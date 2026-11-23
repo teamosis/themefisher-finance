@@ -10,19 +10,17 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ---
 
-# Mandatory: Project Context & Development Log
+# Mandatory: Project Knowledge & Development Protocol
 
-**Before writing ANY code**, read `CONTEXT.md` in the project root. It contains:
+**Before writing ANY code**, read and adhere to the project skill:
+- **Skill:** [`themefisher-finance`](.agents/skills/themefisher-finance/SKILL.md)
+- **References:**
+  - [Architecture & File Structure](.agents/skills/themefisher-finance/references/architecture.md)
+  - [Database Schema & Operations](.agents/skills/themefisher-finance/references/database.md)
+  - [Business Rules & Workflows](.agents/skills/themefisher-finance/references/business-rules.md)
+  - [Development History & Changelog](.agents/skills/themefisher-finance/references/changelog.md)
 
-- Complete architecture, database schema, and business rules
-- Known gotchas and constraints
-- A **Development Log** that tracks every change ever made
-
-**After making ANY code change** (no matter how small), you MUST:
-
-1. Prepend a new entry to the `## Development Log` section in `CONTEXT.md` (just below the `<!-- NEW LOG ENTRIES GO BELOW THIS LINE -->` marker)
-2. Use the format: `### YYYY-MM-DD HH:MM — [Summary]` followed by bullet points describing what changed
-3. Include: files modified, why, and any new constraints or decisions made
-4. Commit `CONTEXT.md` together with your code changes
-
-This is non-negotiable. The log ensures continuity across devices, agents, and sessions.
+### Agent Rules:
+1. **Follow Skill Guidelines:** All development must strictly follow the patterns, Server Action architecture, and modal/form standards documented in `themefisher-finance`.
+2. **Update Changelog:** When introducing major structural changes, migrations, or business rule updates, record the change in [`.agents/skills/themefisher-finance/references/changelog.md`](.agents/skills/themefisher-finance/references/changelog.md).
+3. **Validate Code:** Always ensure `npm run lint` and `npm run build` pass before completing any task.

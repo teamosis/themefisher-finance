@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": 1,
+  "skills": {
+    "taste-skill": {
+      "repository": "https://github.com/Leonxlnx/taste-skill.git",
+      "branch": "main",
+      "path": "skills/taste-skill",
+      "description": "Anti-slop frontend skill for landing pages, portfolios, and redesigns (tasteskill v2)"
+    },
+    "shadcn": {
+      "repository": "https://github.com/shadcn-ui/ui.git",
+      "branch": "main",
+      "path": "skills/shadcn",
+      "description": "shadcn/ui framework, component patterns, and styling rules"
+    },
+    "skill-creator": {
+      "repository": "https://github.com/anthropics/skills.git",
+      "branch": "main",
+      "path": "skills/skill-creator",
+      "description": "Skill creation, eval benchmarking, and iterative refinement"
+    },
+    "better-auth": {
+      "type": "custom",
+      "description": "Better Auth architecture & implementation guide (project-curated)"
+    },
+    "themefisher-finance": {
+      "type": "custom",
+      "description": "Themefisher Admin Tools architecture, workflows, database schema, and operational guide"
+    }
+  }
+}

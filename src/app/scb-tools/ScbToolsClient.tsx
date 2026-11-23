@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Modal } from "@/components/Modal";
-import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
-import { getVendors } from "@/app/actions";
+import { Modal } from "@/components/modals/Modal";
+import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
+import { getVendors } from "@/actions";
 import type { Vendor, DebitAccount } from "@/types";
-import SearchableVendorSelect from "@/components/SearchableVendorSelect";
+import SearchableVendorSelect from "@/components/forms/SearchableVendorSelect";
 import {
   Plus,
   Trash2,

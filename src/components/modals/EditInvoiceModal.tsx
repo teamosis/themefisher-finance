@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
-import { updateInvoice } from "@/app/actions";
+import { updateInvoice } from "@/actions";
 import type { Client, Invoice, PaymentAccount } from "@/types";
 import { Save, FileText, X } from "lucide-react";
 import { Modal } from "./Modal";
-import SearchableClientSelect from "@/components/SearchableClientSelect";
+import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
 
 interface EditInvoiceModalProps {
   invoice: Invoice | null;

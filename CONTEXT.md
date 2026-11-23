@@ -9,7 +9,7 @@
 **Name:** Finance Tools Suite (Themefisher Admin Tools)
 **Repo:** <https://github.com/tftuhin/Themefisher-admin-tools>
 **Deployed:** Vercel (auto-deploys from `main` branch)
-**Database:** Supabase (PostgreSQL)
+**Database:** NeonDB (PostgreSQL) with Drizzle ORM
 **Framework:** Next.js 16.3.4 (App Router, Turbopack)
 **Styling:** Tailwind CSS v4
 **Language:** TypeScript 5
@@ -27,7 +27,8 @@ A unified internal tool for [Themefisher](https://themefisher.com) that handles:
 | --- | --- |
 | `next` 16.3.4 | App framework (App Router) |
 | `react` 19.2.8 | UI library |
-| `@supabase/supabase-js` | Database client |
+| `@neondatabase/serverless` | Neon Serverless PostgreSQL driver |
+| `drizzle-orm` | TypeScript ORM |
 | `react-hook-form` | Form state management (invoice creation) |
 | `react-select` | Searchable/creatable dropdowns (bank/branch select) |
 | `react-to-print` | Print invoices & Form-C to PDF |
@@ -51,11 +52,8 @@ src/
 │   └── banks.ts                          # Bank branches query & SWIFT lookup
 ├── app/
 │   ├── page.tsx                          # Dashboard home (tool selector)
-│   ├── layout.tsx                        # Root layout with AI Assistant
+│   ├── layout.tsx                        # Root layout
 │   ├── globals.css                       # Global styles & Tailwind
-│   ├── actions.ts                        # Backward-compatibility re-export from @/actions
-│   ├── api/
-│   │   └── chat/route.ts                 # AI Assistant streaming route
 │   ├── invoice-tools/
 │   │   ├── layout.tsx                    # Invoice tools layout with sidebar
 │   │   ├── page.tsx                      # Server component: document previewer & printer
@@ -85,13 +83,9 @@ src/
 │   ├── layout/                           # Layout and navigation components
 │   │   ├── InvoiceSidebar.tsx            # Invoice tools sidebar
 │   │   └── SCBSidebar.tsx                # SCB tools sidebar
-│   ├── documents/                        # Printable A4 document templates
-│   │   ├── BankInvoice.tsx               # Invoice print template
-│   │   └── CForm.tsx                     # Bangladesh Bank Form-C template
-│   └── chat/                             # AI chat & interactive cards
-│       ├── AiAssistantPopup.tsx          # Floating AI guide popup
-│       ├── DownloadInvoiceCard.tsx       # Interactive invoice download card
-│       └── DownloadExcelCard.tsx         # Interactive SCB Excel download card
+│   └── documents/                        # Printable A4 document templates
+│       ├── BankInvoice.tsx               # Invoice print template
+│       └── CForm.tsx                     # Bangladesh Bank Form-C template
 ├── db/
 │   ├── index.ts                          # NeonDB + Drizzle client instance
 │   ├── schema.ts                         # PostgreSQL database schema
@@ -106,7 +100,7 @@ src/
 
 ---
 
-## 4. Database Schema (Supabase)
+## 4. Database Schema (Neon PostgreSQL + Drizzle ORM)
 
 ### Tables
 
@@ -115,17 +109,11 @@ src/
 | `clients` | Invoice recipients (foreign companies) | `name`, `address`, `tax_id`, `bank_name`, `bank_address` |
 | `invoices` | All invoices issued | `client_id` (FK), `invoice_number` (UNIQUE), `invoice_date`, `amount`, `received_amount`, `description`, `currency`, `payment_methods[]` |
 | `payment_accounts` | Themefisher's bank accounts for receiving payments | `bank_name`, `account_number`, `name_on_account`, `bic_swift` |
-| `vendors` | SCB payment receivers | `receiver_name`, `account_number`, `bank_name`, `branch_name`, `routing_number` |
+| `vendors` | SCB payment receivers & employees | `receiver_name`, `account_number`, `bank_name`, `branch_name`, `routing_number`, `is_employee`, `salary`, `is_hidden` |
 | `debit_accounts` | SCB debit accounts for outgoing payments | `account_number`, `account_label`, `bank_name`, `is_default` |
-| `bank_branches` | 10,976 Bangladesh bank branches (read-only reference) | `bank_code`, `bank_name`, `district_name`, `branch_name`, `routing_number` (UNIQUE) |
+| `bank_branches` | 11,426 Bangladesh bank branches | `bank_code`, `bank_name`, `district_name`, `branch_name`, `routing_number` (UNIQUE) |
 
-### Row Level Security (RLS)
-
-- All tables have RLS enabled.
-- `bank_branches`: Public read + insert policies (insert was needed for initial data migration).
-- Other tables: Configured via Supabase dashboard.
-
-### Full schema: `supabase_schema.sql` (committed to repo root)
+### Full schema: `src/db/schema.ts`
 
 ---
 
@@ -153,8 +141,7 @@ src/
 ## 6. Environment Variables
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=<supabase-project-url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<supabase-anon-key>
+DATABASE_URL=postgresql://user:password@host.tld/dbname?sslmode=require
 NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ```
 
@@ -164,11 +151,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 
 ## 7. Known Constraints & Gotchas
 
-1. **Supabase 1000-row limit:** All Supabase queries return max 1000 rows by default. Pagination is required for large datasets (e.g., `BankBranchSelect` paginates through all 11K bank branches).
-2. **`canvas` package:** Required for `pdfjs-dist` PDF parsing. `next.config.ts` has special Webpack alias (`canvas: false`) and `serverExternalPackages: ["canvas"]` to handle this.
-3. **Module format:** `package.json` must NOT have `"type": "commonjs"` — it breaks `react-select` and other ESM packages with Next.js Turbopack.
-4. **PDF password:** The fixed password for parsing bank PDFs is `T137101`.
-5. **Dynamic imports:** `BankBranchSelect` is loaded via `next/dynamic` with `ssr: false` to avoid hydration issues with `react-select`.
+1. **`canvas` package:** Required for `pdfjs-dist` PDF parsing. `next.config.ts` has special Webpack alias (`canvas: false`) and `serverExternalPackages: ["canvas"]` to handle this.
+2. **Module format:** `package.json` must NOT have `"type": "commonjs"` — it breaks `react-select` and other ESM packages with Next.js Turbopack.
+3. **PDF password:** The fixed password for parsing bank PDFs is `T137101`.
+4. **Dynamic imports:** `BankBranchSelect` is loaded via `next/dynamic` with `ssr: false` to avoid hydration issues with `react-select`.
 
 ---
 
@@ -209,6 +195,25 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 <!-- NEW LOG ENTRIES GO BELOW THIS LINE -->
+
+### 2026-11-23 17:09 — Completely Remove AI Chat, Legacy Fallbacks & Backward Compatibility Code
+**Agent/Dev:** Gemini (Antigravity)
+**Files changed:**
+- `src/app/api/` — **[DELETED]** Removed entire AI chat API route directory.
+- `src/components/chat/` — **[DELETED]** Removed AI chat component, interactive cards, and assets.
+- `public/chatbot-icon.jpg` — **[DELETED]** Removed chatbot avatar image asset.
+- `src/app/layout.tsx` — **[MODIFY]** Removed `AiAssistantPopup` import and rendering.
+- `package.json` — **[MODIFY]** Uninstalled AI SDK and markdown dependencies (`@ai-sdk/google`, `@ai-sdk/groq`, `@ai-sdk/react`, `ai`, `react-markdown`).
+- `src/app/actions.ts` — **[DELETED]** Removed backward-compatibility actions bridge; all pages and components now import directly from `@/actions`.
+- `src/components/*.tsx` (14 bridge files) — **[DELETED]** Removed root component bridge files; all consumers now import directly from `@/components` or `@/components/<domain>/`.
+- `supabase_schema.sql` — **[DELETED]** Removed obsolete Supabase schema script.
+- `src/app/scb-tools/vendors/VendorsClient.tsx` — **[MODIFY]** Removed legacy dual-layer `localStorage` employee caching and obsolete Supabase comments now that the Neon PostgreSQL database natively handles `is_employee` and `salary`.
+- `README.md` & `CONTEXT.md` — **[MODIFY]** Scrubbed legacy Supabase credentials and setup instructions; aligned documentation with NeonDB and Drizzle ORM.
+**Decisions & notes:**
+- AI chat is completely removed with zero leftover packages or routes.
+- Eliminated all backward compatibility shim layers for clean, modern Next.js App Router code organization.
+- Ran lint and build verification (`npm run lint && npm run build`) with zero errors.
+
 
 ### 2026-11-23 17:01 — Standardize File Structure, Clean Up App Files & Seed New Database
 **Agent/Dev:** Gemini (Antigravity)

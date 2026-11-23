@@ -1,4 +1,4 @@
-import { getPaymentAccounts } from "@/app/actions";
+import { getPaymentAccounts } from "@/actions";
 import SettingsClient from "./SettingsClient";
 
 export const dynamic = "force-dynamic";

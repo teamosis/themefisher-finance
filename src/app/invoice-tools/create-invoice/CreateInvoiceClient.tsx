@@ -1,12 +1,12 @@
 "use client";
 import { useState, useMemo, useRef } from "react";
 import Script from "next/script";
-import { createInvoice, deleteInvoice as deleteInvoiceAction } from "@/app/actions";
+import { createInvoice, deleteInvoice as deleteInvoiceAction } from "@/actions";
 import { parseMT103 } from "@/lib/pdfParser";
 import { useForm } from "react-hook-form";
 import type { Client, PaymentAccount, Invoice, InvoiceFormData } from "@/types";
-import { EditInvoiceModal } from "@/components/EditInvoiceModal";
-import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { EditInvoiceModal } from "@/components/modals/EditInvoiceModal";
+import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
 import {
   Search,
   Edit2,
@@ -22,7 +22,7 @@ import {
   Loader2,
 } from "lucide-react";
 import Link from "next/link";
-import SearchableClientSelect from "@/components/SearchableClientSelect";
+import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
 
 export default function CreateInvoiceClient({
   initialClients,

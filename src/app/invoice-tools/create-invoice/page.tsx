@@ -1,4 +1,4 @@
-import { getClients, getPaymentAccounts, getInvoices } from "@/app/actions";
+import { getClients, getPaymentAccounts, getInvoices } from "@/actions";
 import CreateInvoiceClient from "./CreateInvoiceClient";
 
 export const dynamic = "force-dynamic";

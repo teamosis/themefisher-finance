@@ -1,20 +1,20 @@
 "use client";
 import { useState, useRef } from "react";
-import { getClients, lookupSwiftCode } from "@/app/actions";
+import { getClients, lookupSwiftCode } from "@/actions";
 import { parseMT103 } from "@/lib/pdfParser";
 import { useReactToPrint } from "react-to-print";
-import { CForm } from "@/components/CForm";
-import { BankInvoice } from "@/components/BankInvoice";
+import { CForm } from "@/components/documents/CForm";
+import { BankInvoice } from "@/components/documents/BankInvoice";
 import type { Client, Invoice, PaymentAccount } from "@/types";
 import Script from "next/script";
 import { UploadCloud, Loader2, X, AlertCircle } from "lucide-react";
-import { CreateInvoiceModal } from "@/components/CreateInvoiceModal";
-import { CreateClientModal } from "@/components/CreateClientModal";
-import { Modal } from "@/components/Modal";
+import { CreateInvoiceModal } from "@/components/modals/CreateInvoiceModal";
+import { CreateClientModal } from "@/components/modals/CreateClientModal";
+import { Modal } from "@/components/modals/Modal";
 import { Printer, FileText, CheckCircle2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import SearchableClientSelect from "@/components/SearchableClientSelect";
+import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
 
 type ViewTab = "all" | "invoice" | "cform";
 

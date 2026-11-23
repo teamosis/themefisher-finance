@@ -1,9 +1,9 @@
 "use client";
 import { useState, useCallback } from "react";
-import { getPaymentAccounts, createPaymentAccount, deletePaymentAccount } from "@/app/actions";
+import { getPaymentAccounts, createPaymentAccount, deletePaymentAccount } from "@/actions";
 import { useForm } from "react-hook-form";
 import type { PaymentAccount, PaymentAccountFormData } from "@/types";
-import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
 import {
   Landmark,
   Trash2,

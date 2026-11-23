@@ -1,4 +1,4 @@
-import { InvoiceSidebar } from "@/components/InvoiceSidebar";
+import { InvoiceSidebar } from "@/components/layout/InvoiceSidebar";
 
 export default function InvoiceToolsLayout({
   children,

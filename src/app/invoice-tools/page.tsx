@@ -1,4 +1,4 @@
-import { getClients, getInvoices, getPaymentAccounts } from "@/app/actions";
+import { getClients, getInvoices, getPaymentAccounts } from "@/actions";
 import InvoiceToolsClient from "./InvoiceToolsClient";
 import { Suspense } from "react";
 

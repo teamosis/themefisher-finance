@@ -1,10 +1,10 @@
 "use client";
 import { useState, useCallback, useMemo } from "react";
-import { getClients, createClient as createClientAction, deleteClient as deleteClientAction } from "@/app/actions";
+import { getClients, createClient as createClientAction, deleteClient as deleteClientAction } from "@/actions";
 import { useForm } from "react-hook-form";
 import type { Client, ClientFormData } from "@/types";
-import { EditClientModal } from "@/components/EditClientModal";
-import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+import { EditClientModal } from "@/components/modals/EditClientModal";
+import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
 import {
   Building2,
   MapPin,

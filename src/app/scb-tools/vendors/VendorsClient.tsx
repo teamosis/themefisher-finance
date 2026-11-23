@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Modal } from "@/components/Modal";
-import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
-import { getVendors, createVendor, updateVendor, deleteVendor as deleteVendorAction } from "@/app/actions";
+import { Modal } from "@/components/modals/Modal";
+import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
+import { getVendors, createVendor, updateVendor, deleteVendor as deleteVendorAction } from "@/actions";
 import type { Vendor } from "@/types";
 import dynamic from "next/dynamic";
 
-const BankBranchSelect = dynamic(() => import("@/components/BankBranchSelect"), {
+const BankBranchSelect = dynamic(() => import("@/components/forms/BankBranchSelect"), {
   ssr: false,
   loading: () => <div className="animate-pulse bg-gray-100 rounded-xl h-[38px]" />,
 });
@@ -65,45 +65,12 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
   const [deletingVendor, setDeletingVendor] = useState<Vendor | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Helper to read local employee cache
-  const getLocalEmployeeCache = (): Record<string, { is_employee: boolean; salary?: number }> => {
-    try {
-      const saved = localStorage.getItem("scb_employee_vendors");
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  };
-
-  // Helper to write local employee cache
-  const saveLocalEmployeeCache = (id: string, is_employee: boolean, salary?: number | string) => {
-    try {
-      const cache = getLocalEmployeeCache();
-      cache[id] = {
-        is_employee,
-        salary: salary ? Number(salary) : (cache[id]?.salary ?? 0),
-      };
-      localStorage.setItem("scb_employee_vendors", JSON.stringify(cache));
-    } catch (e) {
-      console.error("Failed to write to localStorage:", e);
-    }
-  };
-
   const fetchVendors = async () => {
     setLoading(true);
     setErrorMessage(null);
     try {
       const data = await getVendors();
-      const localCache = getLocalEmployeeCache();
-      const merged: Vendor[] = (data || []).map((v: Vendor) => {
-        const local = localCache[v.id];
-        return {
-          ...v,
-          is_employee: v.is_employee !== undefined ? Boolean(v.is_employee) : Boolean(local?.is_employee),
-          salary: v.salary !== undefined ? v.salary : (local?.salary ?? ""),
-        };
-      });
-      setVendors(merged);
+      setVendors(data || []);
     } catch (error: any) {
       console.error("Error fetching vendors:", error);
       setErrorMessage(error.message);
@@ -112,16 +79,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
   };
 
   useEffect(() => {
-    const localCache = getLocalEmployeeCache();
-    const merged: Vendor[] = initialVendors.map((v: Vendor) => {
-      const local = localCache[v.id];
-      return {
-        ...v,
-        is_employee: v.is_employee !== undefined ? Boolean(v.is_employee) : Boolean(local?.is_employee),
-        salary: v.salary !== undefined ? v.salary : (local?.salary ?? ""),
-      };
-    });
-    setVendors(merged);
+    setVendors(initialVendors || []);
   }, [initialVendors]);
 
   const triggerSuccess = (msg: string) => {
@@ -170,14 +128,10 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
       prev.map((v) => (v.id === vendor.id ? { ...v, is_employee: nextStatus } : v))
     );
 
-    // 2. Persist to localStorage cache
-    saveLocalEmployeeCache(vendor.id, nextStatus, vendor.salary);
-
-    // 3. Persist to Supabase if column exists
     try {
       await updateVendor(vendor.id, { is_employee: nextStatus });
     } catch (e: any) {
-      console.warn("Could not sync with column:", e.message);
+      console.warn("Could not update employee status:", e.message);
     }
 
     triggerSuccess(
@@ -216,7 +170,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
       return;
     }
 
-    executeCreate(payloadToInsert, formData.is_employee, formData.salary);
+    executeCreate(payloadToInsert, formData.is_employee);
   };
 
   const handleToggleHide = async (vendor: Vendor) => {
@@ -230,11 +184,10 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
     }
   };
 
-  const executeCreate = async (payloadToInsert: any, isEmployee: boolean, salary: string) => {
+  const executeCreate = async (payloadToInsert: any, isEmployee: boolean) => {
     try {
       setSaving(true);
       const newVendor = await createVendor(payloadToInsert);
-      saveLocalEmployeeCache(newVendor.id, isEmployee, salary);
       setFormData({
         receiver_name: "", account_number: "", bank_name: "", branch_name: "", routing_number: "", is_employee: false, salary: ""
       });
@@ -256,7 +209,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
 
   const handleConfirmCreateDuplicate = () => {
     if (duplicatePendingPayload) {
-      executeCreate(duplicatePendingPayload, formData.is_employee, formData.salary);
+      executeCreate(duplicatePendingPayload, formData.is_employee);
     }
   };
 

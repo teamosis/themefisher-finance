@@ -35,22 +35,18 @@ Create `.env.local` based on `.env.example`:
 cp .env.example .env.local
 ```
 
-Fill in your Supabase credentials:
+Fill in your NeonDB and SCB configuration:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=your-scb-debit-account-number
+DATABASE_URL=postgresql://user:password@host.tld/dbname?sslmode=require
+NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=0001914137101
 ```
 
-### 2. Setup Database (Single SQL Script)
-Run the consolidated script [`supabase_schema.sql`](./supabase_schema.sql) in your **Supabase SQL Editor** (SQL Editor -> New query -> Paste & Run).
-
-It will create all 5 tables with Row Level Security (RLS) and index optimizations:
-- `clients`
-- `payment_accounts`
-- `invoices`
-- `vendors`
-- `debit_accounts`
+### 2. Setup Database & Seed
+Push the Drizzle schema to your Neon PostgreSQL database and seed initial data:
+```bash
+npm run db:push
+npm run db:seed
+```
 
 ### 3. Run Locally
 ```bash
@@ -67,38 +63,36 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ```
 finance-tools-suite/
 ├── public/                     # Static assets (logos, signatures, icons)
-│   ├── themefisher_logo.png    # Official invoice logo
-│   └── signature.png           # Form-C authorized signature
 ├── src/
-│   ├── app/
+│   ├── actions/                # Next.js Server Actions (CRUD by domain)
+│   │   ├── index.ts
+│   │   ├── clients.ts
+│   │   ├── invoices.ts
+│   │   ├── payment-accounts.ts
+│   │   ├── vendors.ts
+│   │   ├── debit-accounts.ts
+│   │   └── banks.ts
+│   ├── app/                    # Next.js App Router routes
 │   │   ├── page.tsx            # Main Tools Dashboard
 │   │   ├── layout.tsx          # Root Application Layout
 │   │   ├── globals.css         # Tailwind & A4 Print Media Queries
 │   │   ├── invoice-tools/      # Tool 1: Invoice & Form-C Suite
-│   │   │   ├── layout.tsx      # Tool layout with InvoiceSidebar
-│   │   │   ├── page.tsx        # Document previewer & printer
-│   │   │   ├── create-invoice/ # Invoice creator & list
-│   │   │   ├── clients/        # Client manager
-│   │   │   └── settings/       # Bank payout accounts
 │   │   └── scb-tools/          # Tool 2: SCB Transaction Generator
-│   │       ├── layout.tsx      # Tool layout with SCBSidebar
-│   │       ├── page.tsx        # Multi-row transfer editor & XLSX exporter
-│   │       ├── vendors/        # Beneficiary vendor pool
-│   │       └── debit-accounts/ # SCB debit accounts manager
-│   ├── components/
-│   │   ├── InvoiceSidebar.tsx  # Sidebar + "← Dashboard Hub" button
-│   │   ├── SCBSidebar.tsx      # Sidebar + "← Dashboard Hub" button
-│   │   ├── BankInvoice.tsx     # Printable bank invoice component
-│   │   ├── CForm.tsx           # Printable Form-C component
-│   │   ├── SearchableClientSelect.tsx
-│   │   ├── SearchableVendorSelect.tsx
-│   │   ├── EditInvoiceModal.tsx
-│   │   └── EditClientModal.tsx
+│   ├── components/             # Modular UI Components
+│   │   ├── index.ts            # Central barrel export
+│   │   ├── modals/             # Modal dialogs
+│   │   ├── forms/              # Form controls & searchable dropdowns
+│   │   ├── layout/             # Sidebars & navigation
+│   │   └── documents/          # Printable A4 templates (Invoice, Form-C)
+│   ├── db/                     # NeonDB + Drizzle ORM
+│   │   ├── index.ts
+│   │   ├── schema.ts
+│   │   ├── seed.ts
+│   │   └── data/banks.json
 │   ├── lib/
-│   │   └── supabase.ts         # Unified Supabase client
+│   │   └── pdfParser.ts        # Spatial coordinate MT103 PDF parser
 │   └── types/
 │       └── index.ts            # Consolidated TypeScript types
-├── supabase_schema.sql         # Consolidated database DDL
 ├── package.json
 └── tsconfig.json
 ```

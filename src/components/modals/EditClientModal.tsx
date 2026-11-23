@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { updateClient } from "@/app/actions";
+import { updateClient } from "@/actions";
 import type { Client } from "@/types";
 import { Save, Building2, MapPin, Landmark, FileText } from "lucide-react";
 import { Modal } from "./Modal";

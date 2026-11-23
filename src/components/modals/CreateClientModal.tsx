@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { createClient } from "@/app/actions";
+import { createClient } from "@/actions";
 import { Loader2, AlertCircle, UserPlus, Building2, CheckCircle2 } from "lucide-react";
 import { Modal } from "./Modal";
 import type { Client } from "@/types";

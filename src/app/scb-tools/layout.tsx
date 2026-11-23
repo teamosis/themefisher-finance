@@ -1,4 +1,4 @@
-import SCBSidebar from "@/components/SCBSidebar";
+import SCBSidebar from "@/components/layout/SCBSidebar";
 
 export default function SCBToolsLayout({
   children,

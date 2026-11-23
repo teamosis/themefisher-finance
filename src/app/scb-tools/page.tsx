@@ -1,4 +1,4 @@
-import { getVendors, getDebitAccounts } from "@/app/actions";
+import { getVendors, getDebitAccounts } from "@/actions";
 import ScbToolsClient from "./ScbToolsClient";
 
 export const dynamic = "force-dynamic";

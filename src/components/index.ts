@@ -18,8 +18,3 @@ export { default as SCBSidebar } from "./layout/SCBSidebar";
 // Printable Documents
 export * from "./documents/BankInvoice";
 export * from "./documents/CForm";
-
-// AI Assistant & Chat
-export * from "./chat/AiAssistantPopup";
-export * from "./chat/DownloadInvoiceCard";
-export * from "./chat/DownloadExcelCard";

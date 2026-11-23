@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { AiAssistantPopup } from "@/components/AiAssistantPopup";
 
 export const metadata: Metadata = {
   title: "Themefisher Admin Tools",
@@ -20,7 +19,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-slate-50 text-slate-900 antialiased" suppressHydrationWarning>
         {children}
-        <AiAssistantPopup />
       </body>
     </html>
   );

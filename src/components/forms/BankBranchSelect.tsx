@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import CreatableSelect from "react-select/creatable";
-import { getBankNames, getBranchesByBank, getRoutingNumber } from "@/app/actions";
+import { getBankNames, getBranchesByBank, getRoutingNumber } from "@/actions";
 
 interface OptionType {
   label: string;

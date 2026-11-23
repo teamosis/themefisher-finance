@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Modal } from "@/components/Modal";
-import { getDebitAccounts, createDebitAccount, updateDebitAccount, deleteDebitAccount as deleteDebitAccountAction, setDefaultDebitAccount as setDefaultDebitAccountAction, unsetAllDefaultDebitAccounts } from "@/app/actions";
+import { Modal } from "@/components/modals/Modal";
+import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
+import { getDebitAccounts, createDebitAccount, updateDebitAccount, deleteDebitAccount as deleteDebitAccountAction, setDefaultDebitAccount as setDefaultDebitAccountAction, unsetAllDefaultDebitAccounts } from "@/actions";
 import type { DebitAccount } from "@/types";
 import {
   Plus,
@@ -16,7 +17,7 @@ import {
   CreditCard,
   Star,
 } from "lucide-react";
-import { ConfirmDeleteModal } from "@/components/ConfirmDeleteModal";
+
 
 export default function DebitAccountsClient({ initialAccounts }: { initialAccounts: DebitAccount[] }) {
   const [accounts, setAccounts] = useState<DebitAccount[]>(initialAccounts);

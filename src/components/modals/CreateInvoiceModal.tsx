@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { createInvoice } from "@/app/actions";
+import { createInvoice } from "@/actions";
 import type { Client, PaymentAccount, InvoiceFormData } from "@/types";
 import { Loader2, AlertCircle, FilePlus, CheckCircle2 } from "lucide-react";
 import { Modal } from "./Modal";

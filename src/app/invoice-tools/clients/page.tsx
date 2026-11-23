@@ -1,4 +1,4 @@
-import { getClients } from "@/app/actions";
+import { getClients } from "@/actions";
 import ClientsClient from "./ClientsClient";
 
 export const dynamic = "force-dynamic";

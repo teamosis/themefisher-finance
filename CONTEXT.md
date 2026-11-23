@@ -7,7 +7,7 @@
 ## 1. Project Overview
 
 **Name:** Finance Tools Suite (Themefisher Admin Tools)
-**Repo:** https://github.com/tftuhin/Themefisher-admin-tools
+**Repo:** <https://github.com/tftuhin/Themefisher-admin-tools>
 **Deployed:** Vercel (auto-deploys from `main` branch)
 **Database:** Supabase (PostgreSQL)
 **Framework:** Next.js 16.3.4 (App Router, Turbopack)
@@ -15,6 +15,7 @@
 **Language:** TypeScript 5
 
 A unified internal tool for [Themefisher](https://themefisher.com) that handles:
+
 1. **Invoice Tools** — Create invoices, manage clients, generate Bangladesh Bank Form-C for inward remittances.
 2. **SCB Tools** — Generate Standard Chartered Bank bulk transaction Excel files, manage vendors/receivers and debit accounts.
 
@@ -23,7 +24,7 @@ A unified internal tool for [Themefisher](https://themefisher.com) that handles:
 ## 2. Tech Stack & Key Dependencies
 
 | Package | Purpose |
-|---|---|
+| --- | --- |
 | `next` 16.3.4 | App framework (App Router) |
 | `react` 19.2.8 | UI library |
 | `@supabase/supabase-js` | Database client |
@@ -40,36 +41,67 @@ A unified internal tool for [Themefisher](https://themefisher.com) that handles:
 
 ```
 src/
+├── actions/                              # Modular Next.js Server Actions
+│   ├── index.ts                          # Central barrel export
+│   ├── clients.ts                        # Client CRUD actions
+│   ├── invoices.ts                       # Invoice CRUD actions
+│   ├── payment-accounts.ts               # Payment account CRUD actions
+│   ├── vendors.ts                        # Vendor & employee CRUD actions
+│   ├── debit-accounts.ts                 # SCB debit accounts & default toggle
+│   └── banks.ts                          # Bank branches query & SWIFT lookup
 ├── app/
 │   ├── page.tsx                          # Dashboard home (tool selector)
-│   ├── layout.tsx                        # Root layout
-│   ├── globals.css                       # Global styles
-│   ├── api/                              # API routes (currently empty)
+│   ├── layout.tsx                        # Root layout with AI Assistant
+│   ├── globals.css                       # Global styles & Tailwind
+│   ├── actions.ts                        # Backward-compatibility re-export from @/actions
+│   ├── api/
+│   │   └── chat/route.ts                 # AI Assistant streaming route
 │   ├── invoice-tools/
 │   │   ├── layout.tsx                    # Invoice tools layout with sidebar
-│   │   ├── page.tsx                      # Invoice list & Form-C generation
-│   │   ├── create-invoice/page.tsx       # Create invoice form + PDF parsing
-│   │   ├── clients/page.tsx              # Client management (CRUD)
-│   │   └── settings/                     # Payment account settings
+│   │   ├── page.tsx                      # Server component: document previewer & printer
+│   │   ├── InvoiceToolsClient.tsx        # Client component: form-c & invoice print UI
+│   │   ├── create-invoice/               # Server + Client invoice creator
+│   │   ├── clients/                      # Server + Client client manager
+│   │   └── settings/                     # Server + Client payment account settings
 │   └── scb-tools/
 │       ├── layout.tsx                    # SCB tools layout with sidebar
-│       ├── page.tsx                      # Bulk transaction generator
-│       ├── vendors/page.tsx              # Vendor management (CRUD)
-│       └── debit-accounts/              # Debit account management
+│       ├── page.tsx                      # Server component: transfer editor & XLSX exporter
+│       ├── ScbToolsClient.tsx            # Client component: batch transfer table
+│       ├── vendors/                      # Server + Client vendor & employee manager
+│       └── debit-accounts/               # Server + Client debit accounts manager
 ├── components/
-│   ├── BankBranchSelect.tsx              # Searchable bank/branch dropdown with routing auto-fill
-│   ├── BankInvoice.tsx                   # Invoice print template
-│   ├── CForm.tsx                         # Bangladesh Bank Form-C template
-│   ├── EditClientModal.tsx               # Client edit modal
-│   ├── EditInvoiceModal.tsx              # Invoice edit modal
-│   ├── InvoiceSidebar.tsx                # Invoice tools sidebar navigation
-│   ├── SCBSidebar.tsx                    # SCB tools sidebar navigation
-│   ├── SearchableClientSelect.tsx        # Client search/select for invoice creation
-│   └── SearchableVendorSelect.tsx        # Vendor search/select for SCB transactions
+│   ├── index.ts                          # Central component barrel export
+│   ├── modals/                           # Modal dialogs
+│   │   ├── Modal.tsx                     # Base standardized modal wrapper
+│   │   ├── ConfirmDeleteModal.tsx        # Standard delete confirmation modal
+│   │   ├── CreateClientModal.tsx         # Client creation modal
+│   │   ├── CreateInvoiceModal.tsx        # Pre-filled invoice creation modal
+│   │   ├── EditClientModal.tsx           # Client edit modal
+│   │   └── EditInvoiceModal.tsx          # Invoice edit modal
+│   ├── forms/                            # Form inputs & dropdowns
+│   │   ├── BankBranchSelect.tsx          # Bangladesh bank/branch searchable select
+│   │   ├── SearchableClientSelect.tsx    # Client searchable select
+│   │   └── SearchableVendorSelect.tsx    # Vendor searchable select
+│   ├── layout/                           # Layout and navigation components
+│   │   ├── InvoiceSidebar.tsx            # Invoice tools sidebar
+│   │   └── SCBSidebar.tsx                # SCB tools sidebar
+│   ├── documents/                        # Printable A4 document templates
+│   │   ├── BankInvoice.tsx               # Invoice print template
+│   │   └── CForm.tsx                     # Bangladesh Bank Form-C template
+│   └── chat/                             # AI chat & interactive cards
+│       ├── AiAssistantPopup.tsx          # Floating AI guide popup
+│       ├── DownloadInvoiceCard.tsx       # Interactive invoice download card
+│       └── DownloadExcelCard.tsx         # Interactive SCB Excel download card
+├── db/
+│   ├── index.ts                          # NeonDB + Drizzle client instance
+│   ├── schema.ts                         # PostgreSQL database schema
+│   ├── seed.ts                           # Database seeding script
+│   └── data/
+│       └── banks.json                    # 11,426 Bangladesh bank branches dataset
 ├── lib/
-│   └── supabase.ts                       # Supabase client initialization
+│   └── pdfParser.ts                      # Spatial coordinate MT103 PDF parser
 └── types/
-    └── index.ts                          # All TypeScript interfaces
+    └── index.ts                          # Consolidated TypeScript types & interfaces
 ```
 
 ---
@@ -79,7 +111,7 @@ src/
 ### Tables
 
 | Table | Purpose | Key Columns |
-|---|---|---|
+| --- | --- | --- |
 | `clients` | Invoice recipients (foreign companies) | `name`, `address`, `tax_id`, `bank_name`, `bank_address` |
 | `invoices` | All invoices issued | `client_id` (FK), `invoice_number` (UNIQUE), `invoice_date`, `amount`, `received_amount`, `description`, `currency`, `payment_methods[]` |
 | `payment_accounts` | Themefisher's bank accounts for receiving payments | `bank_name`, `account_number`, `name_on_account`, `bic_swift` |
@@ -88,6 +120,7 @@ src/
 | `bank_branches` | 10,976 Bangladesh bank branches (read-only reference) | `bank_code`, `bank_name`, `district_name`, `branch_name`, `routing_number` (UNIQUE) |
 
 ### Row Level Security (RLS)
+
 - All tables have RLS enabled.
 - `bank_branches`: Public read + insert policies (insert was needed for initial data migration).
 - Other tables: Configured via Supabase dashboard.
@@ -99,6 +132,7 @@ src/
 ## 5. Business Rules & Logic
 
 ### Invoice Tools
+
 - **Invoice Number Format:** `TF-YYYY-MM-DD-XX` (auto-generated, user can modify).
 - **Duplicate Prevention:** Invoice numbers are UNIQUE in the database. The form blocks submission if the number already exists (checked against local state).
 - **Description Default:** Pre-filled with `"Web development services"` — user can modify.
@@ -108,6 +142,7 @@ src/
 - **Form-C:** Bangladesh Bank inward remittance form, generated from invoice data for printing.
 
 ### SCB Tools
+
 - **Vendor Bank Selection:** Uses `BankBranchSelect` component — searchable dropdown backed by 10,976 bank branches in Supabase. Selecting bank → filters branches → auto-fills routing number.
 - **Custom Entry:** If bank/branch isn't in the official list, user can type custom values (CreatableSelect).
 - **Debit Account:** The default SCB debit account number is stored in `process.env.NEXT_PUBLIC_SCB_DEBIT_ACCOUNT` (never hardcoded in source).
@@ -161,6 +196,7 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ## Development Log
 
 > **Format for new entries (prepend at the top, newest first):**
+>
 > ```
 > ### YYYY-MM-DD HH:MM — [Short Summary]
 > **Agent/Dev:** [Agent name or "Manual"]
@@ -173,55 +209,81 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 <!-- NEW LOG ENTRIES GO BELOW THIS LINE -->
+
+### 2026-11-23 17:01 — Standardize File Structure, Clean Up App Files & Seed New Database
+**Agent/Dev:** Gemini (Antigravity)
+**Files changed:**
+- `test-38.js` — **[DELETED]** Removed obsolete root test script.
+- `package.json` — **[MODIFY]** Added standard Drizzle scripts (`db:push`, `db:generate`, `db:migrate`, `db:seed`, `db:studio`), updated `lint` script, and added `tsx` devDependency.
+- `eslint.config.mjs` — **[NEW]** Added modern ESLint 9 configuration with Next.js plugin and TypeScript parser.
+- `.gitignore` — **[MODIFY]** Added `.agents/` to gitignore.
+- `src/actions/` — **[NEW]** Created modular server actions organized by domain (`clients.ts`, `invoices.ts`, `payment-accounts.ts`, `vendors.ts`, `debit-accounts.ts`, `banks.ts`, and barrel `index.ts`).
+- `src/app/actions.ts` — **[MODIFY]** Retained clean re-export from `@/actions` for 100% backward compatibility.
+- `src/components/` — **[RESTRUCTURE]** Modularized loose components into domain subdirectories (`modals/`, `forms/`, `layout/`, `documents/`, `chat/`) and added central barrel `index.ts` with backward-compatible re-export bridges at root component paths.
+- `src/components/chat/AiAssistantPopup.tsx` — **[MODIFY]** Replaced raw `<img>` with Next.js `<Image />` for optimized asset loading.
+- `src/db/data/banks.json` — **[NEW]** Bundled complete Bangladesh Bank branches dataset (11,426 branches across 63 scheduled banks).
+- `src/db/seed.ts` — **[NEW]** Created reproducible, idempotent database seed script covering debit accounts, receiving payment accounts, initial clients, vendors/employees, and bulk bank branches.
+- `CONTEXT.md` — **[MODIFY]** Updated architecture map and development log.
+**Decisions & notes:**
+- Pushed Drizzle schema to the new Neon PostgreSQL database instance (`drizzle-kit push`).
+- Seeded new database: 1 default SCB debit account, 1 receiving payment account (Themefisher), 3 international clients, 4 vendors/employees, and all 11,426 Bangladesh bank branches with routing numbers.
+- Verified build and lint (`npm run lint && npm run build`) with zero errors.
+
 ### 2026-09-16 13:41 — [Fix PDF Client Name Partial Matching]
+
 - Modified `src/app/invoice-tools/InvoiceToolsClient.tsx`: Replaced rigid stripped-substring matching with a 3-pass algorithm (exact → word-level fuzzy → full-text fallback).
 - Modified `src/app/invoice-tools/create-invoice/CreateInvoiceClient.tsx`: Applied the same 2-pass (exact → word-level fuzzy) matching for consistency.
 - Noise words like "Ltd", "Inc", "Co", "Private", "Limited" are now ignored during matching so they don't pollute scores.
 - A 60% word-match threshold ensures partial names like "Developer Team" still match even when the PDF extracts "DEVELOPER TEAM LONDON GB".
 
-
 ### 2026-09-16 07:02 — [Enrich System Prompt Knowledge Base]
+
 - Modified `src/app/api/chat/route.ts` to completely rewrite the AI Assistant's knowledge base.
 - Added comprehensive coverage for all CRUD operations in Invoice Tools (Clients, Invoices, Payment Accounts).
 - Added comprehensive coverage for all operations in SCB Tools (Debit Accounts, Vendors, Custom Bulk Transfers, Salary Sheets).
 - Separated instructions logically to ensure the AI knows exactly which page every feature is located on.
 
-
-
 ### 2026-09-16 10:52 — [Injected AI Knowledge Base]
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/api/chat/route.ts` — **[MODIFY]** Injected a comprehensive static knowledge base outlining all SOPs (Standard Operating Procedures) for the application directly into the AI's system prompt.
 **Decisions & notes:**
 - User requested that the AI act as an offline-capable instructional guide with immediate access to all workflows.
 - Extracted procedures for generating invoices, Form-C, SCB bulk Excel (salary sheets), and managing clients/vendors/payment accounts.
 
-
 ### 2026-09-16 10:48 — [Updated AI Assistant to Instructional Guide]
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/api/chat/route.ts` — **[MODIFY]** Updated system prompt to restrict AI to providing instructions only. Removed background generative UI tools to prevent automated orchestration.
 **Decisions & notes:**
 - User requested that the AI act strictly as a guide to teach them how to use the admin tools suite rather than attempting to automate the tasks in the background.
 - Stripped out server tools to reduce token usage and enforce the instructional persona.
 
-
 ### 2026-09-16 10:00 — [Added AI Assistant Chat Dashboard]
+
 - **Files Modified:** `src/app/layout.tsx`, `package.json`
 - **Files Created:** `src/components/AiAssistantPopup.tsx`, `src/app/api/chat/route.ts`, `src/components/chat/DownloadInvoiceCard.tsx`, `src/components/chat/DownloadExcelCard.tsx`
 - **Why:** The user requested a conversational AI dashboard using the Vercel AI SDK to orchestrate PDF processing, invoice generation, and SCB Excel bulk generation natively via chat.
 - **Decisions Made:** Used Gemini 1.5 Flash natively with its multi-modal vision properties to read the uploaded PDFs in chat instead of using the custom client-side spatial parser. Generated UI components (Generative UI / Server Tools) return downloadable interactive cards inside the chat window.
+
 ### 2026-09-15 16:36 — Fix Remaining Native Confirm Modal
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/create-invoice/CreateInvoiceClient.tsx` — **[MODIFY]** Replaced the final remaining native `window.confirm()` call in the invoice deletion handler with the unified `ConfirmDeleteModal` component.
 **Decisions & notes:**
 - Ensured 100% UI consistency across all destructive actions in the app. The invoice creator table now uses the same sleek deletion modal as the client and vendor tables.
 
-
 ### 2026-09-15 16:31 — Fix False Positive Client Matching
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/create-invoice/CreateInvoiceClient.tsx` — **[MODIFY]** Fixed client matching bug where an empty extracted string or single space would falsely match clients.
 - `src/app/invoice-tools/InvoiceToolsClient.tsx` — **[MODIFY]** Removed brittle `words[0]` fallback logic that falsely matched clients if their first name (e.g. "Grand") appeared anywhere in the PDF text blob.
 - `src/lib/pdfParser.ts` — **[MODIFY]** Improved spatial header detection to account for fractured word blocks in `pdf.js`.
@@ -229,10 +291,11 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 - The spatial parser and client matcher occasionally returned false positives (like selecting "GRAND HOTEL KURHAUS AROLLA SA") due to a bug in the fallback matching logic where `dbName.includes("")` evaluates to true, or where the first word of a long client name arbitrarily matched an unrelated string in the PDF.
 - The matching logic is now highly strict: it strips punctuation/spaces, normalizes to lowercase, and requires a substring match of at least 3 characters.
 
-
 ### 2026-09-15 16:15 — Switch to Fast Deterministic Spatial PDF Parser
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/lib/pdfParser.ts` — **[NEW]** Added a deterministic spatial column parser for MT103 PDFs using `pdf.js` coordinates.
 - `src/app/invoice-tools/create-invoice/CreateInvoiceClient.tsx` — **[MODIFY]** Replaced slow LLM-based `extractInvoiceDataFromText` with the new local `parseMT103` utility.
 - `src/app/invoice-tools/InvoiceToolsClient.tsx` — **[MODIFY]** Replaced LLM parsing with `parseMT103`.
@@ -242,10 +305,11 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 - Because it groups all text found under the column and passes it to the existing substring matcher, it successfully resolves names like `tuhintestclient` even when they are buried between account strings.
 - This change completely eliminates network requests for parsing, making it practically instantaneous.
 
-
 ### 2026-09-15 14:42 — Switch to Vercel AI SDK + Client Name Matching Fix
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/actions.ts` — Replaced `@google/genai` with Vercel AI SDK (`ai` + `@ai-sdk/google`). Now uses `generateObject()` with Zod schema for faster structured output. Added `existingClientNames` parameter so the LLM can match against the database.
 - `src/app/invoice-tools/InvoiceToolsClient.tsx` — Passes `clients.map(c => c.name)` to the extraction call
 - `src/app/invoice-tools/create-invoice/CreateInvoiceClient.tsx` — Same change
@@ -255,8 +319,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 - Switched from `@google/genai` to Vercel AI SDK for better performance and simpler API.
 
 ### 2026-09-15 13:56 — LLM-Powered PDF Data Extraction (Gemini 2.5 Flash)
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/actions.ts` — Added `extractInvoiceDataFromText()` server action using `@google/genai` SDK with structured JSON output schema
 - `src/app/invoice-tools/create-invoice/CreateInvoiceClient.tsx` — Replaced coordinate-based PDF parsing with simple text extraction + LLM call
 - `src/app/invoice-tools/InvoiceToolsClient.tsx` — Same replacement for the Generate Docs page PDF upload
@@ -268,10 +334,11 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 - The LLM call runs server-side via a server action, so the API key is never exposed to the client.
 - Client matching logic is preserved: the LLM-extracted client_name is matched against the database using the same normalized string comparison.
 
-
 ### 2026-09-15 13:37 — Performance: App-Wide Server Components Refactor
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/clients/page.tsx` -> split to `page.tsx` & `ClientsClient.tsx`
 - `src/app/invoice-tools/settings/page.tsx` -> split to `page.tsx` & `SettingsClient.tsx`
 - `src/app/invoice-tools/create-invoice/page.tsx` -> split to `page.tsx` & `CreateInvoiceClient.tsx`
@@ -285,19 +352,21 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 - This eliminates the network waterfall on mount, preventing the "skeleton screen / loading spinner" delay, resolving the issue where data was taking too long to be printed to the screen from the database.
 - Fixed TS unused variable errors after removing `useEffect` and hook imports. Verified with `npm run build`.
 
-
 ### 2026-09-15 13:20 — Feature: Option to Hide Vendors Instead of Deleting
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/components/ConfirmDeleteModal.tsx` — **[MODIFY]** Added optional `onHide` and `isHiding` props to support a third "Hide Instead" button alongside Cancel and Delete. Adjusted layout to be vertical/horizontal responsive if the hide button is active.
 - `src/app/scb-tools/vendors/page.tsx` — **[MODIFY]** Implemented `handleHideVendor` logic that calls `updateVendor({ is_hidden: true })` instead of permanently deleting. Passed the new hide option into the ConfirmDeleteModal, which allows users to safely archive a receiver account rather than destroying it.
 **Decisions & notes:**
 - The `vendors` table already had an `is_hidden` schema column and the vendors page already successfully filters out hidden items via tabs, so all we needed was to expose this option during the deletion workflow.
 
-
 ### 2026-09-15 13:13 — Feature: Unified Delete Confirmation Modals
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/components/ConfirmDeleteModal.tsx` — **[NEW]** Created a standardized, reusable delete confirmation component that wraps the global `Modal`.
 - `src/app/invoice-tools/clients/page.tsx` — **[MODIFY]** Replaced native `confirm()` with `ConfirmDeleteModal`.
 - `src/app/invoice-tools/settings/page.tsx` — **[MODIFY]** Replaced native `confirm()` with `ConfirmDeleteModal`.
@@ -308,52 +377,58 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 **Decisions & notes:**
 - Synchronized all destructive actions across the entire application to use the same sleek UI pattern as the rest of the popups, completely removing any reliance on the browser's native `window.confirm()`.
 
-
 ### 2026-09-15 13:04 — Feature: Spatial Column Extraction for Client Matching
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/page.tsx` — **[MODIFY]** Implemented spatial (X/Y coordinate) column extraction to parse the underlying PDF table structure.
 **Decisions & notes:**
 - Replaced the string-search fallback matching with structural column extraction. The system now searches for the "Ordering Customer" header, calculates the bounding box of the column using its `x` coordinate and the `x` coordinate of the subsequent column ("Details"), and iterates through the rows below to extract the exact customer name text.
 - This extracted client name perfectly resolves partial matches and false positives. If the extracted name matches a database entry, it auto-selects it. If no match is found, it pre-fills the extracted name directly into the "Create Client" modal.
 
-
 ### 2026-09-15 12:57 — Bug Fix: Invoice Auto-Select & False Positive Matching
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/components/CreateInvoiceModal.tsx` — **[MODIFY]** Updated `onSuccess` callback to pass the created `invoiceId` so the page can automatically redirect to and select the newly created invoice and C-Form.
 - `src/app/invoice-tools/page.tsx` — **[MODIFY]** Updated the page redirection logic to append `?invoiceId=[ID]`. Sorted the `clients` array by name length in descending order before matching to prevent generic names (e.g. `Theme Fisher`, which appears at the top of the PDF as the payee) from causing false positive matches over specific clients like `tuhintestclient`.
 
-
 ### 2026-09-15 12:47 — Bug Fix: SWIFT Extraction Auto-Fill
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/page.tsx` — **[MODIFY]** Updated SWIFT code extraction logic to use `matchAll` and verify against the API.
 **Decisions & notes:**
-- Previously, the regex `([A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?)` incorrectly extracted words like `THEMEFISHER` as the SWIFT code since it happens to perfectly match the 11-character BIC format (`THEM` + `EF` + `IS` + `HER`). 
-- This caused the SWIFT code lookup to silently fail against the API, leading to an empty `bankData` object. When the "Create Client" form opened, it was completely blank. 
+- Previously, the regex `([A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?)` incorrectly extracted words like `THEMEFISHER` as the SWIFT code since it happens to perfectly match the 11-character BIC format (`THEM` + `EF` + `IS` + `HER`).
+- This caused the SWIFT code lookup to silently fail against the API, leading to an empty `bankData` object. When the "Create Client" form opened, it was completely blank.
 - It now extracts all potential SWIFT codes and iterates over them, polling the API to find the genuine SWIFT code (`SCBLUS33XXX`), successfully auto-filling the bank data.
 
-
 ### 2026-09-15 12:41 — Bug Fix: Space-Agnostic Client Matching
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/page.tsx` — **[MODIFY]** Added "normalized" fallback matching logic that completely strips all spaces and punctuation from both the PDF text and the client name before matching.
 **Decisions & notes:**
 - Certain bank PDFs generated the client string without spaces (e.g. `tuhintestclient`), which failed to match the database name if it was stored with spaces (e.g. `Tuhin Test Client`), or vice-versa. The matching logic is now incredibly robust against formatting anomalies.
 
-
 ### 2026-09-15 12:37 — Bug Fix: Robust Client PDF Matching
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/page.tsx` — **[MODIFY]** Updated `processPDF` to use `fullTextBlob` for client name matching and SWIFT code matching.
 **Decisions & notes:**
 - The previous client matching logic only searched 5 lines of text following the "header row" in the PDF (`clientText`). Because bank PDFs vary greatly, if the client name or SWIFT code appeared elsewhere, it would fail to match an existing client and incorrectly prompt the "Client not found" modal. It now matches the client against the entire text contents of the PDF.
 
-
 ### 2026-09-15 12:15 — UI Synchronization: Unified Modal Component
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/components/Modal.tsx` — **[NEW]** Created a centralized, highly polished modal wrapper.
 - `src/components/CreateClientModal.tsx` — **[MODIFY]** Refactored to use the new `Modal` component.
 - `src/components/CreateInvoiceModal.tsx` — **[MODIFY]** Refactored to use the new `Modal` component.
@@ -367,18 +442,20 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 **Decisions & notes:**
 - Extracted the premium styling from `CreateClientModal` into a reusable wrapper to ensure 100% UI consistency across 10+ different popups in the application.
 
-
 ### 2026-09-15 12:00 — Switch SWIFT Code API to Open Source Dataset
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/actions.ts` — **[MODIFY]** Rewrote `lookupSwiftCode` to fetch from the PeterNotenboom/SwiftCodes open-source dataset on GitHub instead of API-Ninjas, because API-Ninjas hides `bank_name` and `city` behind a paywall on their free tier.
 **Decisions & notes:**
 - The new approach is completely free, requires no API key in `.env.local`, and provides full bank details without premium masking.
 
-
 ### 2026-09-15 11:51 — Add SWIFT Code Parsing and Client Creation Chain
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/actions.ts` — **[MODIFY]** Added `lookupSwiftCode` which hits the API-Ninjas SWIFT API.
 - `src/components/CreateClientModal.tsx` — **[NEW]** Modal for creating a new client, mirroring the UI of CreateInvoiceModal.
 - `src/app/invoice-tools/page.tsx` — **[MODIFY]** Updated PDF parser to regex-extract SWIFT Codes from the "Received From" field. When a completely unknown client uploads a PDF, the app now chains the new `CreateClientModal` (pre-filled with Bank data resolved from the SWIFT API) straight into the `CreateInvoiceModal`.
@@ -386,10 +463,11 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 - **IMPORTANT**: API-Ninjas SWIFT API requires an API key. You must configure `NEXT_PUBLIC_API_NINJAS_KEY` in `.env.local` or Vercel.
 - Form chaining implemented: on successful client creation, `client_id` is passed seamlessly to the Invoice creator.
 
-
 ### 2026-09-15 11:05 — Add Vendor Hide & Invoice Auto-Fill from PDF
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/scb-tools/vendors/page.tsx` — Added UI logic to "Hide" vendors instead of deleting, duplicate detection modal (suggesting old hidden account activation vs new duplicate creation), and updated Tabs/Filters.
 - `src/app/invoice-tools/page.tsx` — Added PDF upload logic (matches `create-invoice/page.tsx`), auto-selects if matching invoice found, or triggers `CreateInvoiceModal`.
 - `src/components/CreateInvoiceModal.tsx` — **[NEW]** Pre-filled invoice creation modal, triggered when a PDF mismatch occurs on the Invoice Tools generator page.
@@ -399,10 +477,11 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 **Decisions & notes:**
 - Extracted and modified `handleFileUpload` logic into `invoice-tools/page.tsx` allowing fast document extraction on the main page.
 
-
 ### 2026-09-14 16:55 — Complete Migration to NeonDB with Drizzle ORM
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/db/index.ts` & `src/db/schema.ts` — **[NEW]** Setup Drizzle ORM schemas mapped from the original Supabase tables.
 - `drizzle.config.ts` — **[NEW]** Added Drizzle config for migrations and studio.
 - `src/app/actions.ts` — **[NEW]** Centralized all database operations using Next.js Server Actions.
@@ -423,8 +502,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 - The user is responsible for providing Neon DB connection string as an environment variable in production.
 
 ### 2026-09-14 09:42 — Fix TypeScript Build Error
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/components/CForm.tsx` — Removed the unused `parseInvoiceDate` function to fix Vercel deployment.
 **Decisions & notes:**
 - Next.js production builds fail on unused variables/functions. Removed the dead code left behind from the previous Form-C date change.
@@ -432,8 +513,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 ### 2026-09-14 09:37 — Form-C Date Update
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/components/CForm.tsx` — Updated Form-C date to always display the current date instead of the parsed invoice date.
 **Decisions & notes:**
 - Form-C represents a declaration made on the day it is generated/submitted, not necessarily the invoice issue date.
@@ -441,8 +524,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 ### 2026-09-13 22:53 — Added Additional Transactions in Salary Sheet Modal
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/scb-tools/page.tsx` — Added "Additional Transactions" section in the Create Salary Sheet modal, enabling users to add extra transfers (bonuses, vendor invoices, allowances) alongside regular employee salaries; integrated with live total breakdown, SCB Excel export, and "Load into Table".
 **Decisions & notes:**
 - Additional transactions can select any receiver from all available vendors/beneficiaries with custom descriptions and amounts.
@@ -453,8 +538,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 ### 2026-09-13 22:37 — Added Employee Marking & SCB Salary Sheet Generator
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/types/index.ts` — Added `is_employee?: boolean` and `salary?: number | string` to `Vendor` interface.
 - `src/app/scb-tools/vendors/page.tsx` — Added 1-click Employee toggle checkmarks in receiver accounts table/cards, Add/Edit form support for employee marking and default monthly salary, filter tabs (`All`, `Employees`, `Vendors`), and local cache persistence fallback with Supabase sync.
 - `src/app/scb-tools/page.tsx` — Added "Create Salary Sheet" action with dedicated modal to review/input employee salaries, auto-calculate total payroll sums, directly export SCB-formatted Excel spreadsheets (`.xlsx`), or load employee rows into the main generator table.
@@ -467,8 +554,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 ### 2026-09-13 11:47 — Added CONTEXT.md & Agent Rules
+
 **Agent/Dev:** Claude (Opus 4.6)
 **Files changed:**
+
 - `CONTEXT.md` — **[NEW]** Comprehensive project context and development log
 - `AGENTS.md` — Added mandatory rules for reading `CONTEXT.md` and updating the development log
 **Decisions & notes:**
@@ -479,8 +568,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 ### 2026-09-13 11:25 — Bank Branch Routing Number Integration
+
 **Agent/Dev:** Gemini (Antigravity) + Claude (Opus 4.6)
 **Files changed:**
+
 - `src/components/BankBranchSelect.tsx` — **[NEW]** Searchable bank/branch dropdown with routing auto-fill using `react-select/creatable`
 - `src/app/scb-tools/vendors/page.tsx` — Replaced plain text inputs with `BankBranchSelect` in both Add and Edit forms
 - `supabase_schema.sql` — Added `bank_branches` table schema
@@ -496,8 +587,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 ### 2026-09-13 10:30 — Duplicate Invoice Prevention & Description Default
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/create-invoice/page.tsx` — Added duplicate invoice number check (blocks submission if number exists in local state); set default description to "Web development services" (pre-filled via `useForm` defaultValues + `setValue` on mount)
 **Decisions & notes:**
 - Invoice numbers are UNIQUE in database — no two invoices can share the same number
@@ -507,8 +600,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 ### 2026-09-10 14:00 — PDF Auto-Fill & Security Hardening
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/invoice-tools/create-invoice/page.tsx` — Added PDF upload/parsing to auto-fill invoice fields from bank remittance PDFs
 - `src/components/BankInvoice.tsx` — Invoice print template
 - `src/components/CForm.tsx` — Form-C template for inward remittance
@@ -524,8 +619,10 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=<scb-debit-account-number>
 ---
 
 ### 2026-09-10 09:00 — Initial Project Setup
+
 **Agent/Dev:** Gemini (Antigravity)
 **Files changed:**
+
 - `src/app/page.tsx` — Dashboard home with tool selector cards
 - `src/app/layout.tsx` — Root layout with metadata
 - `src/app/invoice-tools/*` — Invoice creation, client management, settings

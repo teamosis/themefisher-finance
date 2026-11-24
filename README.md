@@ -44,14 +44,14 @@ NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=0001914137101
 ### 2. Setup Database & Seed
 Push the Drizzle schema to your Neon PostgreSQL database and seed initial data:
 ```bash
-npm run db:push
-npm run db:seed
+pnpm db:push
+pnpm db:seed
 ```
 
 ### 3. Run Locally
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.

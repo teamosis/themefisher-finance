@@ -83,19 +83,19 @@ Complete Bangladesh Bank branch routing dataset (11,426 records).
 
 ```bash
 # Push schema changes directly to NeonDB
-npm run db:push
+pnpm db:push
 
 # Generate Drizzle migrations
-npm run db:generate
+pnpm db:generate
 
 # Execute Drizzle migrations
-npm run db:migrate
+pnpm db:migrate
 
 # Seed database with initial accounts, clients, team members, and all 11,426 bank branches
-npm run db:seed
+pnpm db:seed
 
 # Open Drizzle Studio visual browser
-npm run db:studio
+pnpm db:studio
 ```
 
 ---

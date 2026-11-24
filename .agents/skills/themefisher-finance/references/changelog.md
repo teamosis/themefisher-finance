@@ -4,6 +4,14 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Remove Unused Zod Package & Migrate to pnpm
+- Audited all dependencies across `src/`; identified `zod` as an obsolete remnant of the removed AI SDK.
+- Removed `zod` from `package.json`.
+- Removed `package-lock.json` and migrated package management to `pnpm`.
+- Regenerated clean `pnpm-lock.yaml`.
+- Updated documentation and skills runbooks to use `pnpm` commands (`pnpm db:push`, `pnpm db:seed`, `pnpm dev`, `pnpm build`, `pnpm lint`).
+- Verified typechecking, linting, production build, and database seed (`pnpm run lint && pnpm run build && pnpm run db:seed`) with zero errors.
+
 ### 2026-11-23 — Completely Remove AI Chat, Legacy Fallbacks & Backward Compatibility Code
 - Removed AI chat API route (`src/app/api/`) and components (`src/components/chat/`).
 - Uninstalled all AI SDK dependencies (`@ai-sdk/google`, `@ai-sdk/groq`, `@ai-sdk/react`, `ai`, `react-markdown`).

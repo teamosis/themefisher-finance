@@ -68,19 +68,19 @@ The database is managed with Drizzle ORM against Neon PostgreSQL.
 ### Core Commands:
 ```bash
 # Push schema updates directly to NeonDB
-npm run db:push
+pnpm db:push
 
 # Seed database with initial data & 11,426 Bangladesh bank branches
-npm run db:seed
+pnpm db:seed
 
 # Generate Drizzle migration files
-npm run db:generate
+pnpm db:generate
 
 # Execute Drizzle migrations
-npm run db:migrate
+pnpm db:migrate
 
 # Open visual Drizzle Studio database browser
-npm run db:studio
+pnpm db:studio
 ```
 
 For schema definition and column details, see [database.md](./references/database.md).
@@ -109,7 +109,7 @@ For complete business logic specifications, see [business-rules.md](./references
    - Forms: `import { ... } from "@/components/forms/<FormName>";`
    - Barrel export: `import { ... } from "@/components";`
 3. **Destructive Actions:** Always use `ConfirmDeleteModal` instead of native `window.confirm()`. Support `is_hidden` archiving for vendors where appropriate.
-4. **Strict Type Checking:** Always verify with `npm run lint` and `npm run build` before committing.
+4. **Strict Type Checking:** Always verify with `pnpm lint` and `pnpm build` before committing.
 
 ---
 

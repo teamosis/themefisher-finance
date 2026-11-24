@@ -83,9 +83,11 @@ export default function VendorsClient({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isHiding, setIsHiding] = useState(false);
 
-  useEffect(() => {
+  const [prevInitialVendors, setPrevInitialVendors] = useState(initialVendors);
+  if (initialVendors !== prevInitialVendors) {
+    setPrevInitialVendors(initialVendors);
     setVendors(initialVendors || []);
-  }, [initialVendors]);
+  }
 
   const triggerSuccess = (msg: string) => {
     setSuccessMessage(msg);

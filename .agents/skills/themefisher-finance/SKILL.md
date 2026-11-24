@@ -116,4 +116,4 @@ For complete business logic specifications, see [business-rules.md](./references
 
 ## 7. Technical Evolution & Changelog
 
-For the historical log of architectural decisions and migrations (including the migration from Supabase to NeonDB + Drizzle), see [changelog.md](./references/changelog.md).
+For the historical log of architectural decisions and migrations (including the migration from Supabase to NeonDB + Drizzle), see [changelog.md](./references/changelog.md). Only record major architectural decisions, database migrations, or business rule updates essential for future context. Routine bug fixes, lint/config adjustments, or minor tweaks must not be added.

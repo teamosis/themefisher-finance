@@ -30,9 +30,16 @@ export function CreateClientModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setError("");
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
       reset();
 
       if (defaultValues.name) setValue("name", defaultValues.name);

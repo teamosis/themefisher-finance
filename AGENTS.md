@@ -13,6 +13,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Mandatory: Project Knowledge & Development Protocol
 
 **Before writing ANY code**, read and adhere to the project skill:
+
 - **Skill:** [`themefisher-finance`](.agents/skills/themefisher-finance/SKILL.md)
 - **References:**
   - [Architecture & File Structure](.agents/skills/themefisher-finance/references/architecture.md)
@@ -20,7 +21,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
   - [Business Rules & Workflows](.agents/skills/themefisher-finance/references/business-rules.md)
   - [Development History & Changelog](.agents/skills/themefisher-finance/references/changelog.md)
 
-### Agent Rules:
+### Agent Rules
+
 1. **Follow Skill Guidelines:** All development must strictly follow the patterns, Server Action architecture, and modal/form standards documented in `themefisher-finance`.
-2. **Update Changelog:** When introducing major structural changes, migrations, or business rule updates, record the change in [`.agents/skills/themefisher-finance/references/changelog.md`](.agents/skills/themefisher-finance/references/changelog.md).
+2. **Update Changelog Only When Necessary:** Only document significant architectural shifts, schema migrations, security model updates, or core business rule changes that provide essential context for future development in [`.agents/skills/themefisher-finance/references/changelog.md`](.agents/skills/themefisher-finance/references/changelog.md). Routine bug fixes, minor tweaks, or simple changes that do not affect future context must NOT be added.
 3. **Validate Code:** Always ensure `npm run lint` and `npm run build` pass before completing any task.

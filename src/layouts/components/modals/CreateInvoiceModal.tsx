@@ -33,9 +33,17 @@ export function CreateInvoiceModal({
     string[]
   >([]);
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setError("");
+      setSelectedPaymentMethods(accounts.length > 0 ? [accounts[0].id] : []);
+    }
+  }
+
+  useEffect(() => {
+    if (isOpen) {
       reset();
 
       if (extractedData?.invoice_number)
@@ -52,10 +60,7 @@ export function CreateInvoiceModal({
       setValue("description", "Web development services");
 
       if (accounts.length > 0) {
-        setSelectedPaymentMethods([accounts[0].id]);
         setValue("payment_methods", [accounts[0].id]);
-      } else {
-        setSelectedPaymentMethods([]);
       }
     }
   }, [isOpen, extractedData, setValue, reset, accounts]);

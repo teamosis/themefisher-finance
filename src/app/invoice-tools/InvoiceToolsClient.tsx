@@ -591,6 +591,8 @@ export default function InvoiceToolsClient({
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(invoiceId) => {
           setIsCreateModalOpen(false);
+          // Force page refresh to re-fetch newly created invoice
+          // eslint-disable-next-line @next/next/no-location-assign-relative-destination
           window.location.href = "?invoiceId=" + invoiceId;
         }}
         clients={clients}

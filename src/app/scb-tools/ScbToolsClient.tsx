@@ -1,10 +1,11 @@
 "use client";
 
+import { logExcelExport } from "@/actions";
 import SearchableVendorSelect from "@/components/forms/SearchableVendorSelect";
 import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
 import { Modal } from "@/components/modals/Modal";
 import { Button } from "@/components/ui/button";
-import type { DebitAccount, Vendor } from "@/types";
+import type { ActivityExcelItem, DebitAccount, Vendor } from "@/types";
 import { format, isValid, parseISO } from "date-fns";
 import {
   ArrowRight,
@@ -74,15 +75,14 @@ async function downloadScbWorkbook(
   rows: Record<string, string>[],
   sheetName: string,
   filePrefix: string,
-) {
+): Promise<string> {
   const { utils, writeFile } = await import("xlsx");
   const worksheet = utils.json_to_sheet(rows);
   const workbook = utils.book_new();
   utils.book_append_sheet(workbook, worksheet, sheetName);
-  writeFile(
-    workbook,
-    `${filePrefix}_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`,
-  );
+  const fileName = `${filePrefix}_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`;
+  writeFile(workbook, fileName);
+  return fileName;
 }
 
 export default function ScbToolsClient({
@@ -254,11 +254,51 @@ export default function ScbToolsClient({
       });
     }
 
+    let generatedFileName = "";
     try {
-      await downloadScbWorkbook(excelData, "Transfers", "SCB_Transfers");
+      generatedFileName = await downloadScbWorkbook(
+        excelData,
+        "Transfers",
+        "SCB_Transfers",
+      );
     } catch {
       alert("Could not generate the Excel file. Please try again.");
       return;
+    }
+
+    const transferItems: ActivityExcelItem[] = filledRows.map((row) => {
+      const vendor = vendors.find((item) => item.id === row.vendorId)!;
+      return {
+        beneficiaryName: vendor.receiver_name,
+        accountNumber: vendor.account_number,
+        bankName: vendor.bank_name,
+        branchName: vendor.branch_name,
+        routingNumber: vendor.routing_number,
+        amount: row.amount,
+        reason: row.description,
+        isEmployee: vendor.is_employee || false,
+      };
+    });
+
+    const totalTransferAmount = filledRows.reduce(
+      (sum, r) => sum + Number(r.amount),
+      0,
+    );
+
+    try {
+      await logExcelExport({
+        type: "transfers",
+        fileName: generatedFileName,
+        sheetName: "Transfers",
+        totalAmount: totalTransferAmount,
+        currency: "BDT",
+        itemCount: filledRows.length,
+        debitAccount: debitAccount.trim(),
+        reason: filledRows[0]?.description || "SCB Bulk Transfers",
+        items: transferItems,
+      });
+    } catch (logErr) {
+      console.error("Failed to log SCB transfers export:", logErr);
     }
 
     setShowScbPopup(true);
@@ -413,8 +453,9 @@ export default function ScbToolsClient({
 
     const combinedExcelData = [...employeeExcelData, ...additionalExcelData];
 
+    let generatedSalaryFileName = "";
     try {
-      await downloadScbWorkbook(
+      generatedSalaryFileName = await downloadScbWorkbook(
         combinedExcelData,
         "Salary Sheet",
         "SCB_Salary_Sheet",
@@ -422,6 +463,48 @@ export default function ScbToolsClient({
     } catch {
       alert("Could not generate the Excel file. Please try again.");
       return;
+    }
+
+    const salaryItems: ActivityExcelItem[] = [
+      ...selectedSalaryRows.map((r) => ({
+        beneficiaryName: r.vendor.receiver_name,
+        accountNumber: r.vendor.account_number,
+        bankName: r.vendor.bank_name,
+        branchName: r.vendor.branch_name,
+        routingNumber: r.vendor.routing_number,
+        amount: r.amount,
+        reason: salaryReason || `Salary for ${format(new Date(), "MMMM yyyy")}`,
+        isEmployee: true,
+      })),
+      ...additionalSalaryRows.map((r) => {
+        const v = vendors.find((vend) => vend.id === r.vendorId)!;
+        return {
+          beneficiaryName: v.receiver_name,
+          accountNumber: v.account_number,
+          bankName: v.bank_name,
+          branchName: v.branch_name,
+          routingNumber: v.routing_number,
+          amount: r.amount,
+          reason: r.description || salaryReason || "Additional Payout",
+          isEmployee: v.is_employee || false,
+        };
+      }),
+    ];
+
+    try {
+      await logExcelExport({
+        type: "salary",
+        fileName: generatedSalaryFileName,
+        sheetName: "Salary Sheet",
+        totalAmount: grandTotalPayout,
+        currency: "BDT",
+        itemCount: combinedExcelData.length,
+        debitAccount: activeDebit.trim(),
+        reason: salaryReason || `Salary for ${format(new Date(), "MMMM yyyy")}`,
+        items: salaryItems,
+      });
+    } catch (logErr) {
+      console.error("Failed to log SCB salary sheet export:", logErr);
     }
 
     setShowSalaryModal(false);
@@ -1038,7 +1121,7 @@ export default function ScbToolsClient({
 
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 onClick={handleLoadEmployeesIntoTable}
                 title="Load all into the main generator table"
               >

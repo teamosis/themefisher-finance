@@ -39,6 +39,13 @@ export const MCP_SCOPES = [
       "Manage Standard Chartered funding debit accounts and Themefisher receiving accounts",
     prefixes: ["finance_accounts_"],
   },
+  {
+    key: "logs",
+    label: "Activity & Audit Logs",
+    description:
+      "Read audit logs for generated SCB Excel sheets, invoices, and bank operations",
+    prefixes: ["finance_logs_"],
+  },
 ] as const;
 
 export type McpScopeKey = (typeof MCP_SCOPES)[number]["key"];

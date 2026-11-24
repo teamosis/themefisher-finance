@@ -372,9 +372,9 @@ export default function InvoiceToolsClient({
             className="gap-2 text-xs sm:text-sm font-normal rounded-xl"
           >
             {isUploadingPdf ? (
-              <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <UploadCloud className="size-4 text-muted-foreground" />
+              <UploadCloud className="size-4" />
             )}
             <span>{isUploadingPdf ? "Parsing..." : "Autofill from PDF"}</span>
           </Button>

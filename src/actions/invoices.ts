@@ -6,6 +6,7 @@ import { requireBrowserSession } from "@/lib/browser-session";
 import { invoiceFields } from "@/lib/invoice-validation";
 import type { Invoice } from "@/types";
 import { and, count, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
+import { logActivity } from "./activity-logs";
 
 export async function getInvoices(): Promise<Invoice[]> {
   await requireBrowserSession();
@@ -68,6 +69,24 @@ export async function createInvoice(data: Partial<Invoice>) {
       .insert(invoices)
       .values(data as any)
       .returning();
+    if (result) {
+      await logActivity({
+        domain: "invoice_tools",
+        action: "invoice_create",
+        entityType: "invoice",
+        entityId: result.invoice_number,
+        title: `Created invoice ${result.invoice_number} ($${Number(result.amount || 0).toLocaleString()} ${result.currency || "USD"})`,
+        details: {
+          extra: {
+            invoiceNumber: result.invoice_number,
+            amount: result.amount,
+            currency: result.currency,
+            invoiceDate: result.invoice_date,
+            clientId: result.client_id,
+          },
+        },
+      }).catch(() => {});
+    }
     return result;
   }
 
@@ -98,7 +117,25 @@ export async function createInvoice(data: Partial<Invoice>) {
       .values({ ...data, invoice_number } as any)
       .onConflictDoNothing({ target: invoices.invoice_number })
       .returning();
-    if (result) return result;
+    if (result) {
+      await logActivity({
+        domain: "invoice_tools",
+        action: "invoice_create",
+        entityType: "invoice",
+        entityId: result.invoice_number,
+        title: `Created invoice ${result.invoice_number} ($${Number(result.amount || 0).toLocaleString()} ${result.currency || "USD"})`,
+        details: {
+          extra: {
+            invoiceNumber: result.invoice_number,
+            amount: result.amount,
+            currency: result.currency,
+            invoiceDate: result.invoice_date,
+            clientId: result.client_id,
+          },
+        },
+      }).catch(() => {});
+      return result;
+    }
   }
   throw new Error("Could not assign an invoice number. Try again.");
 }
@@ -111,12 +148,42 @@ export async function updateInvoice(id: string, data: Partial<Invoice>) {
     .set({ ...data, createdAt: undefined } as any)
     .where(eq(invoices.id, id))
     .returning();
+
+  if (result) {
+    await logActivity({
+      domain: "invoice_tools",
+      action: "invoice_update",
+      entityType: "invoice",
+      entityId: result.invoice_number || id,
+      title: `Updated invoice ${result.invoice_number || id}`,
+      details: {
+        extra: {
+          id,
+          invoiceNumber: result.invoice_number,
+          amount: result.amount,
+          receivedAmount: result.received_amount,
+        },
+      },
+    }).catch(() => {});
+  }
+
   return result;
 }
 
 export async function deleteInvoice(id: string) {
   await requireBrowserSession();
   await db.delete(invoices).where(eq(invoices.id, id));
+
+  await logActivity({
+    domain: "invoice_tools",
+    action: "invoice_delete",
+    entityType: "invoice",
+    entityId: id,
+    title: `Deleted invoice`,
+    details: {
+      extra: { id },
+    },
+  }).catch(() => {});
 }
 
 export async function getPdfPassword(): Promise<string | undefined> {

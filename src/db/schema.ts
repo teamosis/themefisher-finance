@@ -190,3 +190,28 @@ export const mcpWriteRequests = pgTable(
   },
   (table) => [primaryKey({ columns: [table.tokenId, table.key] })],
 );
+
+export const activityLogs = pgTable(
+  "activity_logs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    domain: text("domain").notNull(), // 'scb_tools' | 'invoice_tools' | 'settings' | 'auth'
+    action: text("action").notNull(), // 'excel_export_transfers' | 'excel_export_salary' | 'invoice_create' | ...
+    entityType: text("entity_type"), // 'excel_export' | 'salary_sheet' | 'invoice' | 'vendor' | 'client' | ...
+    entityId: text("entity_id"),
+    title: text("title").notNull(),
+    details: jsonb("details"),
+    status: text("status").default("success").notNull(), // 'success' | 'failed' | 'warning'
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    createdAtIdx: index("idx_activity_logs_created_at").on(table.createdAt),
+    domainIdx: index("idx_activity_logs_domain").on(table.domain),
+    actionIdx: index("idx_activity_logs_action").on(table.action),
+    entityTypeIdx: index("idx_activity_logs_entity_type").on(table.entityType),
+  }),
+);

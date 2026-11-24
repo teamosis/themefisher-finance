@@ -48,8 +48,8 @@ describe("MCP Tools Registry & Handlers Suite", () => {
     expect(limit).toHaveBeenCalledWith(2);
   });
 
-  it("registers all 25 financial domain tools across expected scopes", () => {
-    expect(tools.length).toBe(25);
+  it("registers all financial domain tools across expected scopes", () => {
+    expect(tools.length).toBe(27);
     const names = tools.map((t) => t.name);
 
     expect(names).toContain("finance_get_overview");
@@ -82,6 +82,9 @@ describe("MCP Tools Registry & Handlers Suite", () => {
     expect(names).toContain("finance_accounts_set_default_debit");
     expect(names).toContain("finance_accounts_list_payment");
     expect(names).toContain("finance_accounts_create_payment");
+
+    expect(names).toContain("finance_logs_list");
+    expect(names).toContain("finance_logs_get_excel_export");
   });
 
   describe("System Overview Tool: finance_get_overview", () => {

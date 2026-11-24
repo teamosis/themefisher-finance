@@ -8,7 +8,6 @@ import {
   Landmark,
   Menu,
   PlusSquare,
-  Settings,
   Users,
   X,
 } from "lucide-react";
@@ -28,7 +27,6 @@ export function InvoiceSidebar() {
       icon: PlusSquare,
     },
     { name: "Clients", href: "/invoice-tools/clients", icon: Users },
-    { name: "Configuration", href: "/invoice-tools/settings", icon: Settings },
   ];
 
   const navContent = (

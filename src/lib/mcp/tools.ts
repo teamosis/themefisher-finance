@@ -2,6 +2,7 @@ import { lookupSwiftCode } from "@/actions/banks";
 import { db } from "@/db";
 import { assignDefaultDebitAccount } from "@/db/debit-accounts";
 import {
+  activityLogs,
   bankBranches,
   clients,
   debitAccounts,
@@ -110,6 +111,16 @@ export const tools: McpToolDefinition[] = [
             .limit(1)
         : [];
 
+      const [logsStats] = scopes.includes("logs")
+        ? await db
+            .select({
+              totalCount: sql<number>`count(*)::int`,
+              excelExportsCount: sql<number>`count(*) filter (where ${activityLogs.action} in ('excel_export_transfers', 'excel_export_salary'))::int`,
+              totalDisbursedBdt: sql<string>`coalesce(sum(case when ${activityLogs.action} in ('excel_export_transfers', 'excel_export_salary') then (${activityLogs.details}->>'totalAmount')::numeric else 0 end), 0)::text`,
+            })
+            .from(activityLogs)
+        : [];
+
       return {
         connected: true,
         ...(allows("invoices") && {
@@ -134,6 +145,13 @@ export const tools: McpToolDefinition[] = [
         }),
         ...(allows("accounts") && {
           defaultScbDebitAccount: defaultDebit ?? null,
+        }),
+        ...(scopes.includes("logs") && {
+          activityLogs: {
+            totalCount: Number(logsStats?.totalCount ?? 0),
+            excelExportsCount: Number(logsStats?.excelExportsCount ?? 0),
+            totalDisbursedBdt: Number(logsStats?.totalDisbursedBdt ?? 0),
+          },
         }),
       };
     },
@@ -953,6 +971,146 @@ export const tools: McpToolDefinition[] = [
         })
         .returning();
       return { success: true, paymentAccount: created };
+    },
+  }),
+
+  // =========================================================================
+  // APP ACTIVITY & AUDIT LOGS
+  // =========================================================================
+  defineTool({
+    name: "finance_logs_list",
+    scope: "logs",
+    description:
+      "Query application activity logs including generated SCB bulk transfer Excels, salary sheets, invoice changes, and bank operations.",
+    write: false,
+    schema: z.object({
+      domain: z
+        .enum(["all", "scb_tools", "invoice_tools", "settings", "auth"])
+        .optional()
+        .describe("Filter by domain"),
+      action: z
+        .string()
+        .optional()
+        .describe(
+          "Filter by action (e.g. 'excel_export_salary', 'excel_export_transfers', 'invoice_create')",
+        ),
+      search: z
+        .string()
+        .optional()
+        .describe("Search term matching title, filename, or debit account"),
+      limit: z
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .default(20)
+        .optional()
+        .describe("Max number of records to return (default 20, max 100)"),
+    }),
+    handler: async ({ domain, action, search, limit = 20 }) => {
+      const conditions = [];
+      if (domain && domain !== "all") {
+        conditions.push(eq(activityLogs.domain, domain));
+      }
+      if (action && action !== "all") {
+        conditions.push(eq(activityLogs.action, action));
+      }
+      if (search && search.trim()) {
+        const term = `%${search.trim()}%`;
+        conditions.push(
+          or(
+            ilike(activityLogs.title, term),
+            ilike(activityLogs.entityId, term),
+            sql`(${activityLogs.details}->>'fileName') ILIKE ${term}`,
+            sql`(${activityLogs.details}->>'reason') ILIKE ${term}`,
+            sql`(${activityLogs.details}->>'debitAccount') ILIKE ${term}`,
+          ),
+        );
+      }
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
+      const rows = await db
+        .select({
+          id: activityLogs.id,
+          domain: activityLogs.domain,
+          action: activityLogs.action,
+          entityType: activityLogs.entityType,
+          entityId: activityLogs.entityId,
+          title: activityLogs.title,
+          status: activityLogs.status,
+          fileName: sql<string>`${activityLogs.details}->>'fileName'`,
+          totalAmount: sql<number>`(${activityLogs.details}->>'totalAmount')::numeric`,
+          currency: sql<string>`${activityLogs.details}->>'currency'`,
+          itemCount: sql<number>`(${activityLogs.details}->>'itemCount')::int`,
+          debitAccount: sql<string>`${activityLogs.details}->>'debitAccount'`,
+          reason: sql<string>`${activityLogs.details}->>'reason'`,
+          createdAt: activityLogs.createdAt,
+        })
+        .from(activityLogs)
+        .where(whereClause)
+        .orderBy(desc(activityLogs.createdAt), desc(activityLogs.id))
+        .limit(limit);
+
+      return { total: rows.length, logs: rows };
+    },
+  }),
+  defineTool({
+    name: "finance_logs_get_excel_export",
+    scope: "logs",
+    description:
+      "Retrieve full itemized payee breakdown and metadata for a specific generated SCB bulk transfer or salary sheet Excel export.",
+    write: false,
+    schema: z.object({
+      logId: z.string().uuid().optional().describe("Activity log UUID"),
+      fileName: z.string().optional().describe("Generated Excel filename"),
+      latest: z
+        .boolean()
+        .optional()
+        .describe("Set true to fetch the most recent export"),
+    }),
+    handler: async ({ logId, fileName, latest }) => {
+      let condition;
+      if (logId) {
+        condition = eq(activityLogs.id, logId);
+      } else if (fileName) {
+        condition = sql`(${activityLogs.details}->>'fileName') = ${fileName}`;
+      } else if (latest) {
+        condition = or(
+          eq(activityLogs.action, "excel_export_transfers"),
+          eq(activityLogs.action, "excel_export_salary"),
+        );
+      } else {
+        throw new Error("Provide logId, fileName, or set latest: true");
+      }
+
+      const [row] = await db
+        .select()
+        .from(activityLogs)
+        .where(condition)
+        .orderBy(desc(activityLogs.createdAt))
+        .limit(1);
+
+      if (!row) {
+        return { error: "No matching Excel export log found" };
+      }
+
+      const details = row.details as any;
+      return {
+        id: row.id,
+        title: row.title,
+        action: row.action,
+        createdAt: row.createdAt,
+        metadata: {
+          fileName: details?.fileName,
+          sheetName: details?.sheetName,
+          totalAmount: details?.totalAmount,
+          currency: details?.currency || "BDT",
+          itemCount: details?.itemCount,
+          debitAccount: details?.debitAccount,
+          reason: details?.reason,
+        },
+        items: details?.items || [],
+      };
     },
   }),
 ];

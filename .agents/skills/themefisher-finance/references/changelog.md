@@ -4,6 +4,16 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Settings & Logs Reorganization & MCP Log Tools
+
+- Created unified `/settings` architecture with dedicated `SettingsSidebar` matching the design system of `SCBSidebar` and `InvoiceSidebar`.
+- Consolidated subroutes: `/settings/activity-logs` (app activity audit trail without stats cards), `/settings/mcp-setup` (AI agent MCP tokens & client configs), `/settings/mcp-logs` (agent execution telemetry), and `/settings/payment-accounts` (receiving bank accounts).
+- Removed legacy `/mcp/`, `/activity-logs/`, `/invoice-tools/settings/`, and `McpSidebar.tsx`.
+- Added `logs` scope to `MCP_SCOPES` and created two new native MCP tools (`finance_logs_list` and `finance_logs_get_excel_export`), enabling AI agents connected via Model Context Protocol to query application activity and examine past Excel exports.
+- Updated main dashboard Card 3 (`Settings & Logs`), top header, and navigation sidebars.
+
+---
+
 ### 2026-11-24 — Finance Constraints and Private Configuration
 
 - Added migrations for protected invoice references, unique debit defaults, and scoped MCP write reservations.

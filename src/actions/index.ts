@@ -6,4 +6,5 @@ export * from "./debit-accounts";
 export * from "./banks";
 export * from "./auth";
 export * from "./mcp";
+export * from "./activity-logs";
 

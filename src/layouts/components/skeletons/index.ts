@@ -5,4 +5,5 @@ export { default as SettingsSkeleton } from "./SettingsSkeleton";
 export { default as ScbToolsSkeleton } from "./ScbToolsSkeleton";
 export { default as DebitAccountsSkeleton } from "./DebitAccountsSkeleton";
 export { default as VendorsSkeleton } from "./VendorsSkeleton";
+export { default as ActivityLogsSkeleton } from "./ActivityLogsSkeleton";
 export * from "./TableRowsSkeleton";

@@ -88,3 +88,82 @@ export interface DebitAccount {
   created_at?: string;
 }
 
+// ==========================================
+// App Activity Log Types
+// ==========================================
+export type ActivityDomain =
+  | "scb_tools"
+  | "invoice_tools"
+  | "settings"
+  | "auth";
+
+export type ActivityAction =
+  | "excel_export_transfers"
+  | "excel_export_salary"
+  | "invoice_create"
+  | "invoice_update"
+  | "invoice_delete"
+  | "vendor_create"
+  | "vendor_update"
+  | "vendor_archive"
+  | "vendor_restore"
+  | "vendor_delete"
+  | "debit_account_create"
+  | "debit_account_update"
+  | "debit_account_delete"
+  | "client_create"
+  | "client_update"
+  | "client_delete"
+  | "payment_account_create"
+  | "payment_account_delete"
+  | "pdf_parsed"
+  | "login"
+  | "logout";
+
+export interface ActivityExcelItem {
+  beneficiaryName: string;
+  accountNumber: string;
+  bankName?: string;
+  branchName?: string;
+  routingNumber: string;
+  amount: string;
+  reason?: string;
+  isEmployee?: boolean;
+}
+
+export interface ActivityLogDetails {
+  fileName?: string;
+  sheetName?: string;
+  totalAmount?: number | string;
+  currency?: string;
+  itemCount?: number;
+  debitAccount?: string;
+  reason?: string;
+  items?: ActivityExcelItem[];
+  changes?: Record<string, { from: any; to: any }>;
+  extra?: Record<string, any>;
+}
+
+export interface ActivityLog {
+  id: string;
+  domain: ActivityDomain;
+  action: ActivityAction;
+  entityType?: string | null;
+  entityId?: string | null;
+  title: string;
+  details?: ActivityLogDetails | null;
+  status: "success" | "failed" | "warning";
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string | Date;
+}
+
+export interface ActivityLogStats {
+  totalActivities: number;
+  totalExcelExports: number;
+  totalPayoutAmount: number;
+  totalInvoices: number;
+  totalVendorChanges: number;
+}
+
+

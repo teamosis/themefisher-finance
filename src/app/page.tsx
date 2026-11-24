@@ -172,27 +172,28 @@ export default function Dashboard() {
               </Card>
             </Link>
 
-            {/* Tool 3: AI Agent MCP Integration */}
+            {/* Tool 3: Settings & Logs */}
             <Link
-              href="/mcp"
+              href="/settings"
               className="group block rounded-xl focus:outline-hidden cursor-pointer"
             >
               <Card className="border-border bg-card group-hover:border-foreground/30 transition-all duration-200 flex flex-col justify-between h-full shadow-xs group-hover:shadow-md">
                 <CardHeader className="p-6 pb-4">
                   <div className="size-11 rounded-xl bg-muted text-text-strong flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105">
-                    <Bot className="size-5 text-primary" />
+                    <Bot className="size-5" />
                   </div>
                   <CardTitle className="text-xl font-semibold text-text-strong group-hover:text-primary transition-colors">
-                    AI Agent MCP
+                    Settings &amp; Logs
                   </CardTitle>
                   <CardDescription className="text-muted-foreground text-sm mt-1.5 leading-relaxed">
-                    Dedicated Model Context Protocol endpoint for Cursor, Claude Desktop, Antigravity, and AI assistants with 25 native tools.
+                    Dedicated MCP endpoint for AI assistants, plus live audit
+                    trails for SCB Excel exports, invoices, and agent runs.
                   </CardDescription>
                 </CardHeader>
 
                 <CardFooter className="p-6 pt-2">
                   <div className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors group-hover:bg-primary/90">
-                    <span>Manage Access</span>
+                    <span>Open Settings</span>
                     <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
                   </div>
                 </CardFooter>

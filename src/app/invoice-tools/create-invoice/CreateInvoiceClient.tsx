@@ -298,9 +298,9 @@ export default function CreateInvoiceClient({
             className="gap-2 cursor-pointer"
           >
             {isUploadingPdf ? (
-              <Loader2 className="size-4 animate-spin text-text-muted" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <UploadCloud className="size-4 text-text-muted" />
+              <UploadCloud className="size-4" />
             )}
             <span>{isUploadingPdf ? "Parsing..." : "Autofill from PDF"}</span>
           </Button>

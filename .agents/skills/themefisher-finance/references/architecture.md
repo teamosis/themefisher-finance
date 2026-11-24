@@ -19,21 +19,17 @@ Themefisher Admin Tools (Finance Tools Suite) is a Next.js App Router applicatio
 │   │   └── banks.ts                      # Bank branch queries & SWIFT lookup
 │   ├── app/                              # Next.js App Router
 │   │   ├── layout.tsx                    # Root layout
-│   │   ├── page.tsx                      # Dashboard selector hub
 │   │   ├── globals.css                   # Global styles & @media print rules
-│   │   ├── invoice-tools/
-│   │   │   ├── layout.tsx                # Layout with InvoiceSidebar
-│   │   │   ├── page.tsx                  # Server component: document preview & print
-│   │   │   ├── InvoiceToolsClient.tsx    # Client component: Form-C & invoice viewer
-│   │   │   ├── clients/                  # Client directory CRUD (Server + Client)
-│   │   │   ├── create-invoice/           # Invoice generator & MT103 upload
-│   │   │   └── settings/                 # Payment receiving accounts manager
-│   │   └── scb-tools/
-│   │       ├── layout.tsx                # Layout with SCBSidebar
-│   │       ├── page.tsx                  # Server component: transfer editor & XLSX exporter
-│   │       ├── ScbToolsClient.tsx        # Client component: batch transfer table
-│   │       ├── vendors/                  # Vendor & employee directory (Server + Client)
-│   │       └── debit-accounts/           # SCB debit accounts manager
+│   │   ├── (dashboard)/                  # Persistent AppSidebar Layout Group
+│   │   │   ├── layout.tsx                # AppSidebar persistent shell
+│   │   │   ├── page.tsx                  # Server component: financial operations dashboard
+│   │   │   ├── DashboardClient.tsx       # Client component: metrics, link share, recent feeds
+│   │   │   ├── invoice-tools/            # Inward docs, Form-C, invoice creator, clients
+│   │   │   ├── scb-tools/                # Bulk transaction generator, payment requests, vendors
+│   │   │   └── settings/                 # Activity logs, MCP tokens, MCP logs, receiving accounts
+│   │   ├── login/                        # Protected access login page (standalone)
+│   │   ├── request-payment/              # Public beneficiary payment claim form (standalone)
+│   │   └── track-payment/                # Public claim tracking page (standalone)
 │   ├── components/                       # Modular UI Components
 │   │   ├── index.ts                      # Central barrel export
 │   │   ├── modals/                       # Standard modal dialogs
@@ -74,6 +70,7 @@ Themefisher Admin Tools (Finance Tools Suite) is a Next.js App Router applicatio
 ## 2. Server Actions Pattern
 
 All database mutations and queries run strictly server-side using Next.js Server Actions with Drizzle ORM:
+
 - **Location:** Defined in `src/actions/<domain>.ts` and re-exported via `src/actions/index.ts`.
 - **Usage in Components:** Imported directly via `@/actions` (e.g. `import { getClients, createClient } from "@/actions"`).
 - **Server Components:** `page.tsx` files fetch initial data using `await Promise.all([...])` and pass data down to `*Client.tsx` components to eliminate client-side loading waterfalls.
@@ -83,6 +80,7 @@ All database mutations and queries run strictly server-side using Next.js Server
 ## 3. Component Architecture
 
 Components are organized into strict functional subdirectories under `src/components/`:
+
 - **`modals/`**: Accessible, animated popups built on a unified base `Modal.tsx`.
 - **`forms/`**: Input components using `react-select/creatable` for fuzzy search and dynamic branch auto-complete.
 - **`layout/`**: Sidebars with sticky navigation and hub redirection.

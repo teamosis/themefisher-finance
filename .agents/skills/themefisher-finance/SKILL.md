@@ -51,14 +51,19 @@ The project follows standard Next.js App Router conventions with domain-separate
   - `layout/` — Sidebars (`InvoiceSidebar.tsx`, `SCBSidebar.tsx`)
   - `documents/` — Printable A4 templates (`BankInvoice.tsx`, `CForm.tsx`)
 - **App Routes (`src/app/`):**
-  - `/` — Central tools selector hub
-  - `/invoice-tools` — Document viewer, Form-C & Bank Invoice printer
-  - `/invoice-tools/create-invoice` — Invoice creator & MT103 remittance PDF parser
-  - `/invoice-tools/clients` — International client directory
-  - `/invoice-tools/settings` — Themefisher receiving bank accounts
-  - `/scb-tools` — Bulk transaction generator & XLSX exporter
-  - `/scb-tools/vendors` — Beneficiary & employee directory
-  - `/scb-tools/debit-accounts` — SCB funding sources
+  - `(dashboard)/` — Unified AppSidebar shell
+    - `/` — Financial operations dashboard with instant payment link sharing
+    - `/invoice-tools` — Document viewer, Form-C & Bank Invoice printer
+    - `/invoice-tools/create-invoice` — Invoice creator & MT103 remittance PDF parser
+    - `/invoice-tools/clients` — International client directory
+    - `/scb-tools` — Bulk transaction generator & XLSX exporter
+    - `/scb-tools/payment-requests` — Beneficiary claim review & 1-click approvals
+    - `/scb-tools/vendors` — Beneficiary & employee directory
+    - `/scb-tools/debit-accounts` — SCB funding sources
+    - `/settings/*` — Activity audit logs, MCP agent tokens & execution logs, receiving accounts
+  - `/request-payment` — Public beneficiary payment request submission form
+  - `/track-payment` — Public claim status tracking page
+  - `/login` — Protected site password authentication
 
 For the complete file tree and design patterns, see [architecture.md](./references/architecture.md).
 

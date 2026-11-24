@@ -1,9 +1,9 @@
-import { Suspense } from "react";
-import type { Metadata } from "next";
 import { LoginForm } from "@/components/forms/LoginForm";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
-import { Landmark } from "lucide-react";
 import config from "@/config/config.json";
+import type { Metadata } from "next";
+import Image from "next/image";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: `Access Protected | ${config.site.title}`,
@@ -16,8 +16,15 @@ export default function LoginPage() {
       {/* Top Bar with ThemeSwitcher */}
       <div className="max-w-6xl w-full mx-auto flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="size-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-xs">
-            <Landmark className="size-4" />
+          <div className="size-8 rounded-lg bg-muted/50 border border-border/80 flex items-center justify-center p-1 shadow-xs">
+            <Image
+              src="/logo.png"
+              alt={config.site.title}
+              width={24}
+              height={24}
+              className="size-full object-contain"
+              priority
+            />
           </div>
           <span className="text-sm font-bold text-text-strong">
             {config.site.title}
@@ -31,14 +38,22 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-sm">
             <div className="flex flex-col items-center text-center mb-6">
-              <div className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3">
-                <Landmark className="size-6" />
+              <div className="size-14 rounded-2xl bg-muted/50 border border-border/80 flex items-center justify-center p-2 mb-3 shadow-xs">
+                <Image
+                  src="/logo.png"
+                  alt={config.site.title}
+                  width={38}
+                  height={38}
+                  className="size-full object-contain"
+                  priority
+                />
               </div>
               <h1 className="text-xl sm:text-2xl font-bold text-text-strong tracking-tight">
                 Authentication Required
               </h1>
               <p className="text-xs sm:text-sm text-muted-foreground mt-1.5 max-w-xs">
-                This internal tool is protected. Please provide the site password to continue.
+                This internal tool is protected. Please provide the site
+                password to continue.
               </p>
             </div>
 
@@ -56,7 +71,8 @@ export default function LoginPage() {
           </div>
 
           <p className="text-center text-xs text-muted-foreground mt-6">
-            Themefisher Financial Operations Suite &copy; {new Date().getFullYear()}
+            Themefisher Financial Operations Suite &copy;{" "}
+            {new Date().getFullYear()}
           </p>
         </div>
       </main>

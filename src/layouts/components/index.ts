@@ -30,8 +30,8 @@ export { default as SearchableClientSelect } from "./forms/SearchableClientSelec
 export { default as SearchableVendorSelect } from "./forms/SearchableVendorSelect";
 
 // Layout & Navigation (Partials)
-export * from "../partials/InvoiceSidebar";
-export { default as SCBSidebar } from "../partials/SCBSidebar";
+export { default as AppSidebar } from "../partials/AppSidebar";
+export * from "../partials/AppSidebar";
 
 // Printable Documents
 export * from "./documents/BankInvoice";

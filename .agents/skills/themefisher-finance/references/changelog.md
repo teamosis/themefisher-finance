@@ -4,6 +4,20 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Unified Single-Sidebar Layout & Interactive Finance Dashboard
+
+- Replaced separate sub-tool sidebars (`InvoiceSidebar`, `SCBSidebar`, `SettingsSidebar`) and isolated header/footer with a single persistent, unified `AppSidebar` housed within a Next.js App Router route group `src/app/(dashboard)/layout.tsx`.
+- Removed legacy `Header.tsx` and `Footer.tsx` components across all authenticated tools.
+- Redesigned homepage into an operational finance dashboard (`DashboardClient.tsx`) with:
+  - Instant 1-click Public Payment Request Link copy & share widget with live URL display, clipboard copy toast, external form opener, and tracking link shortcuts.
+  - Live financial KPIs: total inward remittance USD volume, pending BDT payment claims, active beneficiaries/employees, and international clients.
+  - Quick workflow launchpad for MT103 invoice creation, Form-C generator, SCB bulk payouts, and activity logs.
+  - Live data tables for recent inward remittance invoices (with direct print links) and recent payment claims (with status badges and review shortcuts).
+  - Operational activity audit trail.
+- Maintained unauthenticated standalone layouts for `/login`, `/request-payment`, and `/track-payment`.
+
+---
+
 ### 2026-11-24 — Public Payment Request Form & Automated SCB Generation
 
 - Added public payment claim workflow enabling external beneficiaries/contractors to submit banking details and claim amounts via unauthenticated public route `/request-payment`.

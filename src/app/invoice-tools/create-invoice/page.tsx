@@ -15,6 +15,7 @@ export default async function Page() {
       initialClients={clients}
       initialAccounts={accounts}
       initialHistory={invoices}
+      pdfPassword={process.env.PDF_PASSWORD}
     />
   );
 }

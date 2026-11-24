@@ -21,7 +21,7 @@ A unified internal financial operations suite for [Themefisher](https://themefis
 | **Database** | NeonDB (Serverless PostgreSQL) | `@neondatabase/serverless` HTTP driver |
 | **ORM** | Drizzle ORM (`drizzle-orm`) | Schema in `src/db/schema.ts` |
 | **Document Export** | `react-to-print`, `xlsx` | A4 PDF printing and SCB Excel files |
-| **PDF Parser** | `pdfjs-dist` (Spatial coordinate parser) | Prompts for a password when required |
+| **PDF Parser** | `pdfjs-dist` (Spatial coordinate parser) | Password `PDF_PASSWORD` env (prompts if missing or incorrect) |
 
 ---
 
@@ -31,6 +31,9 @@ Store in `.env.local` (never commit):
 
 ```env
 DATABASE_URL=postgresql://user:password@ep-...neon.tech/neondb?sslmode=require
+AUTH_PASSWORD=change_this_to_your_secure_password
+AUTH_SECRET=optional_random_secret_for_signing
+PDF_PASSWORD=your_pdf_password_here
 ```
 
 Use authenticated debit account settings for SCB accounts.
@@ -92,7 +95,7 @@ For schema definition and column details, see [database.md](./references/databas
 
 1. **Invoice Numbering:** Auto-generated format `TF-YYYY-MM-DD-XX`. Must be unique in the database.
 2. **Form-C Declaration:** Bangladesh Bank inward remittance declaration. Date represents current submission date. Remitted amount reflects net remittance received.
-3. **Remittance PDF Parsing:** Fast deterministic spatial extraction (`src/lib/pdfParser.ts`) with a password prompt for protected files. Uses 3-pass fuzzy client name matching.
+3. **Remittance PDF Parsing:** Fast deterministic spatial extraction (`src/lib/pdfParser.ts`) with `PDF_PASSWORD` env support and password prompt fallback for protected files. Uses 3-pass fuzzy client name matching.
 4. **SCB Straight2Bank Bulk Excel:** Exported `.xlsx` files conform strictly to SCB specifications.
 5. **Bank Branch Routing:** 11,426 branches across 63 banks. Selecting a bank dynamically filters branches and auto-populates the 9-digit routing number.
 6. **Salary Sheets:** Filters vendors where `is_employee: true`. Allows salary adjustments, additional bonus/allowance rows, and real-time total payroll calculations.

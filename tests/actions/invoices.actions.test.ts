@@ -2,6 +2,7 @@ import {
   createInvoice,
   deleteInvoice,
   getInvoices,
+  getPdfPassword,
   updateInvoice,
 } from "@/actions/invoices";
 import { db } from "@/db";
@@ -153,6 +154,23 @@ describe("Invoices Server Actions Suite", () => {
 
       expect(db.delete).toHaveBeenCalled();
       expect(whereMock).toHaveBeenCalled();
+    });
+  });
+
+  describe("getPdfPassword", () => {
+    it("returns configured PDF_PASSWORD when session exists", async () => {
+      const prev = process.env.PDF_PASSWORD;
+      try {
+        process.env.PDF_PASSWORD = "secret_pdf_pass_123";
+        await expect(getPdfPassword()).resolves.toBe("secret_pdf_pass_123");
+      } finally {
+        process.env.PDF_PASSWORD = prev;
+      }
+    });
+
+    it("rejects without browser session", async () => {
+      cookieStore.clear();
+      await expect(getPdfPassword()).rejects.toThrow("Authentication required");
     });
   });
 });

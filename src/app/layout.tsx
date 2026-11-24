@@ -24,10 +24,13 @@ export const metadata: Metadata = {
   metadataBase: new URL(config.site.base_url),
   title: config.site.title,
   description: config.metadata.meta_description,
-  icons: [
-    { rel: "icon", url: "/favicon.svg", type: "image/svg+xml" },
-    { rel: "shortcut icon", url: "/favicon.ico" },
-  ],
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
   openGraph: {
     images: ["/og-image.png"],
   },

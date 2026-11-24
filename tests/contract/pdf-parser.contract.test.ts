@@ -28,6 +28,122 @@ describe("MT103 Remittance Advice PDF Parser Logic Suite", () => {
     expect(result.invoice_number).toBe("TF-2026-08-15-01");
     expect(destroy).toHaveBeenCalledOnce();
   });
+
+  it("passes configured password parameter to getDocument", async () => {
+    const destroy = vi.fn();
+    getDocument.mockReturnValueOnce({
+      destroy,
+      promise: Promise.resolve({
+        numPages: 1,
+        getPage: async () => ({
+          getTextContent: async () => ({
+            items: [],
+          }),
+        }),
+      }),
+    });
+    await parseMT103(new File(["test"], "advice.pdf"), "custom_param_pw");
+    expect(getDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ password: "custom_param_pw" }),
+    );
+  });
+
+  it("falls back to process.env.PDF_PASSWORD when password parameter is omitted", async () => {
+    const prev = process.env.PDF_PASSWORD;
+    process.env.PDF_PASSWORD = "env_pdf_password_123";
+    const destroy = vi.fn();
+    getDocument.mockReturnValueOnce({
+      destroy,
+      promise: Promise.resolve({
+        numPages: 1,
+        getPage: async () => ({
+          getTextContent: async () => ({
+            items: [],
+          }),
+        }),
+      }),
+    });
+    try {
+      await parseMT103(new File(["test"], "advice.pdf"));
+      expect(getDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ password: "env_pdf_password_123" }),
+      );
+    } finally {
+      process.env.PDF_PASSWORD = prev;
+    }
+  });
+
+  it("supplies configured password on onPassword callback when reason is NEED_PASSWORD", async () => {
+    let capturedOnPassword: any;
+    const destroy = vi.fn();
+    getDocument.mockImplementationOnce(() => {
+      const task: any = {
+        destroy,
+        promise: Promise.resolve({
+          numPages: 1,
+          getPage: async () => ({
+            getTextContent: async () => ({
+              items: [],
+            }),
+          }),
+        }),
+      };
+      Object.defineProperty(task, "onPassword", {
+        set: (fn) => {
+          capturedOnPassword = fn;
+        },
+      });
+      return task;
+    });
+
+    await parseMT103(new File(["test"], "advice.pdf"), "callback_pw");
+    expect(capturedOnPassword).toBeDefined();
+
+    const updatePassword = vi.fn();
+    capturedOnPassword(updatePassword, 1);
+    expect(updatePassword).toHaveBeenCalledWith("callback_pw");
+  });
+
+  it("prompts user when reason is INCORRECT_PASSWORD", async () => {
+    let capturedOnPassword: any;
+    const destroy = vi.fn();
+    getDocument.mockImplementationOnce(() => {
+      const task: any = {
+        destroy,
+        promise: Promise.resolve({
+          numPages: 1,
+          getPage: async () => ({
+            getTextContent: async () => ({
+              items: [],
+            }),
+          }),
+        }),
+      };
+      Object.defineProperty(task, "onPassword", {
+        set: (fn) => {
+          capturedOnPassword = fn;
+        },
+      });
+      return task;
+    });
+
+    const mockPrompt = vi.fn().mockReturnValue("user_entered_password");
+    const originalWindow = (globalThis as any).window;
+    (globalThis as any).window = { prompt: mockPrompt };
+    try {
+      await parseMT103(new File(["test"], "advice.pdf"), "initial_wrong_pw");
+      expect(capturedOnPassword).toBeDefined();
+
+      const updatePassword = vi.fn();
+      capturedOnPassword(updatePassword, 2);
+      expect(mockPrompt).toHaveBeenCalledWith(
+        "Incorrect password. Enter the PDF password again.",
+      );
+      expect(updatePassword).toHaveBeenCalledWith("user_entered_password");
+    } finally {
+      (globalThis as any).window = originalWindow;
+    }
+  });
   describe("Spatial Coordinate Sorting", () => {
     it("sorts text tokens primarily by Y descending (top-to-bottom), then X ascending (left-to-right) with 5px tolerance", () => {
       const items = [

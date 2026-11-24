@@ -118,3 +118,8 @@ export async function deleteInvoice(id: string) {
   await requireBrowserSession();
   await db.delete(invoices).where(eq(invoices.id, id));
 }
+
+export async function getPdfPassword(): Promise<string | undefined> {
+  await requireBrowserSession();
+  return process.env.PDF_PASSWORD;
+}

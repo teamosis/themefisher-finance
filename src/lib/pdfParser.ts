@@ -18,7 +18,7 @@ export function getInvoiceDateFromValueDate(
   return date.toISOString().slice(0, 10);
 }
 
-export async function parseMT103(file: File) {
+export async function parseMT103(file: File, password?: string) {
   if (file.size > 10 * 1024 * 1024) {
     throw new Error("The PDF exceeds the 10 MB upload limit.");
   }
@@ -32,17 +32,38 @@ export async function parseMT103(file: File) {
   const arrayBuffer = await file.arrayBuffer();
   const data = new Uint8Array(arrayBuffer);
 
-  const loadingTask = getDocument({ data });
+  const envPassword =
+    typeof process !== "undefined"
+      ? process.env.PDF_PASSWORD || process.env.NEXT_PUBLIC_PDF_PASSWORD
+      : undefined;
+  const configuredPassword = password ?? envPassword;
+
+  const loadingTask = getDocument({
+    data,
+    ...(configuredPassword ? { password: configuredPassword } : {}),
+  });
+
+  let triedConfiguredPassword = false;
   loadingTask.onPassword = (
     updatePassword: (password: string | Error) => void,
     reason: number,
   ) => {
-    const password = window.prompt(
+    if (reason === 1 && configuredPassword && !triedConfiguredPassword) {
+      triedConfiguredPassword = true;
+      updatePassword(configuredPassword);
+      return;
+    }
+    const message =
       reason === 2
         ? "Incorrect password. Enter the PDF password again."
-        : "Enter the PDF password.",
+        : "Enter the PDF password.";
+    const userEntered =
+      typeof window !== "undefined" && window.prompt
+        ? window.prompt(message)
+        : null;
+    updatePassword(
+      userEntered || new Error("PDF password entry was cancelled."),
     );
-    updatePassword(password || new Error("PDF password entry was cancelled."));
   };
 
   const allItems: { str: string; x: number; y: number }[] = [];

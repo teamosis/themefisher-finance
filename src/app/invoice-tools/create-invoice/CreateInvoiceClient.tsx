@@ -4,6 +4,7 @@ import {
   createInvoice,
   deleteInvoice as deleteInvoiceAction,
   getInvoiceHistory,
+  getPdfPassword,
 } from "@/actions";
 import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
 import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
@@ -31,10 +32,12 @@ export default function CreateInvoiceClient({
   initialClients,
   initialAccounts,
   initialHistory,
+  pdfPassword,
 }: {
   initialClients: Client[];
   initialAccounts: PaymentAccount[];
   initialHistory: Awaited<ReturnType<typeof getInvoiceHistory>>;
+  pdfPassword?: string;
 }) {
   const [clients] = useState<Client[]>(initialClients);
   const [accounts] = useState<PaymentAccount[]>(initialAccounts);
@@ -89,7 +92,15 @@ export default function CreateInvoiceClient({
 
     setIsUploadingPdf(true);
     try {
-      const parsedData = await parseMT103(file);
+      let resolvedPassword = pdfPassword;
+      if (!resolvedPassword) {
+        try {
+          resolvedPassword = await getPdfPassword();
+        } catch {
+          // Ignore session or network error
+        }
+      }
+      const parsedData = await parseMT103(file, resolvedPassword);
       if (!parsedData.full_text) {
         showAlert("Could not extract any text from the PDF.");
         return;

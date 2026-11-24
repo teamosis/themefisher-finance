@@ -27,7 +27,7 @@ This document outlines the domain rules and procedures implemented across the ap
 ### MT103 Remittance PDF Spatial Parsing (`src/lib/pdfParser.ts`)
 
 - Users can upload password-protected bank remittance advice PDFs.
-- **Password:** The operator enters it for protected PDFs.
+- **Password:** Uses the `PDF_PASSWORD` environment variable by default, with an interactive prompt fallback if missing or incorrect.
 - **Parsing Engine:** Deterministic spatial coordinate extraction using `pdfjs-dist`:
   - Locates "Ordering Customer" and "Details" columns using X/Y coordinates.
   - Resolves client names, amounts, value dates, and BIC/SWIFT codes without external LLM latency.

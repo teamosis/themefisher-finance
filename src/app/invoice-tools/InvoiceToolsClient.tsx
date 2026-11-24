@@ -1,5 +1,5 @@
 "use client";
-import { getClients, lookupSwiftCode } from "@/actions";
+import { getClients, getPdfPassword, lookupSwiftCode } from "@/actions";
 import { BankInvoice } from "@/components/documents/BankInvoice";
 import { CForm } from "@/components/documents/CForm";
 import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
@@ -31,10 +31,12 @@ export default function InvoiceToolsClient({
   initialClients,
   initialInvoices,
   initialPaymentAccounts,
+  pdfPassword,
 }: {
   initialClients: Client[];
   initialInvoices: Invoice[];
   initialPaymentAccounts: PaymentAccount[];
+  pdfPassword?: string;
 }) {
   const searchParams = useSearchParams();
   const queryInvoiceId = searchParams.get("invoiceId");
@@ -76,7 +78,15 @@ export default function InvoiceToolsClient({
 
     setIsUploadingPdf(true);
     try {
-      const parsedData = await parseMT103(file);
+      let resolvedPassword = pdfPassword;
+      if (!resolvedPassword) {
+        try {
+          resolvedPassword = await getPdfPassword();
+        } catch {
+          // Ignore session or network error
+        }
+      }
+      const parsedData = await parseMT103(file, resolvedPassword);
       if (!parsedData.full_text) {
         triggerError("Could not extract any text from the PDF.");
         return;

@@ -2,7 +2,7 @@
 
 /* font size and radius */
 :root {
-  --font-base: 16;
+  --font-base: 18;
   --font-scale: 1.125;
   --radius: 0.375rem;
 }

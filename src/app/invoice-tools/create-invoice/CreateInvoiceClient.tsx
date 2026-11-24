@@ -334,7 +334,7 @@ export default function CreateInvoiceClient({
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             <div className="relative z-20 flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Client *
               </label>
               <SearchableClientSelect
@@ -349,7 +349,7 @@ export default function CreateInvoiceClient({
             </div>
 
             <div className="relative z-10 flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Invoice Number *
               </label>
               <input
@@ -360,7 +360,7 @@ export default function CreateInvoiceClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Invoice Date *
               </label>
               <input
@@ -371,7 +371,7 @@ export default function CreateInvoiceClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Currency *
               </label>
               <select
@@ -390,7 +390,7 @@ export default function CreateInvoiceClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Invoice Amount *
               </label>
               <input
@@ -405,7 +405,7 @@ export default function CreateInvoiceClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Remitted / Received Amount
               </label>
               <input
@@ -420,7 +420,7 @@ export default function CreateInvoiceClient({
             </div>
 
             <div className="col-span-1 md:col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Description (Service Details) *
               </label>
               <input
@@ -433,7 +433,7 @@ export default function CreateInvoiceClient({
 
             {/* Payment Bank Account Selector */}
             <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Payment Bank Account(s) *
               </label>
               <div className="flex flex-col gap-2.5">
@@ -458,7 +458,7 @@ export default function CreateInvoiceClient({
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-text-strong">
+                          <span className="text-sm font-normal text-text-strong">
                             {a.bank_name || a.account_name}
                           </span>
                           {a.bic_swift && (
@@ -496,7 +496,7 @@ export default function CreateInvoiceClient({
           <Button
             type="submit"
             disabled={submitting}
-            className="w-full cursor-pointer h-11 text-sm font-semibold"
+            className="w-full cursor-pointer h-11 text-sm font-normal"
           >
             {submitting ? "Generating Invoice..." : "Generate Invoice"}
           </Button>
@@ -507,7 +507,9 @@ export default function CreateInvoiceClient({
       <div className="bg-card rounded-2xl shadow-xs border border-border overflow-hidden flex flex-col">
         <div className="p-4 sm:p-5 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-3 bg-muted/20">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-text-strong">Invoices</h2>
+            <h2 className="text-base sm:text-lg font-bold text-text-strong">
+              Invoices
+            </h2>
             <span className="text-xs text-text-muted">
               ({tableInvoices.length})
             </span>
@@ -572,20 +574,20 @@ export default function CreateInvoiceClient({
                     className="hover:bg-muted/30 transition-colors"
                   >
                     <td className="py-3 px-4">
-                      <span className="font-mono font-bold text-text-strong text-xs sm:text-sm">
+                      <span className="font-mono font-normal text-text-strong text-xs sm:text-sm">
                         {inv.invoice_number}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-text-muted whitespace-nowrap text-xs">
                       {inv.invoice_date}
                     </td>
-                    <td className="py-3 px-4 font-medium text-text-strong max-w-45 truncate text-xs sm:text-sm">
+                    <td className="py-3 px-4 font-normal text-text-strong max-w-45 truncate text-xs sm:text-sm">
                       {client?.name || "—"}
                     </td>
                     <td className="py-3 px-4 text-text-muted max-w-50 truncate text-xs">
                       {inv.description}
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold text-text-strong whitespace-nowrap text-xs sm:text-sm font-mono">
+                    <td className="py-3 px-4 text-right font-normal text-text-strong whitespace-nowrap text-xs sm:text-sm font-mono">
                       {inv.currency || "USD"} {Number(inv.amount).toFixed(2)}
                     </td>
                     <td className="py-3 px-4 text-right text-text-muted whitespace-nowrap text-xs sm:text-sm font-mono">
@@ -648,15 +650,15 @@ export default function CreateInvoiceClient({
           <div className="p-3.5 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-muted bg-muted/20">
             <div>
               Showing{" "}
-              <span className="font-semibold text-text-strong">
+              <span className="font-normal text-text-strong">
                 {(currentPage - 1) * pageSize + 1}
               </span>{" "}
               to{" "}
-              <span className="font-semibold text-text-strong">
+              <span className="font-normal text-text-strong">
                 {Math.min(currentPage * pageSize, tableInvoices.length)}
               </span>{" "}
               of{" "}
-              <span className="font-semibold text-text-strong">
+              <span className="font-normal text-text-strong">
                 {tableInvoices.length}
               </span>{" "}
               invoices

@@ -144,7 +144,7 @@ function EditInvoiceForm({
       >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="relative z-20 flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Client *
             </label>
             <SearchableClientSelect
@@ -156,7 +156,7 @@ function EditInvoiceForm({
           </div>
 
           <div className="relative z-10 flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Invoice Number *
             </label>
             <input
@@ -169,7 +169,7 @@ function EditInvoiceForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Invoice Date *
             </label>
             <input
@@ -182,7 +182,7 @@ function EditInvoiceForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Currency *
             </label>
             <select
@@ -201,7 +201,7 @@ function EditInvoiceForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Amount *
             </label>
             <input
@@ -215,7 +215,7 @@ function EditInvoiceForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Received Amount
             </label>
             <input
@@ -228,7 +228,7 @@ function EditInvoiceForm({
           </div>
 
           <div className="sm:col-span-2 flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Description *
             </label>
             <input
@@ -242,7 +242,7 @@ function EditInvoiceForm({
         </div>
 
         <div className="flex flex-col gap-2 pt-2">
-          <label className="text-xs sm:text-sm font-semibold text-text-strong">
+          <label className="text-sm font-normal text-text-strong">
             Payment Bank Account(s)
           </label>
           <div className="flex flex-col gap-2">
@@ -263,8 +263,8 @@ function EditInvoiceForm({
                     onChange={() => toggleAccount(a.id)}
                     className="size-4 text-primary rounded border-input"
                   />
-                  <div className="text-xs">
-                    <span className="font-semibold text-text-strong">
+                  <div className="text-xs sm:text-sm">
+                    <span className="font-normal text-text-strong">
                       {a.bank_name || a.account_name}
                     </span>
                     {a.account_number && (

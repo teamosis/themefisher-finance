@@ -321,9 +321,9 @@ export default function InvoiceToolsClient({
           <div className="p-6 flex flex-col gap-5">
             <p className="text-sm text-muted-foreground leading-relaxed">
               Existing invoice{" "}
-              <strong className="text-text-strong font-semibold">
+              <span className="text-text-strong font-normal">
                 {matchPopupData.invoiceNum}
-              </strong>{" "}
+              </span>{" "}
               has been selected automatically from your database.
             </p>
             <div className="flex justify-end">
@@ -379,7 +379,7 @@ export default function InvoiceToolsClient({
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploadingPdf}
-            className="gap-2 text-xs sm:text-sm font-semibold rounded-xl"
+            className="gap-2 text-xs sm:text-sm font-normal rounded-xl"
           >
             {isUploadingPdf ? (
               <Loader2 className="size-4 animate-spin text-muted-foreground" />
@@ -390,7 +390,7 @@ export default function InvoiceToolsClient({
           </Button>
           <Button
             asChild
-            className="gap-1.5 text-xs sm:text-sm font-semibold rounded-xl"
+            className="gap-1.5 text-xs sm:text-sm font-normal rounded-xl"
           >
             <Link href="/invoice-tools/create-invoice">
               <span>Create New Invoice</span>
@@ -403,7 +403,7 @@ export default function InvoiceToolsClient({
       <Card className="border-border bg-card shadow-xs">
         <CardContent className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div className="relative z-20 flex flex-col gap-1.5">
-            <label className="block text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="block text-sm font-normal text-text-strong">
               Select Client
             </label>
             <SearchableClientSelect
@@ -417,7 +417,7 @@ export default function InvoiceToolsClient({
             />
           </div>
           <div className="relative z-10 flex flex-col gap-1.5">
-            <label className="block text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="block text-sm font-normal text-text-strong">
               Select Invoice
             </label>
             <select
@@ -446,7 +446,7 @@ export default function InvoiceToolsClient({
               <button
                 type="button"
                 onClick={() => setActiveTab("all")}
-                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "all"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-light text-muted-foreground hover:text-text-strong hover:bg-light/80"
@@ -457,7 +457,7 @@ export default function InvoiceToolsClient({
               <button
                 type="button"
                 onClick={() => setActiveTab("invoice")}
-                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "invoice"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-light text-muted-foreground hover:text-text-strong hover:bg-light/80"
@@ -468,7 +468,7 @@ export default function InvoiceToolsClient({
               <button
                 type="button"
                 onClick={() => setActiveTab("cform")}
-                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                className={`px-3.5 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   activeTab === "cform"
                     ? "bg-primary text-primary-foreground shadow-xs"
                     : "bg-light text-muted-foreground hover:text-text-strong hover:bg-light/80"
@@ -483,7 +483,7 @@ export default function InvoiceToolsClient({
                 <Button
                   type="button"
                   onClick={() => handlePrintBankInvoice()}
-                  className="flex-1 sm:flex-none justify-center gap-2 rounded-xl text-xs sm:text-sm font-semibold"
+                  className="flex-1 sm:flex-none justify-center gap-2 rounded-xl text-xs sm:text-sm font-normal"
                 >
                   <Printer className="size-4" />
                   <span>Print Invoice</span>
@@ -494,7 +494,7 @@ export default function InvoiceToolsClient({
                   type="button"
                   variant="outline"
                   onClick={() => handlePrintCForm()}
-                  className="flex-1 sm:flex-none justify-center gap-2 rounded-xl text-xs sm:text-sm font-semibold border-border hover:bg-light"
+                  className="flex-1 sm:flex-none justify-center gap-2 rounded-xl text-xs sm:text-sm font-normal border-border hover:bg-light"
                 >
                   <FileText className="size-4" />
                   <span>Print Form-C</span>
@@ -515,13 +515,13 @@ export default function InvoiceToolsClient({
                   type="button"
                   size="sm"
                   onClick={() => handlePrintBankInvoice()}
-                  className="gap-1.5 rounded-xl font-semibold"
+                  className="gap-1.5 rounded-xl font-normal"
                 >
                   <Printer className="size-3.5" />
                   <span>Print / Save PDF</span>
                 </Button>
               </div>
-              <p className="sm:hidden text-center text-[11px] text-muted-foreground mb-2">
+              <p className="sm:hidden text-center text-xs text-muted-foreground mb-2">
                 ← Swipe horizontally to view full page →
               </p>
               <div className="overflow-x-auto flex justify-start sm:justify-center py-2 sm:py-4">
@@ -550,13 +550,13 @@ export default function InvoiceToolsClient({
                   size="sm"
                   variant="outline"
                   onClick={() => handlePrintCForm()}
-                  className="gap-1.5 rounded-xl font-semibold border-border hover:bg-light"
+                  className="gap-1.5 rounded-xl font-normal border-border hover:bg-light"
                 >
                   <Printer className="size-3.5" />
                   <span>Print / Save PDF</span>
                 </Button>
               </div>
-              <p className="sm:hidden text-center text-[11px] text-muted-foreground mb-2">
+              <p className="sm:hidden text-center text-xs text-muted-foreground mb-2">
                 ← Swipe horizontally to view full page →
               </p>
               <div className="overflow-x-auto flex justify-start sm:justify-center py-2 sm:py-4">

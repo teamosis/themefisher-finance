@@ -174,7 +174,7 @@ export default function SettingsClient({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             {/* Bank Name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Bank Name *
               </label>
               <input
@@ -194,7 +194,7 @@ export default function SettingsClient({
 
             {/* Name on Account */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Name on Account *
               </label>
               <input
@@ -214,7 +214,7 @@ export default function SettingsClient({
 
             {/* IBAN / Account Number */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 IBAN / Account Number *
               </label>
               <input
@@ -234,7 +234,7 @@ export default function SettingsClient({
 
             {/* BIC / SWIFT */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 BIC / SWIFT
               </label>
               <input
@@ -247,7 +247,7 @@ export default function SettingsClient({
 
             {/* Bank Address */}
             <div className="md:col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Bank Address
               </label>
               <textarea
@@ -325,32 +325,32 @@ export default function SettingsClient({
                 >
                   <div className="flex flex-col gap-2 flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-text-strong text-sm sm:text-base">
+                      <span className="font-normal text-text-strong text-base">
                         {acc.bank_name || acc.account_name || "Unnamed Bank"}
                       </span>
                       {acc.bic_swift && (
-                        <span className="text-xs font-mono text-text-muted">
+                        <span className="text-xs sm:text-sm font-mono text-text-muted">
                           SWIFT: {acc.bic_swift}
                         </span>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
                       {acc.name_on_account && (
                         <div className="flex items-center gap-1.5 text-text-muted">
-                          <User className="size-3.5 text-text-muted shrink-0" />
+                          <User className="size-4 text-text-muted shrink-0" />
                           <span>
                             Name:{" "}
-                            <strong className="text-text-strong font-medium">
+                            <span className="text-text-strong font-normal">
                               {acc.name_on_account}
-                            </strong>
+                            </span>
                           </span>
                         </div>
                       )}
 
                       {acc.account_number && (
                         <div className="flex items-center gap-1.5 text-text-muted">
-                          <CreditCard className="size-3.5 text-text-muted shrink-0" />
+                          <CreditCard className="size-4 text-text-muted shrink-0" />
                           <span>
                             A/C:{" "}
                             <span className="font-mono text-text-strong">
@@ -362,7 +362,7 @@ export default function SettingsClient({
 
                       {acc.bank_address && (
                         <div className="flex items-start gap-1.5 text-text-muted sm:col-span-2 mt-0.5">
-                          <MapPin className="size-3.5 text-text-muted shrink-0 mt-0.5" />
+                          <MapPin className="size-4 text-text-muted shrink-0 mt-0.5" />
                           <span>{acc.bank_address}</span>
                         </div>
                       )}

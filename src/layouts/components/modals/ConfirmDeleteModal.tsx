@@ -47,7 +47,7 @@ export function ConfirmDeleteModal({
           <div>
             <Badge
               variant="destructive"
-              className="py-1 px-3 text-xs font-semibold"
+              className="py-1 px-3 text-xs sm:text-sm font-normal cursor-pointer"
             >
               {itemName}
             </Badge>

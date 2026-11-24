@@ -47,7 +47,7 @@ export function LoginForm() {
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="site-password"
-          className="text-xs font-semibold text-text-strong"
+          className="text-sm font-normal text-text-strong"
         >
           Password
         </label>

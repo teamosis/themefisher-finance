@@ -63,7 +63,7 @@ export function InvoiceSidebar() {
         <Link
           href="/"
           onClick={() => setMobileOpen(false)}
-          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-text-strong hover:bg-light transition-all duration-150 group cursor-pointer mb-1"
+          className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-normal text-muted-foreground hover:text-text-strong hover:bg-light transition-all duration-150 group cursor-pointer mb-1"
         >
           <ArrowLeft className="size-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
           <span>Back to Dashboard</span>
@@ -81,7 +81,7 @@ export function InvoiceSidebar() {
               key={link.name}
               href={link.href}
               onClick={() => setMobileOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-normal transition-all duration-150 cursor-pointer ${
                 isActive
                   ? "bg-primary text-primary-foreground shadow-xs"
                   : "text-muted-foreground hover:text-text-strong hover:bg-light"

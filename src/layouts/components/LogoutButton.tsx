@@ -1,9 +1,9 @@
 "use client";
 
-import { useTransition } from "react";
-import { LogOut, Loader2 } from "lucide-react";
 import { logoutAction } from "@/actions";
 import { cn } from "@/lib/utils/shadcn";
+import { Loader2, LogOut } from "lucide-react";
+import { useTransition } from "react";
 
 interface LogoutButtonProps {
   showLabel?: boolean;
@@ -31,8 +31,8 @@ export default function LogoutButton({
         onClick={handleLogout}
         disabled={isPending}
         className={cn(
-          "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 cursor-pointer disabled:opacity-50 w-full text-left",
-          className
+          "flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-normal text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-150 cursor-pointer disabled:opacity-50 w-full text-left",
+          className,
         )}
       >
         {isPending ? (
@@ -52,7 +52,7 @@ export default function LogoutButton({
       disabled={isPending}
       className={cn(
         "inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-medium text-muted-foreground hover:text-destructive hover:border-destructive/30 hover:bg-destructive/10 transition-colors cursor-pointer disabled:opacity-50",
-        className
+        className,
       )}
       title="Log out"
       aria-label="Log out"

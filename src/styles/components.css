@@ -55,7 +55,7 @@
   margin-bottom: 0.25em;
 }
 .prose strong {
-  font-weight: 600;
+  font-weight: normal;
   color: var(--text-strong-color);
 }
 

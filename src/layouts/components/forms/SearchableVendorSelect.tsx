@@ -242,18 +242,18 @@ export default function SearchableVendorSelect({
                     onMouseEnter={() => setHighlightedIndex(index)}
                     className={`px-3 py-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between text-left ${
                       isSelected
-                        ? "bg-primary/10 text-primary font-semibold"
+                        ? "bg-primary/10 text-primary font-medium"
                         : isHighlighted
                           ? "bg-muted text-text-strong"
                           : "text-text-default hover:bg-muted/50"
                     }`}
                   >
                     <div className="min-w-0 flex-1 pr-2">
-                      <div className="text-sm font-medium truncate">
+                      <div className="text-sm font-normal truncate">
                         {v.receiver_name}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5 truncate">
-                        <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-[10px] text-text-strong">
+                        <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs text-text-strong">
                           {v.account_number}
                         </span>
                         <span>{v.bank_name}</span>

@@ -1,3 +1,4 @@
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 import {
   Card,
   CardDescription,
@@ -5,20 +6,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import config from "@/config/config.json";
+import { isAuthConfigured } from "@/lib/auth";
 import Footer from "@/partials/Footer";
 import Header from "@/partials/Header";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
 import {
+  AlertTriangle,
   ArrowRight,
   FileSpreadsheet,
   FileText,
-  ShieldAlert,
   KeyRound,
-  AlertTriangle,
+  ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
-import config from "@/config/config.json";
-import { isAuthConfigured } from "@/lib/auth";
 
 export default function Dashboard() {
   const configured = isAuthConfigured();
@@ -48,7 +48,7 @@ export default function Dashboard() {
                 <div className="size-14 rounded-2xl bg-destructive/10 text-destructive flex items-center justify-center mx-auto mb-4">
                   <KeyRound className="size-7" />
                 </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-destructive/15 text-destructive text-xs font-semibold mx-auto mb-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-destructive/15 text-destructive text-xs font-medium mx-auto mb-2">
                   <AlertTriangle className="size-3.5" />
                   <span>Setup Required</span>
                 </div>
@@ -56,18 +56,35 @@ export default function Dashboard() {
                   Environment Variables Missing
                 </CardTitle>
                 <CardDescription className="text-muted-foreground text-sm mt-2 leading-relaxed">
-                  To protect this application, <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted text-text-strong font-semibold">AUTH_PASSWORD</code> and <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted text-text-strong font-semibold">AUTH_SECRET</code> must be set on the environment. Without these variables configured, this site cannot be accessed.
+                  To protect this application,{" "}
+                  <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted text-text-strong">
+                    AUTH_PASSWORD
+                  </code>{" "}
+                  and{" "}
+                  <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted text-text-strong">
+                    AUTH_SECRET
+                  </code>{" "}
+                  must be set on the environment. Without these variables
+                  configured, this site cannot be accessed.
                 </CardDescription>
               </CardHeader>
 
               <CardFooter className="p-6 sm:p-8 pt-2 flex flex-col gap-4">
                 <div className="w-full bg-muted/60 border border-border rounded-xl p-4 text-left font-mono text-xs text-text-default overflow-x-auto">
-                  <p className="text-muted-foreground mb-2"># Add these to your .env.local file:</p>
-                  <p className="text-text-strong">AUTH_PASSWORD=your_secure_password</p>
-                  <p className="text-text-strong">AUTH_SECRET=a_random_32_character_secret</p>
+                  <p className="text-muted-foreground mb-2">
+                    # Add these to your .env.local file:
+                  </p>
+                  <p className="text-text-strong">
+                    AUTH_PASSWORD=your_secure_password
+                  </p>
+                  <p className="text-text-strong">
+                    AUTH_SECRET=a_random_32_character_secret
+                  </p>
                 </div>
                 <p className="text-xs text-muted-foreground text-center">
-                  After setting the environment variables in <span className="font-semibold text-text-default">.env.local</span>, restart the Next.js server to unlock access.
+                  After setting the environment variables in{" "}
+                  <span className="text-text-default">.env.local</span>, restart
+                  the Next.js server to unlock access.
                 </p>
               </CardFooter>
             </Card>

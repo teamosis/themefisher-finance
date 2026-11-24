@@ -250,7 +250,7 @@ export default function DebitAccountsClient({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Debit Account Number *
               </label>
               <input
@@ -266,7 +266,7 @@ export default function DebitAccountsClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Account Label / Alias *
               </label>
               <input
@@ -282,7 +282,7 @@ export default function DebitAccountsClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Bank Name
               </label>
               <input
@@ -368,7 +368,7 @@ export default function DebitAccountsClient({
         ) : filteredAccounts.length === 0 ? (
           <div className="p-12 text-center text-text-muted flex flex-col items-center gap-1">
             <CreditCard className="size-8 opacity-40 mb-1" />
-            <p className="font-semibold text-text-strong text-sm">
+            <p className="font-medium text-text-strong text-sm">
               No debit accounts found
             </p>
             <p className="text-xs text-text-muted">
@@ -395,7 +395,7 @@ export default function DebitAccountsClient({
                     key={acc.id}
                     className="hover:bg-muted/30 transition-colors"
                   >
-                    <td className="py-3 px-4 font-semibold text-text-strong">
+                    <td className="py-3 px-4 font-normal text-text-strong">
                       {acc.account_label}
                     </td>
                     <td className="py-3 px-4 font-mono text-text-muted text-xs">
@@ -406,7 +406,7 @@ export default function DebitAccountsClient({
                     </td>
                     <td className="py-3 px-4 text-center">
                       {acc.is_default ? (
-                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-success">
                           <Star className="size-3 fill-current" />
                           Default
                         </span>
@@ -463,7 +463,7 @@ export default function DebitAccountsClient({
         >
           <form onSubmit={handleSaveEdit} className="p-5 flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Debit Account Number *
               </label>
               <input
@@ -481,7 +481,7 @@ export default function DebitAccountsClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Account Label *
               </label>
               <input
@@ -499,7 +499,7 @@ export default function DebitAccountsClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+              <label className="text-sm font-normal text-text-strong">
                 Bank Name
               </label>
               <input

@@ -566,7 +566,7 @@ export default function ScbToolsClient({
         <div>
           <label
             htmlFor="debit-account"
-            className="block text-sm font-semibold text-text-strong"
+            className="block text-sm font-normal text-text-strong"
           >
             SCB Debit Account Number *
           </label>
@@ -612,7 +612,7 @@ export default function ScbToolsClient({
             >
               {/* Mobile Header for this row */}
               <div className="flex items-center justify-between md:hidden pb-2 border-b border-border/60">
-                <span className="text-xs font-bold uppercase tracking-wider text-text-muted">
+                <span className="text-xs font-medium uppercase tracking-wider text-text-muted">
                   Transfer #{index + 1}
                 </span>
                 <Button
@@ -754,7 +754,7 @@ export default function ScbToolsClient({
             {/* Settings Bar */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4 p-4 bg-muted/40 rounded-2xl border border-border text-xs sm:text-sm">
               <div className="flex flex-col gap-1.5">
-                <label className="font-semibold text-text-strong">
+                <label className="font-normal text-text-strong">
                   Salary Month / Reason *
                 </label>
                 <input
@@ -766,7 +766,7 @@ export default function ScbToolsClient({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="font-semibold text-text-strong">
+                <label className="font-normal text-text-strong">
                   Transfer Date *
                 </label>
                 <input
@@ -777,7 +777,7 @@ export default function ScbToolsClient({
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="font-semibold text-text-strong">
+                <label className="font-normal text-text-strong">
                   Debit Account *
                 </label>
                 <select
@@ -797,7 +797,7 @@ export default function ScbToolsClient({
             {/* Section 1: Marked Employees Table */}
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between pb-1">
-                <label className="inline-flex items-center gap-2 cursor-pointer select-none text-xs sm:text-sm font-semibold text-text-strong">
+                <label className="inline-flex items-center gap-2 cursor-pointer select-none text-xs sm:text-sm font-normal text-text-strong">
                   <input
                     type="checkbox"
                     checked={
@@ -828,7 +828,7 @@ export default function ScbToolsClient({
                   </div>
                   <Link
                     href="/scb-tools/vendors"
-                    className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors hover:opacity-90"
+                    className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-normal whitespace-nowrap transition-colors hover:opacity-90"
                   >
                     <span>Mark Employees</span>
                     <ArrowRight className="size-3.5" />
@@ -912,7 +912,7 @@ export default function ScbToolsClient({
             <div className="pt-4 border-t border-border flex flex-col gap-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h4 className="text-sm font-semibold text-text-strong flex items-center gap-2">
+                  <h4 className="text-sm font-normal text-text-strong flex items-center gap-2">
                     <Layers className="size-4 text-primary" />
                     <span>Additional Transactions</span>
                     {additionalSalaryRows.length > 0 && (
@@ -986,7 +986,7 @@ export default function ScbToolsClient({
                                 ))}
                               </select>
                               {matchedVendor && (
-                                <div className="text-[11px] text-text-muted font-mono mt-1">
+                                <div className="text-xs text-text-muted font-mono mt-1">
                                   A/C: {matchedVendor.account_number} • Routing:{" "}
                                   {matchedVendor.routing_number || "—"}
                                 </div>
@@ -1060,7 +1060,7 @@ export default function ScbToolsClient({
                 )
               </span>
               <div className="flex items-baseline gap-2">
-                <span className="text-lg sm:text-xl font-bold font-mono text-text-strong">
+                <span className="text-lg sm:text-xl font-normal font-mono text-text-strong">
                   ৳{" "}
                   {grandTotalPayout.toLocaleString("en-US", {
                     minimumFractionDigits: 2,

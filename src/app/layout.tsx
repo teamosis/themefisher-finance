@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
+import { Toaster } from "@/components/ui/toast";
 import config from "@/config/config.json";
 import TwSizeIndicator from "@/helpers/TwSizeIndicator";
 import Providers from "@/partials/Providers";
 import "@/styles/main.css";
+import type { Metadata } from "next";
 import { Heebo, Signika } from "next/font/google";
-import { Toaster } from "@/components/ui/toast";
 
 const fontPrimary = Heebo({
-  weight: ["400", "600"],
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
   variable: "--font-primary",
   display: "swap",
@@ -52,9 +52,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <TwSizeIndicator />
-        <Providers>
-          {children}
-        </Providers>
+        <Providers>{children}</Providers>
         <Toaster />
       </body>
     </html>

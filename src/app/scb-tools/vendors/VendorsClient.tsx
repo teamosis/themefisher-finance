@@ -408,7 +408,7 @@ export default function VendorsClient({
         <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-destructive flex items-start gap-3">
           <AlertCircle className="size-5 shrink-0 mt-0.5" />
           <div className="text-xs sm:text-sm">
-            <p className="font-semibold">Database Error</p>
+            <p className="font-medium">Database Error</p>
             <p className="mt-1">{errorMessage}</p>
           </div>
         </div>
@@ -424,7 +424,7 @@ export default function VendorsClient({
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4"
         >
           <div className="flex flex-col gap-1.5 relative">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Receiver / Employee Name *
             </label>
             <input
@@ -442,7 +442,7 @@ export default function VendorsClient({
               placeholder="e.g. John Doe"
             />
             {inlineDuplicateWarning && (
-              <p className="text-[11px] font-medium text-warning flex items-center gap-1 mt-1">
+              <p className="text-xs font-medium text-warning flex items-center gap-1 mt-1">
                 <AlertTriangle className="size-3" />
                 {inlineDuplicateWarning}
               </p>
@@ -450,7 +450,7 @@ export default function VendorsClient({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Account Number *
             </label>
             <input
@@ -547,7 +547,7 @@ export default function VendorsClient({
                 onClick={() => setActiveTab("all")}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTab === "all"
-                    ? "bg-background text-text-strong shadow-2xs font-semibold"
+                    ? "bg-background text-text-strong shadow-2xs font-medium"
                     : "text-text-muted hover:text-text-strong"
                 }`}
               >
@@ -558,7 +558,7 @@ export default function VendorsClient({
                 onClick={() => setActiveTab("employees")}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTab === "employees"
-                    ? "bg-background text-text-strong shadow-2xs font-semibold"
+                    ? "bg-background text-text-strong shadow-2xs font-medium"
                     : "text-text-muted hover:text-text-strong"
                 }`}
               >
@@ -569,7 +569,7 @@ export default function VendorsClient({
                 onClick={() => setActiveTab("others")}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTab === "others"
-                    ? "bg-background text-text-strong shadow-2xs font-semibold"
+                    ? "bg-background text-text-strong shadow-2xs font-medium"
                     : "text-text-muted hover:text-text-strong"
                 }`}
               >
@@ -580,7 +580,7 @@ export default function VendorsClient({
                 onClick={() => setActiveTab("hidden")}
                 className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTab === "hidden"
-                    ? "bg-background text-text-strong shadow-2xs font-semibold"
+                    ? "bg-background text-text-strong shadow-2xs font-medium"
                     : "text-text-muted hover:text-text-strong"
                 }`}
               >
@@ -662,11 +662,11 @@ export default function VendorsClient({
                     key={v.id}
                     className="hover:bg-muted/30 transition-colors"
                   >
-                    <td className="px-5 py-3.5 font-medium text-text-strong">
+                    <td className="px-5 py-3.5 font-normal text-text-strong">
                       <div className="flex items-center gap-2">
                         <span>{v.receiver_name}</span>
                         {v.salary ? (
-                          <span className="text-[11px] text-text-muted font-mono">
+                          <span className="text-xs text-text-muted font-mono">
                             ৳{Number(v.salary).toLocaleString()}
                           </span>
                         ) : null}
@@ -758,7 +758,7 @@ export default function VendorsClient({
           >
             <div className="p-5 sm:p-6 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                <label className="text-sm font-normal text-text-strong">
                   Receiver / Employee Name *
                 </label>
                 <input
@@ -773,7 +773,7 @@ export default function VendorsClient({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                  <label className="text-sm font-normal text-text-strong">
                     Account Number *
                   </label>
                   <input
@@ -821,7 +821,7 @@ export default function VendorsClient({
 
                 {editFormData.is_employee && (
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                    <label className="text-sm font-normal text-text-strong">
                       Default Monthly Salary (BDT)
                     </label>
                     <input
@@ -898,9 +898,9 @@ export default function VendorsClient({
           <div className="p-6 flex flex-col gap-4 text-center">
             <p className="text-sm text-text-muted">
               An account named{" "}
-              <strong className="text-text-strong font-semibold">
+              <span className="text-text-strong font-normal">
                 {duplicateVendor.receiver_name}
-              </strong>{" "}
+              </span>{" "}
               already exists
               {duplicateVendor.is_hidden
                 ? " but is currently hidden."

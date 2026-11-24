@@ -16,5 +16,5 @@
 }
 
 .nav-link {
-  @apply text-text-strong hover:text-primary block p-3 cursor-pointer font-semibold transition lg:px-2 lg:py-3;
+  @apply text-text-strong hover:text-primary block p-3 cursor-pointer font-normal transition lg:px-2 lg:py-3;
 }

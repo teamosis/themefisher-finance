@@ -74,7 +74,7 @@ function EditClientForm({
         className="p-5 sm:p-6 flex flex-col gap-4 overflow-y-auto max-h-[75vh]"
       >
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs sm:text-sm font-semibold text-text-strong">
+          <label className="text-sm font-normal text-text-strong">
             Client / Company Name *
           </label>
           <input
@@ -89,7 +89,7 @@ function EditClientForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs sm:text-sm font-semibold text-text-strong">
+          <label className="text-sm font-normal text-text-strong">
             Client Address
           </label>
           <textarea
@@ -103,7 +103,7 @@ function EditClientForm({
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs sm:text-sm font-semibold text-text-strong">
+          <label className="text-sm font-normal text-text-strong">
             VAT / Tax ID
           </label>
           <input
@@ -118,7 +118,7 @@ function EditClientForm({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Remitting Bank Name
             </label>
             <input
@@ -132,7 +132,7 @@ function EditClientForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Remitting Bank Address
             </label>
             <input

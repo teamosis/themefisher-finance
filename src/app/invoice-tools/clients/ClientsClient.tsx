@@ -133,12 +133,14 @@ export default function ClientsClient({
 
       {/* Add Client Card */}
       <div className="bg-card p-5 sm:p-6 rounded-2xl shadow-xs border border-border flex flex-col gap-4">
-        <h2 className="text-base font-bold text-text-strong">Add New Client</h2>
+        <h2 className="text-base sm:text-lg font-bold text-text-strong">
+          Add New Client
+        </h2>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong flex items-center gap-1.5">
-                <Building2 className="size-3.5 text-text-muted" />
+              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+                <Building2 className="size-4 text-text-muted" />
                 Client Name *
               </label>
               <input
@@ -150,8 +152,8 @@ export default function ClientsClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong flex items-center gap-1.5">
-                <MapPin className="size-3.5 text-text-muted" />
+              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+                <MapPin className="size-4 text-text-muted" />
                 Client Address
               </label>
               <input
@@ -163,8 +165,8 @@ export default function ClientsClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong flex items-center gap-1.5">
-                <FileText className="size-3.5 text-text-muted" />
+              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+                <FileText className="size-4 text-text-muted" />
                 VAT / Tax ID
               </label>
               <input
@@ -176,8 +178,8 @@ export default function ClientsClient({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong flex items-center gap-1.5">
-                <Landmark className="size-3.5 text-text-muted" />
+              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+                <Landmark className="size-4 text-text-muted" />
                 Remitting Bank Name
               </label>
               <input
@@ -189,8 +191,8 @@ export default function ClientsClient({
             </div>
 
             <div className="md:col-span-2 flex flex-col gap-1.5">
-              <label className="text-xs sm:text-sm font-semibold text-text-strong flex items-center gap-1.5">
-                <MapPin className="size-3.5 text-text-muted" />
+              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+                <MapPin className="size-4 text-text-muted" />
                 Remitting Bank Address
               </label>
               <input
@@ -206,7 +208,7 @@ export default function ClientsClient({
             <Button
               type="submit"
               disabled={submitting}
-              className="gap-2 cursor-pointer"
+              className="gap-2 font-normal cursor-pointer"
             >
               <Plus className="size-4" />
               <span>{submitting ? "Adding..." : "Add Client"}</span>
@@ -219,10 +221,10 @@ export default function ClientsClient({
       <div className="bg-card rounded-2xl shadow-xs border border-border overflow-hidden flex flex-col">
         <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-muted/20">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-text-strong">
+            <h2 className="text-base sm:text-lg font-bold text-text-strong">
               Client Directory
             </h2>
-            <span className="text-xs text-text-muted">({clients.length})</span>
+            <span className="text-sm text-text-muted">({clients.length})</span>
           </div>
 
           {/* Search Bar */}
@@ -233,7 +235,7 @@ export default function ClientsClient({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search clients..."
-              className="w-full pl-9 pr-3 py-1.5 text-sm border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 bg-background text-text-strong placeholder:text-text-muted"
+              className="w-full pl-9 pr-3 py-1.5 text-sm sm:text-base border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 bg-background text-text-strong placeholder:text-text-muted"
             />
           </div>
         </div>
@@ -267,21 +269,21 @@ export default function ClientsClient({
                 key={client.id}
                 className="p-4 sm:p-5 hover:bg-muted/30 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
               >
-                <div className="flex flex-col gap-1 flex-1 min-w-0 pr-0 sm:pr-4">
+                <div className="flex flex-col gap-1.5 flex-1 min-w-0 pr-0 sm:pr-4">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-sm sm:text-base text-text-strong truncate">
+                    <h3 className="font-normal text-base sm:text-lg text-text-strong truncate">
                       {client.name}
                     </h3>
                     {client.tax_id && (
-                      <span className="text-[11px] font-mono text-text-muted">
+                      <span className="text-xs sm:text-sm font-mono text-text-muted">
                         Tax ID: {client.tax_id}
                       </span>
                     )}
                   </div>
 
                   {client.address && (
-                    <div className="text-xs text-text-muted flex items-start gap-1.5 wrap-break-word">
-                      <MapPin className="size-3.5 text-text-muted shrink-0 mt-0.5" />
+                    <div className="text-sm text-text-muted flex items-start gap-1.5 wrap-break-word">
+                      <MapPin className="size-4 text-text-muted shrink-0 mt-0.5" />
                       <span className="whitespace-pre-line leading-relaxed">
                         {client.address}
                       </span>
@@ -289,13 +291,13 @@ export default function ClientsClient({
                   )}
 
                   {(client.bank_name || client.bank_address) && (
-                    <div className="text-xs text-text-muted flex items-center gap-1.5 pt-0.5 flex-wrap">
-                      <Landmark className="size-3.5 text-text-muted shrink-0" />
+                    <div className="text-sm text-text-muted flex items-center gap-1.5 pt-0.5 flex-wrap">
+                      <Landmark className="size-4 text-text-muted shrink-0" />
                       <span>
                         {client.bank_name && (
-                          <strong className="text-text-strong font-medium">
+                          <span className="text-text-strong font-normal">
                             {client.bank_name}
-                          </strong>
+                          </span>
                         )}
                         {client.bank_name && client.bank_address && " — "}
                         {client.bank_address}
@@ -311,7 +313,7 @@ export default function ClientsClient({
                     variant="outline"
                     size="sm"
                     onClick={() => handleEditClient(client)}
-                    className="gap-1.5 text-xs cursor-pointer"
+                    className="gap-1.5 text-xs sm:text-sm font-normal cursor-pointer"
                   >
                     <Edit2 className="size-3.5" />
                     <span>Edit</span>
@@ -322,7 +324,7 @@ export default function ClientsClient({
                     variant="ghost"
                     size="sm"
                     onClick={() => setDeletingClient(client)}
-                    className="gap-1.5 text-xs text-text-muted hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                    className="gap-1.5 text-xs sm:text-sm font-normal text-text-muted hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                   >
                     <Trash2 className="size-3.5" />
                     <span>Delete</span>
@@ -332,7 +334,7 @@ export default function ClientsClient({
             ))}
 
             {filteredClients.length === 0 && (
-              <div className="p-8 text-center text-text-muted text-sm">
+              <div className="p-8 text-center text-text-muted text-sm sm:text-base">
                 {searchTerm
                   ? "No clients match your search query."
                   : "No clients found."}

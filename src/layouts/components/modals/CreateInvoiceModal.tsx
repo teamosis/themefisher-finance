@@ -147,7 +147,7 @@ export function CreateInvoiceModal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Client *
             </label>
             <select
@@ -164,7 +164,7 @@ export function CreateInvoiceModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Invoice Number *
             </label>
             <input
@@ -174,7 +174,7 @@ export function CreateInvoiceModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Invoice Date *
             </label>
             <input
@@ -185,7 +185,7 @@ export function CreateInvoiceModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Currency *
             </label>
             <select
@@ -203,7 +203,7 @@ export function CreateInvoiceModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Amount *
             </label>
             <input
@@ -215,7 +215,7 @@ export function CreateInvoiceModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Description
             </label>
             <input
@@ -226,7 +226,7 @@ export function CreateInvoiceModal({
         </div>
 
         <div className="flex flex-col gap-2 pt-2">
-          <label className="text-xs sm:text-sm font-semibold text-text-strong">
+          <label className="text-sm font-normal text-text-strong">
             Payment Bank Account(s)
           </label>
           <div className="flex flex-col gap-2">
@@ -247,8 +247,8 @@ export function CreateInvoiceModal({
                     onChange={() => toggleAccount(a.id)}
                     className="size-4 text-primary rounded border-input"
                   />
-                  <div className="text-xs">
-                    <span className="font-semibold text-text-strong">
+                  <div className="text-xs sm:text-sm">
+                    <span className="font-normal text-text-strong">
                       {a.bank_name || a.account_name}
                     </span>
                     {a.account_number && (

@@ -91,7 +91,7 @@ export function CreateClientModal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2 flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Company / Client Name *
             </label>
             <input
@@ -102,7 +102,7 @@ export function CreateClientModal({
           </div>
 
           <div className="md:col-span-2 flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Company Address
             </label>
             <textarea
@@ -114,7 +114,7 @@ export function CreateClientModal({
           </div>
 
           <div className="md:col-span-2 flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Tax ID / VAT No
             </label>
             <input
@@ -125,7 +125,7 @@ export function CreateClientModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Bank Name
             </label>
             <input
@@ -136,7 +136,7 @@ export function CreateClientModal({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs sm:text-sm font-semibold text-text-strong">
+            <label className="text-sm font-normal text-text-strong">
               Bank Address
             </label>
             <input

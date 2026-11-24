@@ -8,6 +8,7 @@ import {
   jsonb,
   boolean,
   index,
+  integer,
 } from "drizzle-orm/pg-core";
 
 export const clients = pgTable("clients", {
@@ -92,3 +93,58 @@ export const bankBranches = pgTable("bank_branches", {
   routing_number: text("routing_number").notNull().unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const mcpAccessTokens = pgTable(
+  "mcp_access_tokens",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    tokenHash: text("token_hash").notNull().unique(),
+    prefix: text("prefix").notNull(),
+    readOnly: boolean("read_only").default(false).notNull(),
+    allowedScopes: jsonb("allowed_scopes").$type<string[]>().default(["*"]).notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    tokenHashIdx: index("idx_mcp_access_tokens_token_hash").on(table.tokenHash),
+    statusIdx: index("idx_mcp_access_tokens_status").on(table.revokedAt, table.expiresAt),
+  })
+);
+
+export const mcpRuns = pgTable(
+  "mcp_runs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tokenId: uuid("token_id").references(() => mcpAccessTokens.id, { onDelete: "cascade" }),
+    toolName: text("tool_name").notNull(),
+    requestId: text("request_id"),
+    requestHash: text("request_hash"),
+    status: text("status").notNull(), // "completed" | "failed" | "running"
+    input: jsonb("input"),
+    result: jsonb("result"),
+    error: text("error"),
+    durationMs: integer("duration_ms"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    tokenIdIdx: index("idx_mcp_runs_token_id").on(table.tokenId),
+    createdAtIdx: index("idx_mcp_runs_created_at").on(table.createdAt),
+    toolNameIdx: index("idx_mcp_runs_tool_name").on(table.toolName),
+  })
+);
+
+export const mcpLimits = pgTable(
+  "mcp_limits",
+  {
+    id: text("id").primaryKey(), // `${tokenId}:${windowTimestamp}`
+    tokenId: uuid("token_id").notNull(),
+    count: integer("count").default(1).notNull(),
+    window: timestamp("window", { withTimezone: true }).notNull(),
+  },
+  (table) => ({
+    windowIdx: index("idx_mcp_limits_window").on(table.window),
+  })
+);

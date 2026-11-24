@@ -8,6 +8,11 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Allow MCP API endpoints to pass through for Bearer token authentication
+  if (pathname.startsWith("/api/mcp")) {
+    return NextResponse.next();
+  }
+
   // If AUTH_PASSWORD or AUTH_SECRET is missing or empty on the env
   if (!isAuthConfigured()) {
     // Only the homepage is allowed to display the configuration error notice

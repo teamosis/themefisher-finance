@@ -1,33 +1,33 @@
 "use client";
-import { useState, useMemo, useRef } from "react";
-import Script from "next/script";
+
 import { createInvoice, deleteInvoice as deleteInvoiceAction } from "@/actions";
-import { parseMT103 } from "@/lib/pdfParser";
-import { useForm } from "react-hook-form";
-import type { Client, PaymentAccount, Invoice, InvoiceFormData } from "@/types";
-import { EditInvoiceModal } from "@/components/modals/EditInvoiceModal";
+import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
 import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
+import { EditInvoiceModal } from "@/components/modals/EditInvoiceModal";
+import { Button } from "@/components/ui/button";
+import { parseMT103 } from "@/lib/pdfParser";
+import type { Client, Invoice, InvoiceFormData, PaymentAccount } from "@/types";
 import {
-  Search,
-  Edit2,
-  Trash2,
+  AlertCircle,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  PlusCircle,
-  FileText,
+  Edit2,
   ExternalLink,
-  UploadCloud,
-  CheckCircle2,
-  AlertCircle,
   Loader2,
+  Search,
+  Trash2,
+  UploadCloud,
 } from "lucide-react";
 import Link from "next/link";
-import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
+import Script from "next/script";
+import { useMemo, useRef, useState } from "react";
+import { useForm } from "react-hook-form";
 
 export default function CreateInvoiceClient({
   initialClients,
   initialAccounts,
-  initialInvoices
+  initialInvoices,
 }: {
   initialClients: Client[];
   initialAccounts: PaymentAccount[];
@@ -41,7 +41,7 @@ export default function CreateInvoiceClient({
   >(initialAccounts.length > 0 ? [initialAccounts[0].id] : []);
   const [submitting, setSubmitting] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState("");
-  
+
   const initialDateStr = new Date().toISOString().split("T")[0];
   const { register, handleSubmit, reset, setValue } = useForm<InvoiceFormData>({
     defaultValues: {
@@ -49,7 +49,8 @@ export default function CreateInvoiceClient({
       invoice_number: `TF-${initialDateStr}-01`,
       invoice_date: initialDateStr,
       currency: "USD",
-      payment_methods: initialAccounts.length > 0 ? [initialAccounts[0].id] : [],
+      payment_methods:
+        initialAccounts.length > 0 ? [initialAccounts[0].id] : [],
     },
   });
   const [alertData, setAlertData] = useState<{
@@ -95,100 +96,56 @@ export default function CreateInvoiceClient({
       try {
         showAlert("Parsing document...", "success");
         const parsedData = await parseMT103(file);
-        
+
         if (parsedData?.amount) {
           setValue("amount", parsedData.amount as any);
           setValue("received_amount", parsedData.amount as any);
         }
-        if (parsedData.currency) {
-          setValue("currency", parsedData.currency.toUpperCase());
+        if (parsedData?.currency) {
+          setValue("currency", parsedData.currency);
         }
-        if (parsedData.invoice_number) {
+
+        if (parsedData?.value_date) {
+          try {
+            let parsedDate = new Date(parsedData.value_date);
+            if (!isNaN(parsedDate.getTime())) {
+              parsedDate.setDate(parsedDate.getDate() - 7);
+              setValue("invoice_date", parsedDate.toISOString().split("T")[0]);
+            }
+          } catch {}
+        }
+
+        if (parsedData?.invoice_number) {
           finalInvoiceNumber = parsedData.invoice_number;
-          setValue("invoice_number", parsedData.invoice_number);
         }
-        
-        if (parsedData.value_date) {
-          let parsedDate = new Date(parsedData.value_date);
-          if (!isNaN(parsedDate.getTime())) {
-            parsedDate.setDate(parsedDate.getDate() - 7);
-            setValue("invoice_date", parsedDate.toISOString().split("T")[0]);
-          }
-        }
-        
-        if (parsedData.client_name && parsedData.client_name.trim().length >= 3) {
-          let matchedClient = null;
-          const cText = parsedData.client_name.toLowerCase().trim();
-          const NOISE_WORDS = new Set(["ltd", "llc", "inc", "co", "pvt", "private", "limited", "the", "of", "and"]);
 
-          // Pass 1: direct substring match
-          for (const c of clients) {
-            const dbName = c.name.toLowerCase();
-            if (cText.includes(dbName) || dbName.includes(cText)) {
-              matchedClient = c;
-              break;
-            }
-          }
-
-          // Pass 2: word-level partial match (>=60% of significant words)
-          if (!matchedClient) {
-            let bestScore = 0;
-            for (const c of clients) {
-              const dbWords = c.name.toLowerCase().split(/\s+/).filter((w: string) => w.length >= 2 && !NOISE_WORDS.has(w));
-              if (dbWords.length === 0) continue;
-              const matched = dbWords.filter((w: string) => cText.includes(w)).length;
-              const score = matched / dbWords.length;
-              if (score >= 0.6 && score > bestScore) {
-                bestScore = score;
-                matchedClient = c;
-              }
-            }
-          }
-
-          if (matchedClient) {
-            setSelectedClientId(matchedClient.id);
-            setValue("client_id", matchedClient.id);
-          } else {
-            // Unmatched client logic handled externally or by user
+        if (parsedData?.client_name) {
+          const matched = clients.find((c) =>
+            parsedData.client_name
+              ?.toLowerCase()
+              .includes(c.name.toLowerCase()),
+          );
+          if (matched) {
+            setSelectedClientId(matched.id);
+            setValue("client_id", matched.id);
           }
         }
-      } catch (parseError) {
-        console.error("Parsing failed", parseError);
-        showAlert("Parsing failed. Please manually enter data.", "error");
-        return;
+      } catch (err: any) {
+        console.error("PDF parsing error", err);
       }
 
-      if (finalInvoiceNumber && invoices.some(inv => inv.invoice_number === finalInvoiceNumber)) {
-        showAlert(
-          `An invoice with the number "${finalInvoiceNumber}" already exists in the system! Please verify before submitting.`,
-          "error",
-          "Duplicate Invoice Number"
-        );
-      } else {
-        showAlert(
-          "PDF parsed successfully. Please review the autofilled fields.",
-          "success",
-        );
+      if (finalInvoiceNumber) {
+        setValue("invoice_number", finalInvoiceNumber);
       }
+
+      showAlert("Document data populated into form!", "success");
     } catch (err: any) {
-      showAlert(err.message || "Error parsing PDF", "error");
+      showAlert(err.message || "Failed to process PDF", "error");
     } finally {
       setIsUploadingPdf(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
-
-  // Invoices list state
-  const [searchTerm, setSearchTerm] = useState("");
-  const [tableClientFilter, setTableClientFilter] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
-
-  // Edit modal state
-  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-  // End of state declarations
 
   const toggleAccount = (id: string) => {
     const next = selectedPaymentMethods.includes(id)
@@ -199,117 +156,86 @@ export default function CreateInvoiceClient({
   };
 
   const onSubmit = async (data: InvoiceFormData) => {
-    const clientId = selectedClientId || data.client_id;
-    if (!clientId) {
+    if (!selectedClientId) {
       showAlert("Please select a client.", "error");
       return;
     }
-
-    const cleanInvoiceNumber = data.invoice_number?.trim();
-    if (!cleanInvoiceNumber) {
-      showAlert("Invoice number is required.", "error");
+    if (!data.invoice_number?.trim()) {
+      showAlert("Please enter an invoice number.", "error");
       return;
     }
-
-    if (invoices.some((inv) => inv.invoice_number === cleanInvoiceNumber)) {
-      showAlert(
-        `An invoice with the number "${cleanInvoiceNumber}" already exists in the system! Please use a unique invoice number.`,
-        "error",
-        "Duplicate Invoice Number"
-      );
+    if (!data.invoice_date) {
+      showAlert("Please select an invoice date.", "error");
       return;
     }
-
-    const cleanDescription = data.description?.trim();
-    if (!cleanDescription) {
-      showAlert("Please enter a service description.", "error");
+    if (!data.amount || Number(data.amount) <= 0) {
+      showAlert("Please enter a valid invoice amount.", "error");
       return;
     }
-
-    const parsedAmount =
-      typeof data.amount === "string"
-        ? parseFloat(data.amount)
-        : Number(data.amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      showAlert("Please enter a valid invoice amount greater than 0.", "error");
+    if (selectedPaymentMethods.length === 0) {
+      showAlert("Please select at least one payment bank account.", "error");
       return;
-    }
-
-    let parsedReceived = parsedAmount;
-    if (data.received_amount !== undefined && data.received_amount !== "") {
-      const customReceived =
-        typeof data.received_amount === "string"
-          ? parseFloat(data.received_amount)
-          : Number(data.received_amount);
-      if (!isNaN(customReceived) && customReceived > 0) {
-        parsedReceived = customReceived;
-      } else if (customReceived < 0) {
-        showAlert("Received amount cannot be negative.", "error");
-        return;
-      }
     }
 
     setSubmitting(true);
-    const paymentMethodsArray =
-      selectedPaymentMethods.length > 0
-        ? selectedPaymentMethods
-        : Array.isArray(data.payment_methods)
-          ? data.payment_methods
-          : data.payment_methods
-            ? [data.payment_methods]
-            : [];
-
-    const payload: Record<string, unknown> = {
-      client_id: clientId,
-      invoice_number: cleanInvoiceNumber,
-      invoice_date: data.invoice_date,
-      currency: data.currency || "USD",
-      amount: parsedAmount,
-      description: cleanDescription,
-      received_amount: parsedReceived,
-      payment_methods: paymentMethodsArray,
-    };
-
     try {
-      await createInvoice(payload);
-      showAlert("Invoice created successfully!", "success");
-      reset();
-      setSelectedClientId("");
-      const dateStr = new Date().toISOString().split("T")[0];
-      setValue("invoice_number", `TF-${dateStr}-01`);
-      setValue("invoice_date", dateStr);
-      setValue("currency", "USD");
-      if (accounts.length > 0) {
-        setSelectedPaymentMethods([accounts[0].id]);
-        setValue("payment_methods", [accounts[0].id]);
-      } else {
-        setSelectedPaymentMethods([]);
+      const payload = {
+        client_id: selectedClientId,
+        invoice_number: data.invoice_number.trim(),
+        invoice_date: data.invoice_date,
+        description: data.description?.trim() || "Web development services",
+        amount: Number(data.amount),
+        received_amount: data.received_amount
+          ? Number(data.received_amount)
+          : undefined,
+        currency: data.currency || "USD",
+        payment_methods: selectedPaymentMethods,
+      };
+
+      const newInv = await createInvoice(payload);
+      if (newInv) {
+        setInvoices((prev) => [newInv as unknown as Invoice, ...prev]);
+        reset({
+          description: "Web development services",
+          invoice_number: `TF-${new Date().toISOString().split("T")[0]}-01`,
+          invoice_date: new Date().toISOString().split("T")[0],
+          currency: "USD",
+          amount: "" as any,
+          received_amount: "" as any,
+          payment_methods: accounts.length > 0 ? [accounts[0].id] : [],
+        });
+        setSelectedClientId("");
+        setSelectedPaymentMethods(accounts.length > 0 ? [accounts[0].id] : []);
+        showAlert("Invoice created successfully!", "success");
       }
-    } catch (error: any) {
-      console.error("Error creating invoice:", error.message);
-      showAlert(
-        "Unable to save invoice. Please verify invoice details and try again.",
-        "error",
-      );
+    } catch (err: any) {
+      showAlert(err.message || "Failed to create invoice.", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Edit action
+  // Table filtering and pagination
+  const [searchTerm, setSearchTerm] = useState("");
+  const [tableClientFilter, setTableClientFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Edit State
+  const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
   const handleEditInvoice = (inv: Invoice) => {
     setEditingInvoice(inv);
     setIsEditModalOpen(true);
   };
 
-  // Saved edit
   const handleInvoiceSaved = (updated: Invoice) => {
     setInvoices((prev) =>
       prev.map((inv) => (inv.id === updated.id ? updated : inv)),
     );
   };
 
-  // Delete action
   const handleDeleteInvoice = async (inv: Invoice) => {
     setDeletingInvoice(inv);
   };
@@ -329,27 +255,28 @@ export default function CreateInvoiceClient({
     }
   };
 
-  // Filtered invoices for table — sorted newest first
   const tableInvoices = useMemo(() => {
-    return invoices.filter((inv) => {
-      if (tableClientFilter && inv.client_id !== tableClientFilter) {
-        return false;
-      }
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase();
-        const client = clients.find((c) => c.id === inv.client_id);
-        const matchNum = inv.invoice_number?.toLowerCase().includes(term);
-        const matchDesc = inv.description?.toLowerCase().includes(term);
-        const matchClient = client?.name?.toLowerCase().includes(term);
-        const matchDate = inv.invoice_date?.toLowerCase().includes(term);
-        return matchNum || matchDesc || matchClient || matchDate;
-      }
-      return true;
-    }).sort((a, b) => {
-      const dateA = a.invoice_date || "";
-      const dateB = b.invoice_date || "";
-      return dateB.localeCompare(dateA);
-    });
+    return invoices
+      .filter((inv) => {
+        if (tableClientFilter && inv.client_id !== tableClientFilter) {
+          return false;
+        }
+        if (searchTerm.trim()) {
+          const term = searchTerm.toLowerCase();
+          const client = clients.find((c) => c.id === inv.client_id);
+          const matchNum = inv.invoice_number?.toLowerCase().includes(term);
+          const matchDesc = inv.description?.toLowerCase().includes(term);
+          const matchClient = client?.name?.toLowerCase().includes(term);
+          const matchDate = inv.invoice_date?.toLowerCase().includes(term);
+          return matchNum || matchDesc || matchClient || matchDate;
+        }
+        return true;
+      })
+      .sort((a, b) => {
+        const dateA = a.invoice_date || "";
+        const dateB = b.invoice_date || "";
+        return dateB.localeCompare(dateA);
+      });
   }, [invoices, tableClientFilter, searchTerm, clients]);
 
   const totalPages = Math.ceil(tableInvoices.length / pageSize) || 1;
@@ -359,60 +286,56 @@ export default function CreateInvoiceClient({
   }, [tableInvoices, currentPage, pageSize]);
 
   return (
-    <div className="max-w-5xl mx-auto space-y-10 pb-16">
+    <div className="max-w-7xl mx-auto flex flex-col gap-8 pb-16">
       <Script
         src="//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
         strategy="lazyOnload"
       />
+
       {/* Top Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-          Create Invoice
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Generate a new client billing record and manage existing invoices
-          below.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-strong">
+            Create Invoice
+          </h1>
+          <p className="text-sm text-text-muted mt-1">
+            Generate a new client billing record and manage existing invoices.
+          </p>
+        </div>
+
+        <div>
+          <input
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploadingPdf}
+            className="gap-2 cursor-pointer"
+          >
+            {isUploadingPdf ? (
+              <Loader2 className="size-4 animate-spin text-text-muted" />
+            ) : (
+              <UploadCloud className="size-4 text-text-muted" />
+            )}
+            <span>{isUploadingPdf ? "Parsing..." : "Autofill from PDF"}</span>
+          </Button>
+        </div>
       </div>
 
       {/* TOP: Invoice Creation Form */}
-      <div className="bg-white p-5 sm:p-8 rounded-2xl shadow-xs border border-gray-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-blue-600" />
-            <h2 className="text-base sm:text-lg font-bold text-gray-900">
-              New Invoice Details
-            </h2>
-          </div>
-          <div>
-            <input
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              ref={fileInputRef}
-              onChange={handleFileUpload}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isUploadingPdf}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors cursor-pointer"
-            >
-              {isUploadingPdf ? (
-                <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
-              ) : (
-                <UploadCloud className="w-4 h-4 text-gray-500" />
-              )}
-              {isUploadingPdf ? "Parsing..." : "Autofill from PDF"}
-            </button>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-            <div className="relative z-20">
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                Client
+      <div className="bg-card p-5 sm:p-6 rounded-2xl shadow-xs border border-border flex flex-col gap-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+            <div className="relative z-20 flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Client *
               </label>
               <SearchableClientSelect
                 clients={clients}
@@ -425,36 +348,36 @@ export default function CreateInvoiceClient({
               />
             </div>
 
-            <div className="relative z-10">
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                Invoice Number
+            <div className="relative z-10 flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Invoice Number *
               </label>
               <input
                 {...register("invoice_number", { required: true })}
                 maxLength={60}
-                className="block w-full p-2.5 border rounded-xl border-gray-300 text-base sm:text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-hidden"
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
               />
             </div>
 
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                Invoice Date
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Invoice Date *
               </label>
               <input
                 type="date"
                 {...register("invoice_date", { required: true })}
-                className="block w-full p-2.5 border rounded-xl border-gray-300 text-base sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-hidden"
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
               />
             </div>
 
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                Currency
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Currency *
               </label>
               <select
                 {...register("currency")}
                 defaultValue="USD"
-                className="block w-full p-2.5 border rounded-xl border-gray-300 bg-white text-base sm:text-sm font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-hidden"
+                className="w-full border border-input rounded-xl px-3.5 py-2.5 pr-10 text-sm font-medium bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-11 cursor-pointer"
               >
                 <option value="USD">USD ($ - US Dollar)</option>
                 <option value="BDT">BDT (৳ - Bangladeshi Taka)</option>
@@ -466,9 +389,9 @@ export default function CreateInvoiceClient({
               </select>
             </div>
 
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                Invoice Amount
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Invoice Amount *
               </label>
               <input
                 type="number"
@@ -476,13 +399,13 @@ export default function CreateInvoiceClient({
                 min="0.01"
                 max="999999999"
                 {...register("amount", { required: true })}
-                className="block w-full p-2.5 border rounded-xl border-gray-300 text-base sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-hidden"
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="0.00"
               />
             </div>
 
-            <div>
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
                 Remitted / Received Amount
               </label>
               <input
@@ -491,39 +414,39 @@ export default function CreateInvoiceClient({
                 min="0"
                 max="999999999"
                 {...register("received_amount")}
-                className="block w-full p-2.5 border rounded-xl border-gray-300 text-base sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-hidden"
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="Optional received amount"
               />
             </div>
 
-            <div className="col-span-1 md:col-span-2">
-              <label className="block text-xs sm:text-sm font-semibold text-gray-700 mb-1.5">
-                Description (Service Details)
+            <div className="col-span-1 md:col-span-2 flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Description (Service Details) *
               </label>
               <input
                 {...register("description", { required: true })}
                 maxLength={300}
-                className="block w-full p-2.5 border rounded-xl border-gray-300 text-base sm:text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-hidden"
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="Web development services"
               />
             </div>
 
-            {/* Payment Bank Account Selector as Checkboxes */}
-            <div className="col-span-1 md:col-span-2">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Payment Bank Account(s)
+            {/* Payment Bank Account Selector */}
+            <div className="col-span-1 md:col-span-2 flex flex-col gap-2">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Payment Bank Account(s) *
               </label>
-              <div className="space-y-3">
+              <div className="flex flex-col gap-2.5">
                 {accounts.map((a) => {
                   const isChecked = selectedPaymentMethods.includes(a.id);
                   return (
                     <div
                       key={a.id}
                       onClick={() => toggleAccount(a.id)}
-                      className={`flex items-start gap-3.5 p-3.5 border rounded-xl cursor-pointer transition-all select-none ${
+                      className={`flex items-start gap-3 p-3.5 border rounded-xl cursor-pointer transition-colors select-none ${
                         isChecked
-                          ? "border-blue-600 bg-blue-50/60 shadow-xs"
-                          : "border-gray-200 hover:border-gray-300 bg-white"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:bg-muted/30 bg-background"
                       }`}
                     >
                       <input
@@ -531,85 +454,69 @@ export default function CreateInvoiceClient({
                         checked={isChecked}
                         onChange={() => toggleAccount(a.id)}
                         onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 mt-0.5 rounded text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
+                        className="size-4 mt-0.5 rounded border-input text-primary focus:ring-ring/20 cursor-pointer"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-bold text-gray-900">
+                          <span className="text-sm font-semibold text-text-strong">
                             {a.bank_name || a.account_name}
                           </span>
                           {a.bic_swift && (
-                            <span className="text-xs font-mono bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                            <span className="text-xs font-mono text-text-muted">
                               SWIFT: {a.bic_swift}
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-gray-600 mt-1 flex flex-wrap gap-x-4 gap-y-1">
+                        <div className="text-xs text-text-muted mt-1 flex flex-wrap gap-x-4 gap-y-0.5">
                           {a.account_number && (
                             <span>
-                              <strong className="text-gray-700">
-                                Account:
-                              </strong>{" "}
-                              <span className="font-mono">
+                              A/C:{" "}
+                              <span className="font-mono text-text-strong">
                                 {a.account_number}
                               </span>
                             </span>
                           )}
                           {a.name_on_account && (
-                            <span>
-                              <strong className="text-gray-700">Name:</strong>{" "}
-                              {a.name_on_account}
-                            </span>
+                            <span>Name: {a.name_on_account}</span>
                           )}
                         </div>
-                        {a.bank_address && (
-                          <div className="text-[11px] text-gray-500 mt-1 truncate">
-                            {a.bank_address}
-                          </div>
-                        )}
                       </div>
                     </div>
                   );
                 })}
                 {accounts.length === 0 && (
-                  <div className="p-4 border border-dashed border-gray-300 rounded-xl text-center text-sm text-gray-500">
+                  <div className="p-4 border border-dashed border-border rounded-xl text-center text-sm text-text-muted">
                     No payment accounts configured. Add one in Configuration.
                   </div>
                 )}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                Check the payment bank account(s) to include in the invoice
-                transfer instructions.
-              </p>
             </div>
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={submitting}
-            className="w-full bg-blue-600 text-white px-4 py-3 rounded-xl hover:bg-blue-700 disabled:opacity-50 font-semibold text-base transition-colors shadow-xs cursor-pointer"
+            className="w-full cursor-pointer h-11 text-sm font-semibold"
           >
             {submitting ? "Generating Invoice..." : "Generate Invoice"}
-          </button>
+          </Button>
         </form>
       </div>
 
       {/* BOTTOM: List of Invoices with Edit and Delete */}
-      <div className="bg-white rounded-2xl shadow-xs border border-gray-200 overflow-hidden">
-        <div className="p-5 sm:p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gray-50/50">
-          <div className="flex items-center gap-2.5">
-            <FileText className="w-5 h-5 text-gray-700" />
-            <h2 className="text-lg font-bold text-gray-900">Invoices List</h2>
-            <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-              {tableInvoices.length}{" "}
-              {tableInvoices.length === 1 ? "invoice" : "invoices"}
+      <div className="bg-card rounded-2xl shadow-xs border border-border overflow-hidden flex flex-col">
+        <div className="p-4 sm:p-5 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-3 bg-muted/20">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-text-strong">Invoices</h2>
+            <span className="text-xs text-text-muted">
+              ({tableInvoices.length})
             </span>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
             {/* Search Input */}
-            <div className="relative flex-1 sm:w-64 min-w-0">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <div className="relative flex-1 sm:w-60 min-w-0">
+              <Search className="size-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search invoice, client..."
@@ -618,7 +525,7 @@ export default function CreateInvoiceClient({
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-9 pr-3 py-2 sm:py-1.5 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white focus:outline-hidden"
+                className="w-full pl-9 pr-3 py-1.5 text-sm border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 bg-background text-text-strong placeholder:text-text-muted"
               />
             </div>
 
@@ -629,7 +536,7 @@ export default function CreateInvoiceClient({
                 setTableClientFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="py-2 sm:py-1.5 px-3 text-base sm:text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white focus:outline-hidden"
+              className="py-2 px-3.5 pr-10 text-xs sm:text-sm border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 bg-background text-text-strong cursor-pointer"
             >
               <option value="">All Clients</option>
               {clients.map((c) => (
@@ -644,78 +551,79 @@ export default function CreateInvoiceClient({
         {/* Table Content */}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="bg-gray-50/80 text-gray-600 text-xs uppercase font-semibold border-b border-gray-200">
+            <thead className="bg-muted/40 text-text-muted text-xs uppercase font-medium border-b border-border">
               <tr>
-                <th className="py-3 px-4">Invoice #</th>
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Client</th>
-                <th className="py-3 px-4">Service Details</th>
-                <th className="py-3 px-4 text-right">Amount</th>
-                <th className="py-3 px-4 text-right">Remitted</th>
-                <th className="py-3 px-4 text-center w-36">Actions</th>
+                <th className="py-2.5 px-4">Invoice #</th>
+                <th className="py-2.5 px-4">Date</th>
+                <th className="py-2.5 px-4">Client</th>
+                <th className="py-2.5 px-4">Service Details</th>
+                <th className="py-2.5 px-4 text-right">Amount</th>
+                <th className="py-2.5 px-4 text-right">Remitted</th>
+                <th className="py-2.5 px-4 text-center w-28">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-border">
               {paginatedInvoices.map((inv) => {
                 const client = clients.find((c) => c.id === inv.client_id);
 
                 return (
                   <tr
                     key={inv.id}
-                    className="hover:bg-gray-50/70 transition-colors"
+                    className="hover:bg-muted/30 transition-colors"
                   >
                     <td className="py-3 px-4">
-                      <span className="font-mono font-bold text-gray-900 text-xs sm:text-sm">
+                      <span className="font-mono font-bold text-text-strong text-xs sm:text-sm">
                         {inv.invoice_number}
                       </span>
                     </td>
-                    <td className="py-3 px-4 text-gray-600 whitespace-nowrap text-xs">
+                    <td className="py-3 px-4 text-text-muted whitespace-nowrap text-xs">
                       {inv.invoice_date}
                     </td>
-                    <td className="py-3 px-4 font-medium text-gray-900 max-w-[180px] truncate text-xs sm:text-sm">
+                    <td className="py-3 px-4 font-medium text-text-strong max-w-45 truncate text-xs sm:text-sm">
                       {client?.name || "—"}
                     </td>
-                    <td className="py-3 px-4 text-gray-600 max-w-[200px] truncate text-xs">
+                    <td className="py-3 px-4 text-text-muted max-w-50 truncate text-xs">
                       {inv.description}
                     </td>
-                    <td className="py-3 px-4 text-right font-semibold text-gray-900 whitespace-nowrap text-xs sm:text-sm">
+                    <td className="py-3 px-4 text-right font-semibold text-text-strong whitespace-nowrap text-xs sm:text-sm font-mono">
                       {inv.currency || "USD"} {Number(inv.amount).toFixed(2)}
                     </td>
-                    <td className="py-3 px-4 text-right text-gray-600 whitespace-nowrap text-xs sm:text-sm">
+                    <td className="py-3 px-4 text-right text-text-muted whitespace-nowrap text-xs sm:text-sm font-mono">
                       {inv.received_amount
                         ? `${inv.currency || "USD"} ${Number(inv.received_amount).toFixed(2)}`
                         : "—"}
                     </td>
                     <td className="py-3 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-1.5">
-                        {/* View in Generate Docs Link */}
+                      <div className="flex items-center justify-center gap-1">
                         <Link
                           href={`/invoice-tools?invoiceId=${inv.id}`}
                           title="Generate Documents"
-                          className="p-1.5 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-text-muted hover:text-text-strong hover:bg-muted transition-colors"
                         >
-                          <ExternalLink className="w-4 h-4" />
+                          <ExternalLink className="size-4" />
                         </Link>
 
-                        {/* Edit Button */}
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleEditInvoice(inv)}
                           title="Edit Invoice"
-                          className="p-1.5 rounded-xl text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                          className="size-8 text-text-muted hover:text-text-strong"
                         >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
+                          <Edit2 className="size-3.5" />
+                        </Button>
 
-                        {/* Delete Button */}
-                        <button
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDeleteInvoice(inv)}
                           title="Delete Invoice"
-                          className="p-1.5 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                          className="size-8 text-text-muted hover:text-destructive hover:bg-destructive/10"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
                     </td>
                   </tr>
@@ -723,7 +631,10 @@ export default function CreateInvoiceClient({
               })}
               {paginatedInvoices.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">
+                  <td
+                    colSpan={7}
+                    className="py-8 text-center text-text-muted text-sm"
+                  >
                     No invoices match your search criteria.
                   </td>
                 </tr>
@@ -734,41 +645,46 @@ export default function CreateInvoiceClient({
 
         {/* Pagination Controls */}
         {totalPages > 1 && (
-          <div className="p-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0 text-xs sm:text-sm text-gray-600 bg-gray-50/40">
-            <div className="text-center sm:text-left">
+          <div className="p-3.5 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-text-muted bg-muted/20">
+            <div>
               Showing{" "}
-              <span className="font-semibold">
+              <span className="font-semibold text-text-strong">
                 {(currentPage - 1) * pageSize + 1}
               </span>{" "}
               to{" "}
-              <span className="font-semibold">
+              <span className="font-semibold text-text-strong">
                 {Math.min(currentPage * pageSize, tableInvoices.length)}
               </span>{" "}
-              of <span className="font-semibold">{tableInvoices.length}</span>{" "}
+              of{" "}
+              <span className="font-semibold text-text-strong">
+                {tableInvoices.length}
+              </span>{" "}
               invoices
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
                 disabled={currentPage === 1}
-                className="p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="size-8"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="font-medium text-gray-700 px-2">
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-text-strong px-2">
                 Page {currentPage} of {totalPages}
               </span>
-              <button
-                type="button"
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() =>
                   setCurrentPage((p) => Math.min(p + 1, totalPages))
                 }
                 disabled={currentPage === totalPages}
-                className="p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                className="size-8"
               >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                <ChevronRight className="size-4" />
+              </Button>
             </div>
           </div>
         )}
@@ -796,31 +712,32 @@ export default function CreateInvoiceClient({
       />
 
       {alertData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full p-6 transform transition-all scale-100 animate-in zoom-in-95 duration-200">
-            <div className="flex flex-col items-center text-center space-y-4">
-              <div
-                className={`p-3 rounded-full ${alertData.type === "success" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"}`}
-              >
-                {alertData.type === "success" ? (
-                  <CheckCircle2 className="w-8 h-8" />
-                ) : (
-                  <AlertCircle className="w-8 h-8" />
-                )}
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  {alertData.title}
-                </h3>
-                <p className="text-gray-500 text-sm">{alertData.message}</p>
-              </div>
-              <button
-                onClick={() => setAlertData(null)}
-                className="w-full mt-4 bg-gray-900 hover:bg-gray-800 text-white font-medium py-2.5 rounded-lg transition-colors"
-              >
-                Continue
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-card rounded-2xl shadow-xl border border-border max-w-sm w-full p-6 animate-in zoom-in-95 duration-200 flex flex-col items-center text-center gap-4">
+            <div
+              className={`p-3 rounded-full ${
+                alertData.type === "success"
+                  ? "bg-success/10 text-success"
+                  : "bg-destructive/10 text-destructive"
+              }`}
+            >
+              {alertData.type === "success" ? (
+                <CheckCircle2 className="size-7" />
+              ) : (
+                <AlertCircle className="size-7" />
+              )}
             </div>
+            <div className="flex flex-col gap-1">
+              <h3 className="text-base font-bold text-text-strong">
+                {alertData.title}
+              </h3>
+              <p className="text-text-muted text-xs leading-relaxed">
+                {alertData.message}
+              </p>
+            </div>
+            <Button onClick={() => setAlertData(null)} className="w-full mt-2">
+              Continue
+            </Button>
           </div>
         </div>
       )}

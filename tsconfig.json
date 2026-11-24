@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
@@ -21,7 +23,45 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@/actions/*": [
+        "./src/actions/*"
+      ],
+      "@/components": [
+        "./src/layouts/components/index.ts"
+      ],
+      "@/components/*": [
+        "./src/layouts/components/*"
+      ],
+      "@/layouts/*": [
+        "./src/layouts/*"
+      ],
+      "@/helpers/*": [
+        "./src/layouts/helpers/*"
+      ],
+      "@/partials/*": [
+        "./src/layouts/partials/*"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/hooks/*": [
+        "./src/hooks/*"
+      ],
+      "@/types/*": [
+        "./src/types/*"
+      ],
+      "@/db/*": [
+        "./src/db/*"
+      ],
+      "@/config/*": [
+        "./src/config/*"
+      ],
+      "@/styles/*": [
+        "./src/styles/*"
+      ]
     }
   },
   "include": [
@@ -29,8 +69,10 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

@@ -1,10 +1,33 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import config from "@/config/config.json";
+import TwSizeIndicator from "@/helpers/TwSizeIndicator";
+import Providers from "@/partials/Providers";
+import "@/styles/main.css";
+import { Heebo, Signika } from "next/font/google";
+import { Toaster } from "@/components/ui/toast";
+
+const fontPrimary = Heebo({
+  weight: ["400", "600"],
+  subsets: ["latin"],
+  variable: "--font-primary",
+  display: "swap",
+});
+
+const fontSecondary = Signika({
+  weight: ["500", "700"],
+  subsets: ["latin"],
+  variable: "--font-secondary",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "Themefisher Admin Tools",
-  description:
-    "Themefisher Admin Tools – Invoice & Form-C Generator and SCB Bulk Transaction Generator",
+  metadataBase: new URL(config.site.base_url),
+  title: config.site.title,
+  description: config.metadata.meta_description,
+  icons: [
+    { rel: "icon", url: "/favicon.svg", type: "image/svg+xml" },
+    { rel: "shortcut icon", url: "/favicon.ico" },
+  ],
   openGraph: {
     images: ["/og-image.png"],
   },
@@ -16,9 +39,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased" suppressHydrationWarning>
-        {children}
+    <html lang="en" suppressHydrationWarning className="text-base">
+      <head>
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=5"
+        />
+        <meta name="theme-name" content="themefisher-finance" />
+      </head>
+      <body
+        className={`${fontPrimary.variable} ${fontSecondary.variable} font-primary text-base min-h-screen bg-background text-text-default antialiased flex flex-col`}
+        suppressHydrationWarning
+      >
+        <TwSizeIndicator />
+        <Providers>
+          {children}
+        </Providers>
+        <Toaster />
       </body>
     </html>
   );

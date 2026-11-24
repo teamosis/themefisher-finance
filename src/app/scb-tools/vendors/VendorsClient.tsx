@@ -1,41 +1,58 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
-import { Modal } from "@/components/modals/Modal";
+import {
+  createVendor,
+  deleteVendor as deleteVendorAction,
+  updateVendor,
+} from "@/actions";
 import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
-import { getVendors, createVendor, updateVendor, deleteVendor as deleteVendorAction } from "@/actions";
+import { Modal } from "@/components/modals/Modal";
+import { TableRowsSkeleton } from "@/components/skeletons";
+import { Button } from "@/components/ui/button";
 import type { Vendor } from "@/types";
 import dynamic from "next/dynamic";
+import { useEffect, useMemo, useState } from "react";
 
-const BankBranchSelect = dynamic(() => import("@/components/forms/BankBranchSelect"), {
-  ssr: false,
-  loading: () => <div className="animate-pulse bg-gray-100 rounded-xl h-[38px]" />,
-});
+const BankBranchSelect = dynamic(
+  () => import("@/components/forms/BankBranchSelect"),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse bg-muted rounded-xl h-9.5" />,
+  },
+);
+
 import {
-  Plus,
-  Edit,
-  Loader2,
   AlertCircle,
+  AlertTriangle,
+  Check,
+  Loader2,
   Pencil,
+  Plus,
+  Search,
   Trash2,
   X,
-  Check,
-  Search,
-  AlertTriangle,
-  UserCheck,
 } from "lucide-react";
 
-export default function VendorsClient({ initialVendors }: { initialVendors: Vendor[] }) {
+export default function VendorsClient({
+  initialVendors,
+}: {
+  initialVendors: Vendor[];
+}) {
   const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<"all" | "employees" | "others" | "hidden">("all");
+  const [activeTab, setActiveTab] = useState<
+    "all" | "employees" | "others" | "hidden"
+  >("all");
   const [duplicateVendor, setDuplicateVendor] = useState<Vendor | null>(null);
-  const [duplicatePendingPayload, setDuplicatePendingPayload] = useState<any>(null);
-  const [inlineDuplicateWarning, setInlineDuplicateWarning] = useState<string | null>(null);
+  const [duplicatePendingPayload, setDuplicatePendingPayload] =
+    useState<any>(null);
+  const [inlineDuplicateWarning, setInlineDuplicateWarning] = useState<
+    string | null
+  >(null);
 
   // Add Form state
   const [formData, setFormData] = useState({
@@ -64,19 +81,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
   // Delete State
   const [deletingVendor, setDeletingVendor] = useState<Vendor | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const fetchVendors = async () => {
-    setLoading(true);
-    setErrorMessage(null);
-    try {
-      const data = await getVendors();
-      setVendors(data || []);
-    } catch (error: any) {
-      console.error("Error fetching vendors:", error);
-      setErrorMessage(error.message);
-    }
-    setLoading(false);
-  };
+  const [isHiding, setIsHiding] = useState(false);
 
   useEffect(() => {
     setVendors(initialVendors || []);
@@ -103,9 +108,16 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
       setInlineDuplicateWarning(null);
       return;
     }
-    const exactMatch = vendors.find((v) => v.receiver_name.toLowerCase() === val);
-    if (exactMatch) {
-      setInlineDuplicateWarning(`Duplicate: An account with this name already exists (${exactMatch.account_number}).`);
+
+    const existing = vendors.find(
+      (v) => v.receiver_name.trim().toLowerCase() === val,
+    );
+    if (existing) {
+      setInlineDuplicateWarning(
+        existing.is_hidden
+          ? `A hidden account already exists with name "${existing.receiver_name}".`
+          : `An active account already exists with name "${existing.receiver_name}".`,
+      );
     } else {
       setInlineDuplicateWarning(null);
     }
@@ -119,84 +131,94 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
     }));
   };
 
-  // Toggle Employee Checkmark directly from Table / Card
   const handleToggleEmployee = async (vendor: Vendor) => {
-    const nextStatus = !vendor.is_employee;
-
-    // 1. Optimistic UI update
-    setVendors((prev) =>
-      prev.map((v) => (v.id === vendor.id ? { ...v, is_employee: nextStatus } : v))
-    );
-
+    const newStatus = !vendor.is_employee;
     try {
-      await updateVendor(vendor.id, { is_employee: nextStatus });
-    } catch (e: any) {
-      console.warn("Could not update employee status:", e.message);
+      await updateVendor(vendor.id, { is_employee: newStatus });
+      setVendors((prev) =>
+        prev.map((v) =>
+          v.id === vendor.id ? { ...v, is_employee: newStatus } : v,
+        ),
+      );
+      triggerSuccess(
+        `${newStatus ? "Marked" : "Unmarked"} "${vendor.receiver_name}" as employee!`,
+      );
+    } catch (error: any) {
+      console.error("Failed to toggle employee status:", error);
+      alert(`Could not update employee status: ${error.message}`);
     }
-
-    triggerSuccess(
-      nextStatus
-        ? `Marked "${vendor.receiver_name}" as an employee.`
-        : `Removed "${vendor.receiver_name}" from employees.`
-    );
   };
 
-  // Add Vendor
+  const handleToggleHide = async (vendor: Vendor) => {
+    const newHidden = !vendor.is_hidden;
+    try {
+      await updateVendor(vendor.id, { is_hidden: newHidden });
+      setVendors((prev) =>
+        prev.map((v) =>
+          v.id === vendor.id ? { ...v, is_hidden: newHidden } : v,
+        ),
+      );
+      triggerSuccess(
+        `${newHidden ? "Hidden" : "Unhidden"} "${vendor.receiver_name}".`,
+      );
+    } catch (error: any) {
+      console.error("Failed to toggle hide status:", error);
+      alert(`Could not update hidden status: ${error.message}`);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setErrorMessage(null);
 
-    const payloadToInsert: Record<string, any> = {
-      receiver_name: formData.receiver_name,
-      account_number: formData.account_number,
-      bank_name: formData.bank_name,
-      branch_name: formData.branch_name,
-      routing_number: formData.routing_number,
+    const payload = {
+      receiver_name: formData.receiver_name.trim(),
+      account_number: formData.account_number.trim(),
+      bank_name: formData.bank_name.trim(),
+      branch_name: formData.branch_name.trim(),
+      routing_number: formData.routing_number.trim(),
+      is_employee: formData.is_employee,
+      salary: formData.salary ? Number(formData.salary) : 0,
     };
 
-    if (formData.is_employee) {
-      payloadToInsert.is_employee = true;
-    }
-    if (formData.salary) {
-      payloadToInsert.salary = Number(formData.salary);
-    }
+    const duplicate = vendors.find(
+      (v) =>
+        v.receiver_name.trim().toLowerCase() ===
+        payload.receiver_name.toLowerCase(),
+    );
 
-    const exactMatch = vendors.find((v) => v.receiver_name.toLowerCase() === formData.receiver_name.trim().toLowerCase());
-    if (exactMatch) {
-      setDuplicateVendor(exactMatch);
-      setDuplicatePendingPayload(payloadToInsert);
+    if (duplicate) {
+      setDuplicateVendor(duplicate);
+      setDuplicatePendingPayload(payload);
       setSaving(false);
       return;
     }
 
-    executeCreate(payloadToInsert, formData.is_employee);
+    await executeCreate(payload, formData.is_employee);
   };
 
-  const handleToggleHide = async (vendor: Vendor) => {
+  const executeCreate = async (payload: any, isEmployee: boolean) => {
     try {
-      const nextState = !vendor.is_hidden;
-      await updateVendor(vendor.id, { is_hidden: nextState });
-      setVendors((prev) => prev.map((v) => v.id === vendor.id ? { ...v, is_hidden: nextState } : v));
-      triggerSuccess(`Account "${vendor.receiver_name}" ${nextState ? 'hidden' : 'activated'} successfully.`);
-    } catch (e: any) {
-      alert(`Failed: ${e.message}`);
-    }
-  };
+      const created = await createVendor(payload);
+      const newVendor: Vendor = {
+        id: (created as any)?.id || crypto.randomUUID(),
+        ...payload,
+        is_employee: isEmployee,
+        is_hidden: false,
+      };
 
-  const executeCreate = async (payloadToInsert: any, isEmployee: boolean) => {
-    try {
-      setSaving(true);
-      const newVendor = await createVendor(payloadToInsert);
+      setVendors((prev) => [newVendor, ...prev]);
       setFormData({
-        receiver_name: "", account_number: "", bank_name: "", branch_name: "", routing_number: "", is_employee: false, salary: ""
+        receiver_name: "",
+        account_number: "",
+        bank_name: "",
+        branch_name: "",
+        routing_number: "",
+        is_employee: false,
+        salary: "",
       });
-      triggerSuccess(
-        isEmployee
-          ? `Added "${newVendor.receiver_name}" as an employee!`
-          : `Vendor "${newVendor.receiver_name}" added successfully!`
-      );
-      fetchVendors();
+      triggerSuccess(`Added "${payload.receiver_name}" successfully!`);
     } catch (error: any) {
       setErrorMessage(error.message);
       alert(`Failed to save vendor: ${error.message}`);
@@ -219,7 +241,13 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
       setDuplicateVendor(null);
       setDuplicatePendingPayload(null);
       setFormData({
-        receiver_name: "", account_number: "", bank_name: "", branch_name: "", routing_number: "", is_employee: false, salary: ""
+        receiver_name: "",
+        account_number: "",
+        bank_name: "",
+        branch_name: "",
+        routing_number: "",
+        is_employee: false,
+        salary: "",
       });
     }
   };
@@ -266,8 +294,8 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
                 ...editFormData,
                 salary: editFormData.salary ? Number(editFormData.salary) : 0,
               }
-            : v
-        )
+            : v,
+        ),
       );
       triggerSuccess(`Updated "${editFormData.receiver_name}" successfully!`);
       setEditingVendor(null);
@@ -278,9 +306,6 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
     setEditSaving(false);
   };
 
-  // Delete Vendor
-  const [isHiding, setIsHiding] = useState(false);
-
   const handleHideVendor = async () => {
     if (!deletingVendor) return;
     setIsHiding(true);
@@ -289,7 +314,9 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
 
     try {
       await updateVendor(targetId, { is_hidden: true });
-      setVendors((prev) => prev.map((v) => v.id === targetId ? { ...v, is_hidden: true } : v));
+      setVendors((prev) =>
+        prev.map((v) => (v.id === targetId ? { ...v, is_hidden: true } : v)),
+      );
       triggerSuccess(`Hidden vendor "${targetName}".`);
       setDeletingVendor(null);
     } catch (error: any) {
@@ -318,15 +345,15 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
     setIsDeleting(false);
   };
 
-  // Filtered vendors
+  // Filtered counts
   const employeeCount = useMemo(
     () => vendors.filter((v) => v.is_employee && !v.is_hidden).length,
-    [vendors]
+    [vendors],
   );
-  
+
   const hiddenCount = useMemo(
     () => vendors.filter((v) => v.is_hidden).length,
-    [vendors]
+    [vendors],
   );
   const visibleCount = vendors.length - hiddenCount;
 
@@ -335,57 +362,51 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
       if (activeTab === "hidden") return Boolean(v.is_hidden);
       if (v.is_hidden) return false;
 
-      // Tab filter
       if (activeTab === "employees" && !v.is_employee) return false;
       if (activeTab === "others" && v.is_employee) return false;
 
-      // Search query filter
       const q = searchQuery.toLowerCase().trim();
       if (!q) return true;
       return (
         v.receiver_name.toLowerCase().includes(q) ||
         v.account_number.toLowerCase().includes(q) ||
         v.bank_name.toLowerCase().includes(q) ||
-        v.branch_name.toLowerCase().includes(q) ||
-        v.routing_number.toLowerCase().includes(q)
+        (v.branch_name && v.branch_name.toLowerCase().includes(q)) ||
+        (v.routing_number && v.routing_number.toLowerCase().includes(q))
       );
     });
   }, [vendors, activeTab, searchQuery]);
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-            Receiver Bank Accounts
-          </h1>
-          <p className="text-sm sm:text-base text-gray-500 mt-1 sm:mt-2">
-            Add, edit, and mark employees or vendor beneficiary bank accounts.
-          </p>
-        </div>
+    <div className="max-w-7xl mx-auto flex flex-col gap-6 pb-16">
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-strong">
+          Receiver Bank Accounts
+        </h1>
+        <p className="text-sm text-text-muted mt-1">
+          Add, edit, and mark employees or vendor beneficiary bank accounts.
+        </p>
       </div>
 
       {/* Success Notification */}
       {successMessage && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center justify-between shadow-sm animate-in fade-in duration-200">
+        <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-xl flex items-center justify-between shadow-xs animate-in fade-in duration-200">
           <div className="flex items-center gap-2 font-medium text-xs sm:text-sm">
-            <Check className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 flex-shrink-0" />
+            <Check className="size-4 shrink-0" />
             <span>{successMessage}</span>
           </div>
           <button
             onClick={() => setSuccessMessage(null)}
-            className="text-emerald-600 hover:text-emerald-800 p-1 rounded-lg"
+            className="text-success hover:opacity-75 p-1 rounded-lg cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" />
           </button>
         </div>
       )}
 
-
-
       {errorMessage && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-800 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-4 text-destructive flex items-start gap-3">
+          <AlertCircle className="size-5 shrink-0 mt-0.5" />
           <div className="text-xs sm:text-sm">
             <p className="font-semibold">Database Error</p>
             <p className="mt-1">{errorMessage}</p>
@@ -394,17 +415,16 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
       )}
 
       {/* Add New Receiver Form */}
-      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-xs border border-slate-200">
-        <h2 className="text-base sm:text-lg font-semibold mb-4 text-gray-900 flex items-center gap-2">
-          <Plus className="w-5 h-5 text-blue-600" />
+      <div className="bg-card p-4 sm:p-6 rounded-2xl shadow-xs border border-border flex flex-col gap-4">
+        <h2 className="text-base font-bold text-text-strong">
           Add New Receiver Account
         </h2>
         <form
           onSubmit={handleSubmit}
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4"
         >
-          <div className="relative">
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+          <div className="flex flex-col gap-1.5 relative">
+            <label className="text-xs sm:text-sm font-semibold text-text-strong">
               Receiver / Employee Name *
             </label>
             <input
@@ -414,18 +434,23 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
               value={formData.receiver_name}
               onChange={handleChange}
               onBlur={handleNameBlur}
-              className={`w-full border rounded-xl px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 transition-colors ${inlineDuplicateWarning ? 'border-orange-400 bg-orange-50' : 'border-slate-200'}`}
+              className={`w-full border rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted ${
+                inlineDuplicateWarning
+                  ? "border-warning bg-warning/5"
+                  : "border-input"
+              }`}
               placeholder="e.g. John Doe"
             />
             {inlineDuplicateWarning && (
-              <p className="absolute -bottom-5 left-1 text-[11px] font-medium text-orange-600 flex items-center gap-1 whitespace-nowrap">
-                <AlertTriangle className="w-3 h-3" />
+              <p className="text-[11px] font-medium text-warning flex items-center gap-1 mt-1">
+                <AlertTriangle className="size-3" />
                 {inlineDuplicateWarning}
               </p>
             )}
           </div>
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs sm:text-sm font-semibold text-text-strong">
               Account Number *
             </label>
             <input
@@ -434,7 +459,7 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
               name="account_number"
               value={formData.account_number}
               onChange={handleChange}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+              className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
               placeholder="1234567890"
             />
           </div>
@@ -443,31 +468,36 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
             bankName={formData.bank_name}
             branchName={formData.branch_name}
             routingNumber={formData.routing_number}
-            onBankChange={(val) => setFormData((prev) => ({ ...prev, bank_name: val }))}
-            onBranchChange={(val) => setFormData((prev) => ({ ...prev, branch_name: val }))}
-            onRoutingChange={(val) => setFormData((prev) => ({ ...prev, routing_number: val }))}
+            onBankChange={(val) =>
+              setFormData((prev) => ({ ...prev, bank_name: val }))
+            }
+            onBranchChange={(val) =>
+              setFormData((prev) => ({ ...prev, branch_name: val }))
+            }
+            onRoutingChange={(val) =>
+              setFormData((prev) => ({ ...prev, routing_number: val }))
+            }
           />
 
           {/* Employee Option & Default Salary */}
-          <div className="sm:col-span-2 lg:col-span-3 pt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="sm:col-span-2 lg:col-span-3 pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-              <label className="inline-flex items-center gap-2.5 cursor-pointer select-none">
+              <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   name="is_employee"
                   checked={formData.is_employee}
                   onChange={handleChange}
-                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
+                  className="size-4 rounded border-input text-primary focus:ring-ring/20"
                 />
-                <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
-                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                <span className="text-sm font-medium text-text-strong">
                   Mark as Employee (Included in Salary Sheets)
                 </span>
               </label>
 
               {formData.is_employee && (
                 <div className="inline-flex items-center gap-2">
-                  <label className="text-xs sm:text-sm text-gray-600 font-medium whitespace-nowrap">
+                  <label className="text-xs sm:text-sm text-text-muted font-medium whitespace-nowrap">
                     Default Salary (BDT):
                   </label>
                   <input
@@ -476,51 +506,49 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
                     value={formData.salary}
                     onChange={handleChange}
                     placeholder="e.g. 50000"
-                    className="w-36 border border-slate-200 rounded-xl px-3 py-1.5 text-sm focus:ring-blue-500 focus:border-blue-500 font-mono"
+                    className="w-36 border border-input rounded-xl px-3 py-1.5 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20"
                   />
                 </div>
               )}
             </div>
 
-            <button
+            <Button
               type="submit"
               disabled={saving}
-              className="bg-blue-600 text-white px-5 py-2.5 rounded-xl hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center font-medium transition-colors text-sm shadow-sm shrink-0"
+              className="gap-2 cursor-pointer self-start sm:self-auto"
             >
               {saving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="size-4" />
               )}
-              Save Receiver
-            </button>
+              <span>Save Receiver</span>
+            </Button>
           </div>
         </form>
       </div>
 
       {/* Receiver Bank AC Container */}
-      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden mt-6">
-        <div className="px-5 sm:px-6 py-4 border-b border-slate-200 bg-slate-50/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-3.5">
-          <div className="flex items-center gap-3">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+      <div className="bg-card rounded-2xl shadow-xs border border-border overflow-hidden flex flex-col">
+        <div className="px-4 sm:px-6 py-4 border-b border-border bg-muted/20 flex flex-col md:flex-row justify-between items-start md:items-center gap-3.5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-text-strong">
               Receivers List
             </h2>
-            <span className="text-xs bg-slate-200/80 text-slate-700 px-2.5 py-0.5 rounded-full font-medium">
-              {vendors.length} Total
-            </span>
+            <span className="text-xs text-text-muted">({vendors.length})</span>
           </div>
 
           {/* Filter Tabs & Search */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
             {/* Filter Tabs */}
-            <div className="inline-flex p-1 bg-slate-200/70 rounded-xl text-xs font-medium self-start sm:self-auto">
+            <div className="inline-flex p-1 bg-muted rounded-xl text-xs font-medium self-start sm:self-auto gap-0.5">
               <button
                 type="button"
                 onClick={() => setActiveTab("all")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
+                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTab === "all"
-                    ? "bg-white text-gray-900 shadow-xs font-semibold"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-background text-text-strong shadow-2xs font-semibold"
+                    : "text-text-muted hover:text-text-strong"
                 }`}
               >
                 All ({visibleCount})
@@ -528,22 +556,21 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
               <button
                 type="button"
                 onClick={() => setActiveTab("employees")}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTab === "employees"
-                    ? "bg-white text-emerald-700 shadow-xs font-semibold"
-                    : "text-gray-600 hover:text-emerald-700"
+                    ? "bg-background text-text-strong shadow-2xs font-semibold"
+                    : "text-text-muted hover:text-text-strong"
                 }`}
               >
-                <UserCheck className="w-3.5 h-3.5" />
                 Employees ({employeeCount})
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("others")}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
+                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTab === "others"
-                    ? "bg-white text-gray-900 shadow-xs font-semibold"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-background text-text-strong shadow-2xs font-semibold"
+                    : "text-text-muted hover:text-text-strong"
                 }`}
               >
                 Vendors ({visibleCount - employeeCount})
@@ -551,33 +578,32 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
               <button
                 type="button"
                 onClick={() => setActiveTab("hidden")}
-                className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                className={`px-3 py-1.5 rounded-lg transition-colors cursor-pointer ${
                   activeTab === "hidden"
-                    ? "bg-white text-gray-900 shadow-xs font-semibold"
-                    : "text-gray-600 hover:text-gray-900"
+                    ? "bg-background text-text-strong shadow-2xs font-semibold"
+                    : "text-text-muted hover:text-text-strong"
                 }`}
               >
-                <AlertCircle className="w-3.5 h-3.5" />
                 Hidden ({hiddenCount})
               </button>
             </div>
 
             {/* Search Box */}
-            <div className="relative w-full sm:w-64">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <div className="relative w-full sm:w-60">
+              <Search className="size-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search receivers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-8 py-1.5 text-sm bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full pl-9 pr-8 py-1.5 text-sm bg-background border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 text-text-strong placeholder:text-text-muted"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-strong"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="size-3.5" />
                 </button>
               )}
             </div>
@@ -586,230 +612,134 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
 
         {/* Loading State */}
         {loading ? (
-          <div className="p-12 text-center text-gray-500">
-            <Loader2 className="w-7 h-7 animate-spin mx-auto mb-2 text-blue-600" />
-            Loading receiver accounts...
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/40 text-text-muted border-b border-border text-xs uppercase font-medium">
+                <tr>
+                  <th className="px-5 py-3">Receiver Name</th>
+                  <th className="px-4 py-3 text-center w-36">
+                    Employee Status
+                  </th>
+                  <th className="px-5 py-3">Account Number</th>
+                  <th className="px-5 py-3">Bank Name</th>
+                  <th className="px-5 py-3">Branch Name</th>
+                  <th className="px-5 py-3">Routing Number</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                <TableRowsSkeleton rows={6} columns={7} />
+              </tbody>
+            </table>
           </div>
         ) : vendors.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
+          <div className="p-12 text-center text-text-muted text-sm">
             No receivers found. Add one using the form above.
           </div>
         ) : filteredVendors.length === 0 ? (
-          <div className="p-12 text-center text-gray-500">
+          <div className="p-12 text-center text-text-muted text-sm">
             No receivers match the selected filter or search query.
           </div>
         ) : (
-          <>
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-gray-50/80 text-gray-700 border-b border-slate-200">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">Receiver Name</th>
-                    <th className="px-4 py-3 font-semibold text-center w-36">
-                      Employee Status
-                    </th>
-                    <th className="px-5 py-3 font-semibold">Account Number</th>
-                    <th className="px-5 py-3 font-semibold">Bank Name</th>
-                    <th className="px-5 py-3 font-semibold">Branch Name</th>
-                    <th className="px-5 py-3 font-semibold">Routing Number</th>
-                    <th className="px-5 py-3 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredVendors.map((v) => (
-                    <tr
-                      key={v.id}
-                      className={`hover:bg-slate-50/80 transition-colors ${
-                        v.is_employee ? "bg-emerald-50/20" : ""
-                      }`}
-                    >
-                      <td className="px-5 py-3.5 font-medium text-gray-900">
-                        <div className="flex items-center gap-2">
-                          <span>{v.receiver_name}</span>
-                          {v.salary ? (
-                            <span className="text-[11px] text-gray-500 font-mono bg-gray-100 px-1.5 py-0.5 rounded border">
-                              ৳{Number(v.salary).toLocaleString()}
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-
-                      {/* Employee Toggle Checkmark Column */}
-                      <td className="px-4 py-3.5 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleEmployee(v)}
-                          title={
-                            v.is_employee
-                              ? "Click to unmark as employee"
-                              : "Click to mark as employee"
-                          }
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                            v.is_employee
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300 hover:bg-emerald-200"
-                              : "bg-gray-100 text-gray-500 border border-gray-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50"
-                          }`}
-                        >
-                          {v.is_employee ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-600 stroke-[2.5]" />
-                              <span>Employee</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="w-2 h-2 rounded-full bg-gray-300" />
-                              <span>Mark Employee</span>
-                            </>
-                          )}
-                        </button>
-                      </td>
-
-                      <td className="px-5 py-3.5 font-mono text-xs text-gray-700">
-                        {v.account_number}
-                      </td>
-                      <td className="px-5 py-3.5 text-gray-700">{v.bank_name}</td>
-                      <td className="px-5 py-3.5 text-gray-600">
-                        {v.branch_name || "—"}
-                      </td>
-                      <td className="px-5 py-3.5 font-mono text-xs text-gray-700">
-                        {v.routing_number || "—"}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleToggleHide(v)}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-amber-600 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg transition-colors"
-                            title={v.is_hidden ? "Unhide receiver" : "Hide receiver"}
-                          >
-                            <AlertCircle className="w-3.5 h-3.5" />
-                            {v.is_hidden ? "Unhide" : "Hide"}
-                          </button>
-                          <button
-                            onClick={() => handleStartEdit(v)}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-1.5 rounded-lg transition-colors"
-                            title="Edit receiver"
-                          >
-                            <Pencil className="w-3.5 h-3.5" />
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => setDeletingVendor(v)}
-                            className="inline-flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 px-2.5 py-1.5 rounded-lg transition-colors"
-                            title="Delete receiver"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card List View */}
-            <div className="md:hidden divide-y divide-slate-100">
-              {filteredVendors.map((v) => (
-                <div
-                  key={v.id}
-                  className={`p-4 space-y-3 transition-colors ${
-                    v.is_employee ? "bg-emerald-50/25" : "hover:bg-gray-50/70"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-muted/40 text-text-muted border-b border-border text-xs uppercase font-medium">
+                <tr>
+                  <th className="px-5 py-3">Receiver Name</th>
+                  <th className="px-4 py-3 text-center w-36">
+                    Employee Status
+                  </th>
+                  <th className="px-5 py-3">Account Number</th>
+                  <th className="px-5 py-3">Bank Name</th>
+                  <th className="px-5 py-3">Branch Name</th>
+                  <th className="px-5 py-3">Routing Number</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredVendors.map((v) => (
+                  <tr
+                    key={v.id}
+                    className="hover:bg-muted/30 transition-colors"
+                  >
+                    <td className="px-5 py-3.5 font-medium text-text-strong">
                       <div className="flex items-center gap-2">
-                        <h3 className="font-semibold text-gray-900 text-sm">
-                          {v.receiver_name}
-                        </h3>
+                        <span>{v.receiver_name}</span>
+                        {v.salary ? (
+                          <span className="text-[11px] text-text-muted font-mono">
+                            ৳{Number(v.salary).toLocaleString()}
+                          </span>
+                        ) : null}
                       </div>
-                      <div className="inline-block mt-1 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium border border-blue-100">
-                        {v.bank_name || "Bank Not Specified"}
+                    </td>
+
+                    <td className="px-4 py-3.5 text-center">
+                      <Button
+                        type="button"
+                        variant={v.is_employee ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => handleToggleEmployee(v)}
+                        className="h-7 text-xs gap-1.5 cursor-pointer"
+                      >
+                        {v.is_employee ? (
+                          <>
+                            <Check className="size-3 text-primary stroke-[2.5]" />
+                            <span>Employee</span>
+                          </>
+                        ) : (
+                          <span className="text-text-muted">Vendor</span>
+                        )}
+                      </Button>
+                    </td>
+
+                    <td className="px-5 py-3.5 font-mono text-xs text-text-muted">
+                      {v.account_number}
+                    </td>
+                    <td className="px-5 py-3.5 text-text-default">
+                      {v.bank_name}
+                    </td>
+                    <td className="px-5 py-3.5 text-text-muted">
+                      {v.branch_name || "—"}
+                    </td>
+                    <td className="px-5 py-3.5 font-mono text-xs text-text-muted">
+                      {v.routing_number || "—"}
+                    </td>
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleHide(v)}
+                          className="h-8 text-xs text-text-muted hover:text-text-strong"
+                          title={v.is_hidden ? "Unhide" : "Hide"}
+                        >
+                          {v.is_hidden ? "Unhide" : "Hide"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleStartEdit(v)}
+                          className="size-8 text-text-muted hover:text-text-strong"
+                          title="Edit receiver"
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeletingVendor(v)}
+                          className="size-8 text-text-muted hover:text-destructive hover:bg-destructive/10"
+                          title="Delete receiver"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleToggleHide(v)}
-                        className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-xl border border-amber-100 transition-colors"
-                        title={v.is_hidden ? "Unhide receiver" : "Hide receiver"}
-                      >
-                        <AlertCircle className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => handleStartEdit(v)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-xl border border-blue-100 transition-colors"
-                        title="Edit receiver"
-                      >
-                        <Pencil className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => setDeletingVendor(v)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-xl border border-red-100 transition-colors"
-                        title="Delete receiver"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Employee Toggle on Mobile */}
-                  <div className="flex items-center justify-between pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleEmployee(v)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all ${
-                        v.is_employee
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-gray-100 text-gray-600 border border-gray-200"
-                      }`}
-                    >
-                      {v.is_employee ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Marked as Employee</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="w-2 h-2 rounded-full bg-gray-300" />
-                          <span>Not Employee (Tap to mark)</span>
-                        </>
-                      )}
-                    </button>
-
-                    {v.salary ? (
-                      <span className="text-xs font-mono text-gray-600">
-                        Salary: ৳{Number(v.salary).toLocaleString()}
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-xs bg-gray-50 p-2.5 rounded-xl border border-gray-100">
-                    <div>
-                      <span className="text-gray-500 block">Account Number</span>
-                      <span className="font-mono text-gray-800 font-medium break-all">
-                        {v.account_number}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 block">Routing Number</span>
-                      <span className="font-mono text-gray-800 font-medium">
-                        {v.routing_number || "—"}
-                      </span>
-                    </div>
-                    {v.branch_name && (
-                      <div className="col-span-2 pt-1 border-t border-gray-200/50">
-                        <span className="text-gray-500 block">Branch</span>
-                        <span className="text-gray-800">{v.branch_name}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -820,106 +750,116 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
           onClose={() => setEditingVendor(null)}
           title="Edit Receiver Account"
           subtitle="Modify beneficiary banking and employee status."
-          icon={<Edit className="w-5 h-5 text-blue-600" />}
           maxWidth="lg"
         >
-          <form onSubmit={handleSaveEdit} className="flex flex-col h-full w-full max-h-[75vh]">
-              <div className="p-4 sm:p-6 space-y-3.5 sm:space-y-4">
-                <div>
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                    Receiver / Employee Name
+          <form
+            onSubmit={handleSaveEdit}
+            className="flex flex-col h-full w-full max-h-[75vh]"
+          >
+            <div className="p-5 sm:p-6 flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                  Receiver / Employee Name *
+                </label>
+                <input
+                  required
+                  type="text"
+                  name="receiver_name"
+                  value={editFormData.receiver_name}
+                  onChange={handleEditChange}
+                  className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                    Account Number *
                   </label>
                   <input
                     required
                     type="text"
-                    name="receiver_name"
-                    value={editFormData.receiver_name}
+                    name="account_number"
+                    value={editFormData.account_number}
                     onChange={handleEditChange}
-                    className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
                   />
                 </div>
+                <BankBranchSelect
+                  bankName={editFormData.bank_name}
+                  branchName={editFormData.branch_name}
+                  routingNumber={editFormData.routing_number}
+                  onBankChange={(val) =>
+                    setEditFormData((prev) => ({ ...prev, bank_name: val }))
+                  }
+                  onBranchChange={(val) =>
+                    setEditFormData((prev) => ({ ...prev, branch_name: val }))
+                  }
+                  onRoutingChange={(val) =>
+                    setEditFormData((prev) => ({
+                      ...prev,
+                      routing_number: val,
+                    }))
+                  }
+                />
+              </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                  <div>
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                      Account Number
+              {/* Employee checkmark in Edit */}
+              <div className="pt-3 border-t border-border flex flex-col gap-3">
+                <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    name="is_employee"
+                    checked={editFormData.is_employee}
+                    onChange={handleEditChange}
+                    className="size-4 rounded border-input text-primary focus:ring-ring/20"
+                  />
+                  <span className="text-sm font-medium text-text-strong">
+                    Mark as Employee (Included in Salary Sheets)
+                  </span>
+                </label>
+
+                {editFormData.is_employee && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                      Default Monthly Salary (BDT)
                     </label>
                     <input
-                      required
-                      type="text"
-                      name="account_number"
-                      value={editFormData.account_number}
+                      type="number"
+                      name="salary"
+                      value={editFormData.salary}
                       onChange={handleEditChange}
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+                      placeholder="e.g. 50000"
+                      className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
                     />
                   </div>
-                  <BankBranchSelect
-                    bankName={editFormData.bank_name}
-                    branchName={editFormData.branch_name}
-                    routingNumber={editFormData.routing_number}
-                    onBankChange={(val) => setEditFormData((prev) => ({ ...prev, bank_name: val }))}
-                    onBranchChange={(val) => setEditFormData((prev) => ({ ...prev, branch_name: val }))}
-                    onRoutingChange={(val) => setEditFormData((prev) => ({ ...prev, routing_number: val }))}
-                  />
-                </div>
-
-                {/* Employee checkmark in Edit */}
-                <div className="pt-3 border-t border-slate-100 space-y-3">
-                  <label className="inline-flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      name="is_employee"
-                      checked={editFormData.is_employee}
-                      onChange={handleEditChange}
-                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300"
-                    />
-                    <span className="text-sm font-medium text-gray-800 flex items-center gap-1.5">
-                      <UserCheck className="w-4 h-4 text-emerald-600" />
-                      Mark as Employee (Included in Salary Sheets)
-                    </span>
-                  </label>
-
-                  {editFormData.is_employee && (
-                    <div>
-                      <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                        Default Monthly Salary (BDT)
-                      </label>
-                      <input
-                        type="number"
-                        name="salary"
-                        value={editFormData.salary}
-                        onChange={handleEditChange}
-                        placeholder="e.g. 50000"
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500 font-mono"
-                      />
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
+            </div>
 
-              <div className="p-4 bg-gray-50 border-t flex items-center justify-end gap-3 flex-shrink-0">
-                <button
-                  type="button"
-                  disabled={editSaving}
-                  onClick={() => setEditingVendor(null)}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl border transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editSaving}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-sm disabled:opacity-50 flex items-center gap-2 transition-colors"
-                >
-                  {editSaving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Check className="w-4 h-4" />
-                  )}
-                  Save Changes
-                </button>
-              </div>
-            </form>
+            <div className="p-4 bg-muted/40 border-t border-border flex items-center justify-end gap-3 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={editSaving}
+                onClick={() => setEditingVendor(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={editSaving}
+                className="gap-2 cursor-pointer"
+              >
+                {editSaving ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Check className="size-4" />
+                )}
+                <span>Save Changes</span>
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
 
@@ -931,10 +871,15 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
         onHide={handleHideVendor}
         title="Delete Receiver Account?"
         description="Are you sure you want to remove this receiver account? You can hide it instead of permanently deleting it from the database."
-        itemName={deletingVendor ? `${deletingVendor.receiver_name} (A/C: ${deletingVendor.account_number})` : undefined}
+        itemName={
+          deletingVendor
+            ? `${deletingVendor.receiver_name} (A/C: ${deletingVendor.account_number})`
+            : undefined
+        }
         isDeleting={isDeleting}
         isHiding={isHiding}
       />
+
       {duplicateVendor && (
         <Modal
           isOpen={!!duplicateVendor}
@@ -942,49 +887,61 @@ export default function VendorsClient({ initialVendors }: { initialVendors: Vend
             setDuplicateVendor(null);
             setDuplicatePendingPayload(null);
           }}
-          title={duplicateVendor.is_hidden ? "Hidden Account Found" : "Duplicate Account Found"}
-          icon={<AlertTriangle className="w-5 h-5 text-amber-600" />}
+          title={
+            duplicateVendor.is_hidden
+              ? "Hidden Account Found"
+              : "Duplicate Account Found"
+          }
+          icon={<AlertTriangle className="size-5 text-warning" />}
           maxWidth="sm"
         >
-          <div className="p-6">
-              <p className="text-xs sm:text-sm text-gray-600 text-center mt-2">
-                An account with the name <strong className="text-gray-900">{duplicateVendor.receiver_name}</strong> already exists 
-                {duplicateVendor.is_hidden ? " but is currently hidden." : " and is active."}
-              </p>
-              <div className="mt-4 p-3 bg-gray-50 rounded-xl border text-sm text-gray-700">
-                <p><strong>A/C:</strong> {duplicateVendor.account_number}</p>
-                <p><strong>Bank:</strong> {duplicateVendor.bank_name}</p>
-              </div>
+          <div className="p-6 flex flex-col gap-4 text-center">
+            <p className="text-sm text-text-muted">
+              An account named{" "}
+              <strong className="text-text-strong font-semibold">
+                {duplicateVendor.receiver_name}
+              </strong>{" "}
+              already exists
+              {duplicateVendor.is_hidden
+                ? " but is currently hidden."
+                : " and is active."}
+            </p>
+            <div className="p-3 bg-muted/40 rounded-xl border border-border text-xs text-text-muted text-left font-mono">
+              <p>A/C: {duplicateVendor.account_number}</p>
+              <p>Bank: {duplicateVendor.bank_name}</p>
             </div>
+          </div>
 
-            <div className="p-4 bg-gray-50 border-t flex flex-col gap-2">
-              {duplicateVendor.is_hidden ? (
-                <button
-                  type="button"
-                  onClick={handleActivateOldAccount}
-                  className="w-full px-4 py-2 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-sm transition-colors"
-                >
-                  Activate Old Account
-                </button>
-              ) : null}
-              <button
+          <div className="p-4 bg-muted/40 border-t border-border flex flex-col gap-2">
+            {duplicateVendor.is_hidden ? (
+              <Button
                 type="button"
-                onClick={handleConfirmCreateDuplicate}
-                className="w-full px-4 py-2 text-sm font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 rounded-xl shadow-sm transition-colors"
+                onClick={handleActivateOldAccount}
+                className="w-full"
               >
-                Create New Account Anyway
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDuplicateVendor(null);
-                  setDuplicatePendingPayload(null);
-                }}
-                className="w-full px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-xl border transition-colors mt-1"
-              >
-                Cancel
-              </button>
-            </div>
+                Activate Old Account
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleConfirmCreateDuplicate}
+              className="w-full"
+            >
+              Create New Account Anyway
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setDuplicateVendor(null);
+                setDuplicatePendingPayload(null);
+              }}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          </div>
         </Modal>
       )}
     </div>

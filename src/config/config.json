@@ -1,0 +1,21 @@
+{
+  "site": {
+    "title": "Themefisher Finance",
+    "base_url": "https://finance.themefisher.com",
+    "base_path": "/",
+    "trailing_slash": false,
+    "favicon": "/favicon.svg",
+    "logo_text": "Themefisher Finance"
+  },
+  "settings": {
+    "default_theme": "light",
+    "theme_switcher": true
+  },
+  "params": {
+    "copyright": "Copyright © Themefisher. All Rights Reserved."
+  },
+  "metadata": {
+    "meta_author": "Themefisher",
+    "meta_description": "Themefisher Finance – Inward Remittance Invoice, Bangladesh Bank Form-C & SCB Bulk Payout Suite"
+  }
+}

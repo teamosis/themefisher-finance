@@ -1,92 +1,95 @@
+import {
+  Card,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import Footer from "@/partials/Footer";
+import Header from "@/partials/Header";
+import { ArrowRight, FileSpreadsheet, FileText } from "lucide-react";
 import Link from "next/link";
-import { FileText, FileSpreadsheet, ArrowRight, Layers } from "lucide-react";
 
 export default function Dashboard() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-between">
-      {/* Top Header */}
-      <header className="bg-white border-b border-slate-200 py-4 px-6 sm:px-8 shadow-xs">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-sm">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
-                Themefisher Admin Tools
-              </h1>
-              <p className="text-xs text-slate-500">
-                Select a tool to get started
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background flex flex-col justify-between">
+      <Header />
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col justify-center items-center px-4 sm:px-6 py-12">
-        <div className="max-w-4xl w-full">
-          {/* Header Title */}
-          <div className="text-center mb-10">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              Tools Dashboard
-            </h2>
-            <p className="text-slate-600 mt-2 text-sm sm:text-base">
-              Click on a tool below to open its workspace
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-12 sm:py-20">
+        <div className="max-w-7xl w-full mx-auto flex flex-col gap-10">
+          {/* Hero Section */}
+          <section className="text-center flex flex-col items-center gap-3">
+            <h1 className="text-3xl sm:text-4xl font-bold text-text-strong tracking-tight">
+              Themefisher Finance
+            </h1>
+            <p className="text-muted-foreground text-sm sm:text-base max-w-xl">
+              Internal tools for Bangladesh Bank Form-C declarations, bank
+              invoices, and Standard Chartered bulk payouts.
             </p>
-          </div>
+          </section>
 
-          {/* Simple, Clickable Tiles */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
-            {/* Tile 1: Invoice & Form-C Generator */}
+          {/* Tools Grid - Simple, Clean & Fully Clickable */}
+          <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-4xl mx-auto w-full">
+            {/* Tool 1: Invoice & Form-C */}
             <Link
               href="/invoice-tools"
-              className="group bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-xl transition-all duration-200 flex flex-col items-center text-center cursor-pointer shadow-xs"
+              className="group block rounded-xl focus:outline-hidden cursor-pointer"
             >
-              <div className="w-20 h-20 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-6 group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white transition-all duration-200 shadow-xs">
-                <FileText className="w-10 h-10" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                Invoice &amp; Form-C Generator
-              </h3>
-              <p className="text-slate-500 text-sm mt-3 leading-relaxed">
-                Generate Bangladesh Bank Form-C declarations and bank invoices
-                with one-click print and PDF export.
-              </p>
-              <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-blue-600 group-hover:translate-x-1 transition-transform">
-                <span>Open Tool</span>
-                <ArrowRight className="w-4 h-4" />
-              </div>
+              <Card className="border-border bg-card group-hover:border-foreground/30 transition-all duration-200 flex flex-col justify-between h-full shadow-xs group-hover:shadow-md">
+                <CardHeader className="p-6 pb-4">
+                  <div className="size-11 rounded-xl bg-muted text-text-strong flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105">
+                    <FileText className="size-5" />
+                  </div>
+                  <CardTitle className="text-xl font-semibold text-text-strong group-hover:text-primary transition-colors">
+                    Invoice &amp; Form-C
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground text-sm mt-1.5 leading-relaxed">
+                    Generate inward remittance invoices and Bangladesh Bank
+                    Form-C declarations with MT103 PDF parsing.
+                  </CardDescription>
+                </CardHeader>
+
+                <CardFooter className="p-6 pt-2">
+                  <div className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors group-hover:bg-primary/90">
+                    <span>Open Generator</span>
+                    <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </div>
+                </CardFooter>
+              </Card>
             </Link>
 
-            {/* Tile 2: SCB Transection Generator */}
+            {/* Tool 2: SCB Bulk Transactions */}
             <Link
               href="/scb-tools"
-              className="group bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 hover:border-emerald-500 hover:shadow-xl transition-all duration-200 flex flex-col items-center text-center cursor-pointer shadow-xs"
+              className="group block rounded-xl focus:outline-hidden cursor-pointer"
             >
-              <div className="w-20 h-20 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-6 group-hover:scale-105 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-200 shadow-xs">
-                <FileSpreadsheet className="w-10 h-10" />
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 group-hover:text-emerald-600 transition-colors">
-                SCB Transection Generator
-              </h3>
-              <p className="text-slate-500 text-sm mt-3 leading-relaxed">
-                Generate bulk bank transfer Excel files compliant with Standard
-                Chartered Bank format specifications.
-              </p>
-              <div className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-emerald-600 group-hover:translate-x-1 transition-transform">
-                <span>Open Tool</span>
-                <ArrowRight className="w-4 h-4" />
-              </div>
+              <Card className="border-border bg-card group-hover:border-foreground/30 transition-all duration-200 flex flex-col justify-between h-full shadow-xs group-hover:shadow-md">
+                <CardHeader className="p-6 pb-4">
+                  <div className="size-11 rounded-xl bg-muted text-text-strong flex items-center justify-center mb-4 transition-transform duration-200 group-hover:scale-105">
+                    <FileSpreadsheet className="size-5" />
+                  </div>
+                  <CardTitle className="text-xl font-semibold text-text-strong group-hover:text-primary transition-colors">
+                    SCB Bulk Transactions
+                  </CardTitle>
+                  <CardDescription className="text-muted-foreground text-sm mt-1.5 leading-relaxed">
+                    Generate Standard Chartered Bank bulk payout and monthly
+                    employee salary sheet Excel files.
+                  </CardDescription>
+                </CardHeader>
+
+                <CardFooter className="p-6 pt-2">
+                  <div className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors group-hover:bg-primary/90">
+                    <span>Open Generator</span>
+                    <ArrowRight className="size-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </div>
+                </CardFooter>
+              </Card>
             </Link>
-          </div>
+          </section>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">
-        Themefisher Admin Tools
-      </footer>
+      <Footer />
     </div>
   );
 }

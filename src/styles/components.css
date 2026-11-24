@@ -1,0 +1,88 @@
+/* section style */
+.section {
+  @apply py-24 xl:py-28;
+}
+
+.section-sm {
+  @apply py-16 xl:py-20;
+}
+
+/* container */
+.container {
+  @apply mx-auto max-w-7xl px-4;
+}
+
+/* modal */
+.modal {
+  @apply fixed inset-0 z-40 hidden h-full w-full overflow-auto;
+}
+
+.modal-overlay {
+  @apply fixed inset-0 z-40 hidden h-full w-full bg-black/40;
+}
+
+.modal-content {
+  @apply relative top-1/2 z-50 mx-auto max-w-[90%] -translate-y-1/2 rounded-lg bg-background p-8;
+}
+
+.modal-close {
+  @apply absolute right-3 top-3 h-8 w-8 rounded-full bg-light text-center leading-8 text-text-strong;
+}
+
+/* Markdown Prose Styles */
+.prose {
+  color: var(--text-default-color);
+  line-height: 1.6;
+}
+.prose p {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.prose ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.prose ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+.prose li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+.prose strong {
+  font-weight: 600;
+  color: var(--text-strong-color);
+}
+
+/* Print styling specifically tuned for A4 Bangladesh Bank Form-C & Bank Invoices */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .print-page {
+    width: 210mm !important;
+    height: 297mm !important;
+    max-height: 297mm !important;
+    overflow: hidden !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    box-sizing: border-box !important;
+  }
+}

@@ -1,0 +1,20 @@
+.header {
+  @apply bg-background py-4 border-b border-border;
+}
+
+/* navbar items */
+.navbar {
+  @apply relative flex flex-wrap items-center justify-between;
+}
+
+.navbar-brand {
+  @apply text-text-strong text-xl font-semibold;
+}
+
+.navbar-nav {
+  @apply text-center lg:text-left;
+}
+
+.nav-link {
+  @apply text-text-strong hover:text-primary block p-3 cursor-pointer font-semibold transition lg:px-2 lg:py-3;
+}

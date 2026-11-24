@@ -1,4 +1,5 @@
 import { getClients, getInvoices, getPaymentAccounts } from "@/actions";
+import { InvoiceToolsSkeleton } from "@/components";
 import InvoiceToolsClient from "./InvoiceToolsClient";
 import { Suspense } from "react";
 
@@ -12,13 +13,7 @@ export default async function Page() {
   ]);
 
   return (
-    <Suspense
-      fallback={
-        <div className="p-8 text-center text-gray-500">
-          Loading documents...
-        </div>
-      }
-    >
+    <Suspense fallback={<InvoiceToolsSkeleton />}>
       <InvoiceToolsClient
         initialClients={clients}
         initialInvoices={invoices}

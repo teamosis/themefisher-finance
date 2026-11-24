@@ -1,17 +1,17 @@
 "use client";
-import { useState, useCallback } from "react";
-import { getPaymentAccounts, createPaymentAccount, deletePaymentAccount } from "@/actions";
-import { useForm } from "react-hook-form";
-import type { PaymentAccount, PaymentAccountFormData } from "@/types";
-import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
+
 import {
-  Landmark,
-  Trash2,
-  Building2,
-  User,
-  CreditCard,
-  MapPin,
-} from "lucide-react";
+  createPaymentAccount,
+  deletePaymentAccount,
+  getPaymentAccounts,
+} from "@/actions";
+import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { PaymentAccount, PaymentAccountFormData } from "@/types";
+import { CreditCard, Landmark, MapPin, Plus, Trash2, User } from "lucide-react";
+import { useCallback, useState } from "react";
+import { useForm } from "react-hook-form";
 
 function normalizeAccount(acc: Record<string, unknown>): PaymentAccount {
   let detailsObj: Record<string, string> = {};
@@ -43,11 +43,16 @@ function normalizeAccount(acc: Record<string, unknown>): PaymentAccount {
   };
 }
 
-export default function SettingsClient({ initialAccounts }: { initialAccounts: PaymentAccount[] }) {
-  const [accounts, setAccounts] = useState<PaymentAccount[]>(initialAccounts.map(normalizeAccount as any));
+export default function SettingsClient({
+  initialAccounts,
+}: {
+  initialAccounts: PaymentAccount[];
+}) {
+  const [accounts, setAccounts] = useState<PaymentAccount[]>(
+    initialAccounts.map(normalizeAccount as any),
+  );
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
 
   const {
     register,
@@ -99,7 +104,6 @@ export default function SettingsClient({ initialAccounts }: { initialAccounts: P
       .filter(Boolean)
       .join("\n");
 
-    // Full structured payload
     const payload = {
       bank_name: cleanBankName,
       bank_address: cleanBankAddress,
@@ -124,7 +128,9 @@ export default function SettingsClient({ initialAccounts }: { initialAccounts: P
     }
   };
 
-  const [deletingAccount, setDeletingAccount] = useState<PaymentAccount | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState<PaymentAccount | null>(
+    null,
+  );
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleConfirmDelete = async () => {
@@ -143,267 +149,254 @@ export default function SettingsClient({ initialAccounts }: { initialAccounts: P
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 pb-12">
+    <div className="max-w-7xl mx-auto flex flex-col gap-8 pb-16">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-strong">
           Configuration
         </h1>
-        <p className="text-sm text-gray-500 mt-1">
+        <p className="text-sm text-text-muted mt-1">
           Manage payout bank accounts and payment credentials.
         </p>
       </div>
 
       {/* Add Payment Account Card */}
-      <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
-        <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center gap-2.5 bg-gray-50/50">
-          <Landmark className="w-5 h-5 text-blue-600" />
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+      <div className="bg-card rounded-2xl shadow-xs border border-border overflow-hidden flex flex-col">
+        <div className="px-5 sm:px-6 py-4 border-b border-border bg-muted/20">
+          <h2 className="text-base font-bold text-text-strong">
             Add Bank / Payment Account
           </h2>
         </div>
 
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="p-5 sm:p-6 space-y-4 sm:space-y-5"
+          className="p-5 sm:p-6 flex flex-col gap-4 sm:gap-5"
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-            {/* Bank Name (Mandatory) */}
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                Bank Name <span className="text-red-500 font-semibold">*</span>
+            {/* Bank Name */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Bank Name *
               </label>
-              <div className="relative">
-                <input
-                  {...register("bank_name", {
-                    required: "Bank Name is required",
-                  })}
-                  maxLength={120}
-                  className={`w-full px-3.5 py-2.5 border rounded-lg text-base sm:text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 ${
-                    errors.bank_name
-                      ? "border-red-300 bg-red-50/30"
-                      : "border-gray-300 bg-white"
-                  }`}
-                  placeholder="e.g. Standard Chartered Bank or Wise"
-                />
-              </div>
+              <input
+                {...register("bank_name", {
+                  required: "Bank Name is required",
+                })}
+                maxLength={120}
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
+                placeholder="e.g. Standard Chartered Bank or Wise"
+              />
               {errors.bank_name && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-destructive">
                   {errors.bank_name.message}
                 </p>
               )}
             </div>
 
-            {/* Name on Account (Mandatory) */}
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                Name on Account{" "}
-                <span className="text-red-500 font-semibold">*</span>
+            {/* Name on Account */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Name on Account *
               </label>
-              <div className="relative">
-                <input
-                  {...register("name_on_account", {
-                    required: "Name on Account is required",
-                  })}
-                  maxLength={120}
-                  className={`w-full px-3.5 py-2.5 border rounded-lg text-base sm:text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 ${
-                    errors.name_on_account
-                      ? "border-red-300 bg-red-50/30"
-                      : "border-gray-300 bg-white"
-                  }`}
-                  placeholder="e.g. Themefisher LLC or Account Holder Name"
-                />
-              </div>
+              <input
+                {...register("name_on_account", {
+                  required: "Name on Account is required",
+                })}
+                maxLength={120}
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
+                placeholder="e.g. Themefisher LLC"
+              />
               {errors.name_on_account && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-destructive">
                   {errors.name_on_account.message}
                 </p>
               )}
             </div>
 
-            {/* IBAN / Account Number / Account ID (Mandatory) */}
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                IBAN/Account Number/Account ID{" "}
-                <span className="text-red-500 font-semibold">*</span>
+            {/* IBAN / Account Number */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                IBAN / Account Number *
               </label>
-              <div className="relative">
-                <input
-                  {...register("account_number", {
-                    required: "IBAN/Account Number/Account ID is required",
-                  })}
-                  maxLength={50}
-                  className={`w-full px-3.5 py-2.5 border rounded-lg text-base sm:text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 ${
-                    errors.account_number
-                      ? "border-red-300 bg-red-50/30"
-                      : "border-gray-300 bg-white"
-                  }`}
-                  placeholder="e.g. 0001234567890 or GB29 XXXXX"
-                />
-              </div>
+              <input
+                {...register("account_number", {
+                  required: "Account Number is required",
+                })}
+                maxLength={50}
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
+                placeholder="e.g. 0001234567890"
+              />
               {errors.account_number && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-destructive">
                   {errors.account_number.message}
                 </p>
               )}
             </div>
 
-            {/* BIC / SWIFT (Optional) */}
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-                BIC/SWIFT{" "}
-                <span className="text-xs text-gray-400 font-normal">
-                  (Optional)
-                </span>
+            {/* BIC / SWIFT */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                BIC / SWIFT
               </label>
-              <div className="relative">
-                <input
-                  {...register("bic_swift")}
-                  maxLength={20}
-                  className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-base sm:text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 bg-white"
-                  placeholder="e.g. SCBLBDDX"
-                />
-              </div>
+              <input
+                {...register("bic_swift")}
+                maxLength={20}
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
+                placeholder="e.g. SCBLBDDX"
+              />
+            </div>
+
+            {/* Bank Address */}
+            <div className="md:col-span-2 flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Bank Address
+              </label>
+              <textarea
+                {...register("bank_address")}
+                rows={2}
+                maxLength={300}
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-text-muted"
+                placeholder="e.g. 1 Basinghall Avenue, London, EC2V 5DD"
+              />
             </div>
           </div>
 
-          {/* Bank Address (Optional) */}
-          <div>
-            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
-              Bank Address{" "}
-              <span className="text-xs text-gray-400 font-normal">
-                (Optional)
-              </span>
-            </label>
-            <textarea
-              {...register("bank_address")}
-              rows={2}
-              maxLength={300}
-              className="w-full px-3.5 py-2.5 border border-gray-300 rounded-lg text-base sm:text-sm transition-colors focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600 bg-white"
-              placeholder="e.g. 1 Basinghall Avenue, London, EC2V 5DD, United Kingdom"
-            ></textarea>
-          </div>
-
-          <div className="pt-2">
-            <button
+          <div className="pt-2 flex justify-end">
+            <Button
               type="submit"
               disabled={submitting}
-              className="w-full sm:w-auto justify-center bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors shadow-xs disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              className="gap-2 cursor-pointer"
             >
-              {submitting ? "Saving..." : "Add Bank Account"}
-            </button>
+              <Plus className="size-4" />
+              <span>{submitting ? "Saving..." : "Add Bank Account"}</span>
+            </Button>
           </div>
         </form>
       </div>
 
       {/* Existing Accounts List */}
-      <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
-        <div className="px-5 sm:px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-          <div className="flex items-center gap-2.5">
-            <Building2 className="w-5 h-5 text-gray-600" />
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+      <div className="bg-card rounded-2xl shadow-xs border border-border overflow-hidden flex flex-col">
+        <div className="px-5 sm:px-6 py-4 border-b border-border flex items-center justify-between bg-muted/20">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-text-strong">
               Existing Accounts
             </h2>
+            <span className="text-xs text-text-muted">({accounts.length})</span>
           </div>
-          <span className="text-xs font-medium px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full">
-            {accounts.length} {accounts.length === 1 ? "account" : "accounts"}
-          </span>
         </div>
 
         <div className="p-4 sm:p-6">
           {loading ? (
-            <p className="text-gray-500 text-sm py-4">Loading accounts...</p>
+            <div className="grid grid-cols-1 gap-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="border border-border rounded-xl p-4 bg-background flex justify-between items-start gap-4"
+                >
+                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-5 w-44 rounded" />
+                      <Skeleton className="h-4 w-16 rounded-full" />
+                    </div>
+                    <Skeleton className="h-3.5 w-64 rounded" />
+                    <Skeleton className="h-3 w-40 rounded" />
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : accounts.length === 0 ? (
-            <div className="text-center py-10 text-gray-500">
-              <Landmark className="w-10 h-10 mx-auto text-gray-300 mb-2" />
-              <p className="text-sm font-medium">
+            <div className="text-center py-10 text-text-muted flex flex-col items-center gap-2">
+              <Landmark className="size-8 opacity-40" />
+              <p className="text-sm font-medium text-text-strong">
                 No payment accounts configured yet.
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-text-muted">
                 Add your bank account details above to use them in invoices.
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-3">
               {accounts.map((acc) => (
                 <div
                   key={acc.id}
-                  className="border border-gray-200 rounded-lg p-3.5 sm:p-4 hover:border-gray-300 transition-colors bg-white relative group"
+                  className="border border-border rounded-xl p-4 bg-background hover:bg-muted/20 transition-colors flex justify-between items-start gap-4"
                 >
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="space-y-2 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-gray-900 text-sm sm:text-base break-words">
-                          {acc.bank_name || acc.account_name || "Unnamed Bank"}
+                  <div className="flex flex-col gap-2 flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-text-strong text-sm sm:text-base">
+                        {acc.bank_name || acc.account_name || "Unnamed Bank"}
+                      </span>
+                      {acc.bic_swift && (
+                        <span className="text-xs font-mono text-text-muted">
+                          SWIFT: {acc.bic_swift}
                         </span>
-                        {acc.bic_swift && (
-                          <span className="text-xs px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono font-medium border border-blue-100 shrink-0">
-                            SWIFT: {acc.bic_swift}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
-                        {acc.name_on_account && (
-                          <div className="flex items-center gap-1.5 text-gray-700">
-                            <User className="w-4 h-4 text-gray-400 shrink-0" />
-                            <span className="text-gray-500 text-xs">Name:</span>
-                            <span className="font-medium text-gray-800">
-                              {acc.name_on_account}
-                            </span>
-                          </div>
-                        )}
-
-                        {acc.account_number && (
-                          <div className="flex items-center gap-1.5 text-gray-700">
-                            <CreditCard className="w-4 h-4 text-gray-400 shrink-0" />
-                            <span className="text-gray-500 text-xs">
-                              Account/IBAN:
-                            </span>
-                            <span className="font-mono font-medium text-gray-800">
-                              {acc.account_number}
-                            </span>
-                          </div>
-                        )}
-
-                        {acc.bank_address && (
-                          <div className="flex items-start gap-1.5 text-gray-600 sm:col-span-2 text-xs mt-1">
-                            <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                            <span>{acc.bank_address}</span>
-                          </div>
-                        )}
-
-                        {!acc.account_number &&
-                          !acc.name_on_account &&
-                          acc.account_details && (
-                            <div className="sm:col-span-2 text-xs text-gray-600 whitespace-pre-wrap mt-1">
-                              {acc.account_details}
-                            </div>
-                          )}
-                      </div>
+                      )}
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setDeletingAccount(acc)}
-                      title="Delete account"
-                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                      {acc.name_on_account && (
+                        <div className="flex items-center gap-1.5 text-text-muted">
+                          <User className="size-3.5 text-text-muted shrink-0" />
+                          <span>
+                            Name:{" "}
+                            <strong className="text-text-strong font-medium">
+                              {acc.name_on_account}
+                            </strong>
+                          </span>
+                        </div>
+                      )}
+
+                      {acc.account_number && (
+                        <div className="flex items-center gap-1.5 text-text-muted">
+                          <CreditCard className="size-3.5 text-text-muted shrink-0" />
+                          <span>
+                            A/C:{" "}
+                            <span className="font-mono text-text-strong">
+                              {acc.account_number}
+                            </span>
+                          </span>
+                        </div>
+                      )}
+
+                      {acc.bank_address && (
+                        <div className="flex items-start gap-1.5 text-text-muted sm:col-span-2 mt-0.5">
+                          <MapPin className="size-3.5 text-text-muted shrink-0 mt-0.5" />
+                          <span>{acc.bank_address}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeletingAccount(acc)}
+                    title="Delete account"
+                    className="size-8 text-text-muted hover:text-destructive hover:bg-destructive/10 shrink-0 cursor-pointer"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
                 </div>
               ))}
             </div>
           )}
         </div>
       </div>
+
       <ConfirmDeleteModal
         isOpen={!!deletingAccount}
         onClose={() => setDeletingAccount(null)}
         onConfirm={handleConfirmDelete}
         title="Delete Bank Account?"
         description="Are you sure you want to permanently delete this bank account? This action cannot be undone."
-        itemName={deletingAccount?.bank_name ? `${deletingAccount.bank_name} (${deletingAccount.account_number})` : undefined}
+        itemName={
+          deletingAccount?.bank_name
+            ? `${deletingAccount.bank_name} (${deletingAccount.account_number})`
+            : undefined
+        }
         isDeleting={isDeleting}
       />
     </div>

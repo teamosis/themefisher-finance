@@ -1,0 +1,115 @@
+*,
+::after,
+::before,
+::backdrop,
+::file-selector-button {
+  border-color: var(--border);
+}
+
+.border,
+.border-t,
+.border-r,
+.border-b,
+.border-l,
+.border-x,
+.border-y {
+  border-color: var(--border);
+}
+
+html {
+  @apply text-base;
+}
+
+body {
+  @apply bg-background text-base font-primary font-normal leading-relaxed text-text-default;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  @apply font-secondary font-bold leading-tight text-text-strong;
+}
+
+h1,
+.h1 {
+  @apply text-h1-sm md:text-h1;
+}
+
+h2,
+.h2 {
+  @apply text-h2-sm md:text-h2;
+}
+
+h3,
+.h3 {
+  @apply text-h3-sm md:text-h3;
+}
+
+h4,
+.h4 {
+  @apply text-h4;
+}
+
+h5,
+.h5 {
+  @apply text-h5;
+}
+
+h6,
+.h6 {
+  @apply text-h6;
+}
+
+b,
+strong {
+  @apply font-semibold;
+}
+
+code {
+  @apply after:border-none;
+}
+
+button,
+[role="button"],
+[role="menuitem"],
+[role="menuitemcheckbox"],
+[role="menuitemradio"],
+[role="option"],
+[role="tab"],
+[role="checkbox"],
+[role="radio"],
+[role="switch"],
+[type="button"],
+[type="submit"],
+[type="reset"],
+[type="checkbox"],
+[type="radio"],
+select,
+summary,
+a {
+  cursor: pointer;
+}
+
+select::-ms-expand {
+  display: none;
+}
+
+select:not([multiple]):not([size]),
+select:not([multiple])[size="1"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23737373'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3e%3c/svg%3e");
+  background-position: right 0.875rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem 1rem;
+  padding-right: 2.5rem !important;
+}
+
+.dark select:not([multiple]):not([size]),
+.dark select:not([multiple])[size="1"] {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='2' stroke='%23888888'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='m6 9 6 6 6-6'/%3e%3c/svg%3e");
+}

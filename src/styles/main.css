@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@import "./theme.css";
+@import "./variables.css";
+
+@import "./safe.css";
+@import "./utilities.css";
+
+@layer base {
+  @import "./base.css";
+}
+
+@layer components {
+  @import "./components.css";
+  @import "./navigation.css";
+}

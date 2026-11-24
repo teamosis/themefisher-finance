@@ -1,32 +1,43 @@
 "use client";
 
-import { useState } from "react";
-import { Modal } from "@/components/modals/Modal";
+import {
+  createDebitAccount,
+  deleteDebitAccount as deleteDebitAccountAction,
+  getDebitAccounts,
+  setDefaultDebitAccount as setDefaultDebitAccountAction,
+  unsetAllDefaultDebitAccounts,
+  updateDebitAccount,
+} from "@/actions";
 import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
-import { getDebitAccounts, createDebitAccount, updateDebitAccount, deleteDebitAccount as deleteDebitAccountAction, setDefaultDebitAccount as setDefaultDebitAccountAction, unsetAllDefaultDebitAccounts } from "@/actions";
+import { Modal } from "@/components/modals/Modal";
+import { TableRowsSkeleton } from "@/components/skeletons";
+import { Button } from "@/components/ui/button";
 import type { DebitAccount } from "@/types";
 import {
-  Plus,
-  Loader2,
   AlertCircle,
+  Check,
+  CreditCard,
+  Loader2,
   Pencil,
+  Plus,
+  Search,
+  Star,
   Trash2,
   X,
-  Check,
-  Search,
-  CreditCard,
-  Star,
 } from "lucide-react";
+import { useState } from "react";
 
-
-export default function DebitAccountsClient({ initialAccounts }: { initialAccounts: DebitAccount[] }) {
+export default function DebitAccountsClient({
+  initialAccounts,
+}: {
+  initialAccounts: DebitAccount[];
+}) {
   const [accounts, setAccounts] = useState<DebitAccount[]>(initialAccounts);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-
 
   // Add Form state
   const [formData, setFormData] = useState({
@@ -72,13 +83,11 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
     }, 4000);
   };
 
-  // Add Debit Account
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setErrorMessage(null);
 
-    // If new account is marked default, unset others first
     if (formData.is_default && accounts.length > 0) {
       await unsetAllDefaultDebitAccounts();
     }
@@ -90,7 +99,7 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
         bank_name: formData.bank_name.trim() || "Standard Chartered Bank",
         is_default: formData.is_default || accounts.length === 0,
       });
-      // Also cache in localStorage for immediate offline persistence
+
       localStorage.setItem("scb_debit_account", formData.account_number.trim());
       setFormData({
         account_number: "",
@@ -108,7 +117,6 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
     setSaving(false);
   };
 
-  // Set as Default
   const handleSetDefault = async (acc: DebitAccount) => {
     try {
       await setDefaultDebitAccountAction(acc.id);
@@ -124,7 +132,6 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
     }
   };
 
-  // Open Edit Modal
   const handleOpenEdit = (acc: DebitAccount) => {
     setEditingAccount(acc);
     setEditFormData({
@@ -135,7 +142,6 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
     });
   };
 
-  // Submit Edit
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingAccount) return;
@@ -168,7 +174,6 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
     setEditSaving(false);
   };
 
-  // Delete Account
   const handleConfirmDelete = async () => {
     if (!deletingAccount) return;
     setIsDeleting(true);
@@ -184,7 +189,6 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
     setIsDeleting(false);
   };
 
-
   const filteredAccounts = accounts.filter(
     (a) =>
       a.account_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -193,68 +197,60 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto flex flex-col gap-6 pb-16">
       {/* Header */}
       <div>
-        <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold uppercase tracking-wider mb-2">
-          Funding Configuration
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-strong">
           Debit Accounts
         </h1>
-        <p className="text-sm sm:text-base text-gray-500 mt-1 sm:mt-2">
-          Manage your funding bank debit accounts. The
-          default account is automatically loaded into the transfer generator.
+        <p className="text-sm text-text-muted mt-1">
+          Manage your funding bank debit accounts. The default account is
+          automatically loaded into the transfer generator.
         </p>
       </div>
 
       {/* Error Notification Banner */}
       {errorMessage && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-xl flex items-center justify-between gap-2 text-sm animate-in fade-in duration-200">
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl flex items-center justify-between gap-2 text-sm animate-in fade-in duration-200">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+            <AlertCircle className="size-4 shrink-0" />
             <span>{errorMessage}</span>
           </div>
           <button
             onClick={() => setErrorMessage(null)}
-            className="text-red-600 hover:text-red-800 p-1"
+            className="text-destructive hover:opacity-75 p-1"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" />
           </button>
         </div>
       )}
 
       {/* Success Notification Banner */}
       {successMessage && (
-        <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-xl flex items-center justify-between gap-2 text-sm animate-in fade-in duration-200">
+        <div className="bg-success/10 border border-success/20 text-success px-4 py-3 rounded-xl flex items-center justify-between gap-2 text-sm animate-in fade-in duration-200">
           <div className="flex items-center gap-2">
-            <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <Check className="size-4 shrink-0" />
             <span>{successMessage}</span>
           </div>
           <button
             onClick={() => setSuccessMessage(null)}
-            className="text-green-600 hover:text-green-800 p-1"
+            className="text-success hover:opacity-75 p-1"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4" />
           </button>
         </div>
       )}
 
       {/* Add New Debit Account Form */}
-      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 p-4 sm:p-6">
-        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-blue-600" />
+      <div className="bg-card rounded-2xl shadow-xs border border-border p-4 sm:p-6 flex flex-col gap-4">
+        <h2 className="text-base font-bold text-text-strong">
           Add Debit Account
         </h2>
-        <p className="text-xs sm:text-sm text-gray-500 mb-4 sm:mb-6">
-          Add an account number to the database. It will be pulled automatically
-          on all your devices.
-        </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
                 Debit Account Number *
               </label>
               <input
@@ -265,12 +261,12 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
                   setFormData({ ...formData, account_number: e.target.value })
                 }
                 placeholder="e.g. 0001234567890"
-                className="w-full px-3.5 py-2 border rounded-xl font-mono text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-input bg-background text-text-strong rounded-xl font-mono text-sm focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
               />
             </div>
 
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
                 Account Label / Alias *
               </label>
               <input
@@ -281,12 +277,12 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
                   setFormData({ ...formData, account_label: e.target.value })
                 }
                 placeholder="e.g. Main SCB Account"
-                className="w-full px-3.5 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-input bg-background text-text-strong rounded-xl text-sm focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
               />
             </div>
 
-            <div>
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
                 Bank Name
               </label>
               <input
@@ -296,211 +292,163 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
                   setFormData({ ...formData, bank_name: e.target.value })
                 }
                 placeholder="Standard Chartered Bank"
-                className="w-full px-3.5 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-input bg-background text-text-strong rounded-xl text-sm focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
               />
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-            <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm text-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-border">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-xs sm:text-sm text-text-strong">
               <input
                 type="checkbox"
                 checked={formData.is_default}
                 onChange={(e) =>
                   setFormData({ ...formData, is_default: e.target.checked })
                 }
-                className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                className="size-4 text-primary rounded border-input focus:ring-ring/20"
               />
               <span className="font-medium">Set as Default Debit Account</span>
             </label>
 
-            <button
+            <Button
               type="submit"
               disabled={saving}
-              className="inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors shadow-sm disabled:opacity-50"
+              className="gap-2 cursor-pointer"
             >
               {saving ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="size-4 animate-spin" />
               ) : (
-                <Plus className="w-4 h-4 mr-1.5" />
+                <Plus className="size-4" />
               )}
-              Save to Database
-            </button>
+              <span>Save to Database</span>
+            </Button>
           </div>
         </form>
       </div>
 
       {/* Account List */}
-      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 overflow-hidden">
-        <div className="p-4 sm:p-5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50">
-          <div>
-            <h2 className="text-base sm:text-lg font-semibold text-gray-900">
+      <div className="bg-card rounded-2xl shadow-xs border border-border overflow-hidden flex flex-col">
+        <div className="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-text-strong">
               Saved Debit Accounts
             </h2>
-            <p className="text-xs sm:text-sm text-gray-500">
-              {accounts.length} {accounts.length === 1 ? "account" : "accounts"}{" "}
-              configured in database
-            </p>
+            <span className="text-xs text-text-muted">({accounts.length})</span>
           </div>
 
-          <div className="relative w-full sm:w-64">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <div className="relative w-full sm:w-60">
+            <Search className="size-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               placeholder="Search accounts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3.5 py-1.5 border rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              className="w-full pl-9 pr-3.5 py-1.5 border border-input rounded-xl text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-text-muted"
             />
           </div>
         </div>
 
         {loading ? (
-          <div className="p-12 text-center text-gray-400 flex flex-col items-center justify-center gap-2">
-            <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-            <span className="text-sm">
-              Loading debit accounts from database...
-            </span>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/40 text-text-muted border-b border-border text-xs uppercase font-medium">
+                <tr>
+                  <th className="py-2.5 px-4">Label</th>
+                  <th className="py-2.5 px-4">Account Number</th>
+                  <th className="py-2.5 px-4">Bank</th>
+                  <th className="py-2.5 px-4 text-center">Status</th>
+                  <th className="py-2.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                <TableRowsSkeleton rows={4} columns={5} />
+              </tbody>
+            </table>
           </div>
         ) : filteredAccounts.length === 0 ? (
-          <div className="p-12 text-center text-gray-500 space-y-2">
-            <CreditCard className="w-10 h-10 text-gray-300 mx-auto" />
-            <p className="font-semibold text-gray-700">
+          <div className="p-12 text-center text-text-muted flex flex-col items-center gap-1">
+            <CreditCard className="size-8 opacity-40 mb-1" />
+            <p className="font-semibold text-text-strong text-sm">
               No debit accounts found
             </p>
-            <p className="text-xs text-gray-400 max-w-sm mx-auto">
+            <p className="text-xs text-text-muted">
               {searchQuery
                 ? "No accounts match your search filter."
                 : "Add your first SCB debit account above to have it auto-load in the generator."}
             </p>
           </div>
         ) : (
-          <>
-            {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm">
-                <thead>
-                  <tr className="border-b bg-gray-50/80 text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    <th className="py-3 px-4">Label</th>
-                    <th className="py-3 px-4">Account Number</th>
-                    <th className="py-3 px-4">Bank</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {filteredAccounts.map((acc) => (
-                    <tr
-                      key={acc.id}
-                      className="hover:bg-blue-50/40 transition-colors"
-                    >
-                      <td className="py-3.5 px-4 font-semibold text-gray-900">
-                        {acc.account_label}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-gray-700 font-medium">
-                        {acc.account_number}
-                      </td>
-                      <td className="py-3.5 px-4 text-gray-600">
-                        {acc.bank_name || "Standard Chartered Bank"}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        {acc.is_default ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                            <Star className="w-3 h-3 fill-green-600 text-green-600" />
-                            Default
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleSetDefault(acc)}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                          >
-                            Set as Default
-                          </button>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-right space-x-1 whitespace-nowrap">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/40 text-text-muted border-b border-border text-xs uppercase font-medium">
+                <tr>
+                  <th className="py-2.5 px-4">Label</th>
+                  <th className="py-2.5 px-4">Account Number</th>
+                  <th className="py-2.5 px-4">Bank</th>
+                  <th className="py-2.5 px-4 text-center">Status</th>
+                  <th className="py-2.5 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filteredAccounts.map((acc) => (
+                  <tr
+                    key={acc.id}
+                    className="hover:bg-muted/30 transition-colors"
+                  >
+                    <td className="py-3 px-4 font-semibold text-text-strong">
+                      {acc.account_label}
+                    </td>
+                    <td className="py-3 px-4 font-mono text-text-muted text-xs">
+                      {acc.account_number}
+                    </td>
+                    <td className="py-3 px-4 text-text-default">
+                      {acc.bank_name || "Standard Chartered Bank"}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      {acc.is_default ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-success">
+                          <Star className="size-3 fill-current" />
+                          Default
+                        </span>
+                      ) : (
                         <button
                           type="button"
+                          onClick={() => handleSetDefault(acc)}
+                          className="text-xs text-text-muted hover:text-text-strong transition-colors cursor-pointer"
+                        >
+                          Set Default
+                        </button>
+                      )}
+                    </td>
+                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleOpenEdit(acc)}
-                          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="size-8 text-text-muted hover:text-text-strong"
                           title="Edit Account"
                         >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
+                          <Pencil className="size-3.5" />
+                        </Button>
+                        <Button
                           type="button"
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setDeletingAccount(acc)}
-                          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="size-8 text-text-muted hover:text-destructive hover:bg-destructive/10"
                           title="Delete Account"
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden divide-y divide-gray-100">
-              {filteredAccounts.map((acc) => (
-                <div
-                  key={acc.id}
-                  className="p-4 space-y-2.5 hover:bg-gray-50/60 transition-colors"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 text-sm">
-                        {acc.account_label}
-                      </h3>
-                      <p className="text-xs text-gray-500">
-                        {acc.bank_name || "Standard Chartered Bank"}
-                      </p>
-                    </div>
-                    {acc.is_default ? (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-green-100 text-green-800">
-                        <Star className="w-3 h-3 fill-green-600 text-green-600" />
-                        Default
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleSetDefault(acc)}
-                        className="text-xs font-medium text-blue-600 hover:text-blue-800"
-                      >
-                        Set Default
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="bg-gray-50 rounded-xl p-2.5 font-mono text-xs font-semibold text-gray-800">
-                    {acc.account_number}
-                  </div>
-
-                  <div className="flex items-center justify-end gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenEdit(acc)}
-                      className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-blue-600 px-2.5 py-1 border rounded-lg"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setDeletingAccount(acc)}
-                      className="inline-flex items-center gap-1 text-xs text-red-600 hover:text-red-700 px-2.5 py-1 border border-red-200 rounded-lg hover:bg-red-50"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </>
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -511,96 +459,94 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
           onClose={() => setEditingAccount(null)}
           title={editingAccount.id ? "Edit Debit Account" : "Add Debit Account"}
           subtitle="Manage your company's debit accounts for SCB transfers."
-          icon={<CreditCard className="w-5 h-5 text-blue-600" />}
           maxWidth="md"
         >
-
-            <form onSubmit={handleSaveEdit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Debit Account Number *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editFormData.account_number}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      account_number: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 font-mono text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Account Label *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editFormData.account_label}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      account_label: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Bank Name
-                </label>
-                <input
-                  type="text"
-                  value={editFormData.bank_name}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      bank_name: e.target.value,
-                    })
-                  }
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"
-                />
-              </div>
-
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-gray-700 pt-1">
-                <input
-                  type="checkbox"
-                  checked={editFormData.is_default}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      is_default: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <span className="font-medium">Mark as Default Account</span>
+          <form onSubmit={handleSaveEdit} className="p-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Debit Account Number *
               </label>
+              <input
+                type="text"
+                required
+                value={editFormData.account_number}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    account_number: e.target.value,
+                  })
+                }
+                className="w-full border border-input rounded-xl px-3 py-2 font-mono text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
+              />
+            </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3 border-t">
-                <button
-                  type="button"
-                  onClick={() => setEditingAccount(null)}
-                  className="px-4 py-2 border rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={editSaving}
-                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow-sm"
-                >
-                  {editSaving ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Account Label *
+              </label>
+              <input
+                type="text"
+                required
+                value={editFormData.account_label}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    account_label: e.target.value,
+                  })
+                }
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs sm:text-sm font-semibold text-text-strong">
+                Bank Name
+              </label>
+              <input
+                type="text"
+                value={editFormData.bank_name}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    bank_name: e.target.value,
+                  })
+                }
+                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
+              />
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer text-xs sm:text-sm text-text-strong pt-1">
+              <input
+                type="checkbox"
+                checked={editFormData.is_default}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    is_default: e.target.checked,
+                  })
+                }
+                className="size-4 text-primary rounded border-input"
+              />
+              <span className="font-medium">Mark as Default Account</span>
+            </label>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditingAccount(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={editSaving}
+                className="cursor-pointer"
+              >
+                {editSaving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
 
@@ -611,7 +557,11 @@ export default function DebitAccountsClient({ initialAccounts }: { initialAccoun
         onConfirm={handleConfirmDelete}
         title="Delete Account?"
         description="Are you sure you want to remove this debit account? This action cannot be undone."
-        itemName={deletingAccount ? `${deletingAccount.account_label} (${deletingAccount.account_number})` : undefined}
+        itemName={
+          deletingAccount
+            ? `${deletingAccount.account_label} (${deletingAccount.account_number})`
+            : undefined
+        }
         isDeleting={isDeleting}
       />
     </div>

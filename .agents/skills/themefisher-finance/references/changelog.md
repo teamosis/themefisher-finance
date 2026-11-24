@@ -4,6 +4,14 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Standardize Container Sizes & Add Loading Skeletons
+
+- Standardized container width across all pages (`/`, `/invoice-tools`, `/invoice-tools/create-invoice`, `/invoice-tools/clients`, `/invoice-tools/settings`, `/scb-tools`, `/scb-tools/vendors`, `/scb-tools/debit-accounts`) to `max-w-7xl mx-auto`.
+- Updated `.container` in `src/styles/components.css` to `max-w-7xl`.
+- Created tailored loading skeleton components for all routes: `InvoiceToolsSkeleton`, `CreateInvoiceSkeleton`, `ClientsSkeleton`, `SettingsSkeleton`, `ScbToolsSkeleton`, `DebitAccountsSkeleton`, `VendorsSkeleton`, and reusable `TableRowsSkeleton`.
+- Added Next.js App Router route loading skeletons (`loading.tsx`) across all routes in `invoice-tools` and `scb-tools`.
+- Replaced plain text and spinner loading indicators in `ClientsClient`, `SettingsClient`, `DebitAccountsClient`, and `VendorsClient` with animated skeleton components to prevent layout shifts.
+
 ### 2026-11-23 — Completely Remove AI Chat, Legacy Fallbacks & Backward Compatibility Code
 
 - Removed AI chat API route (`src/app/api/`) and components (`src/components/chat/`).

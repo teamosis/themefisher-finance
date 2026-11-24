@@ -1,0 +1,51 @@
+{
+  "main": [
+    {
+      "name": "Invoice & Form-C",
+      "url": "/invoice-tools"
+    },
+    {
+      "name": "SCB Bulk Tools",
+      "url": "/scb-tools"
+    }
+  ],
+  "invoice": [
+    {
+      "name": "Generate Inward Docs",
+      "url": "/invoice-tools",
+      "icon": "FileText"
+    },
+    {
+      "name": "Create Invoice",
+      "url": "/invoice-tools/create-invoice",
+      "icon": "PlusSquare"
+    },
+    {
+      "name": "Clients",
+      "url": "/invoice-tools/clients",
+      "icon": "Users"
+    },
+    {
+      "name": "Configuration",
+      "url": "/invoice-tools/settings",
+      "icon": "Settings"
+    }
+  ],
+  "scb": [
+    {
+      "name": "Generator",
+      "url": "/scb-tools",
+      "icon": "FileSpreadsheet"
+    },
+    {
+      "name": "Receiver Bank AC",
+      "url": "/scb-tools/vendors",
+      "icon": "Users"
+    },
+    {
+      "name": "Debit Accounts",
+      "url": "/scb-tools/debit-accounts",
+      "icon": "CreditCard"
+    }
+  ]
+}

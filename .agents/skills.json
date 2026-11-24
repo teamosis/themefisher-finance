@@ -20,10 +20,6 @@
       "path": "skills/skill-creator",
       "description": "Skill creation, eval benchmarking, and iterative refinement"
     },
-    "better-auth": {
-      "type": "custom",
-      "description": "Better Auth architecture & implementation guide (project-curated)"
-    },
     "themefisher-finance": {
       "type": "custom",
       "description": "Themefisher Admin Tools architecture, workflows, database schema, and operational guide"

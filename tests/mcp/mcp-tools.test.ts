@@ -1,0 +1,196 @@
+import { db } from "@/db";
+import { tools } from "@/lib/mcp/tools";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/db", () => {
+  const mockDb = {
+    select: vi.fn(),
+    selectDistinct: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  };
+  return { db: mockDb };
+});
+
+vi.mock("@/actions/banks", () => ({
+  lookupSwiftCode: vi.fn(async (swift: string) => {
+    if (swift === "SCBLBDDX") {
+      return { bank_name: "Standard Chartered Bank", country: "BD" };
+    }
+    return null;
+  }),
+}));
+
+describe("MCP Tools Registry & Handlers Suite", () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const getTool = (name: string) => {
+    const t = tools.find((tool) => tool.name === name);
+    if (!t) throw new Error(`Tool '${name}' not registered`);
+    return t;
+  };
+
+  it("registers all 25 financial domain tools across expected scopes", () => {
+    expect(tools.length).toBe(25);
+    const names = tools.map((t) => t.name);
+
+    expect(names).toContain("finance_get_overview");
+    expect(names).toContain("finance_invoices_list");
+    expect(names).toContain("finance_invoices_get");
+    expect(names).toContain("finance_invoices_create");
+    expect(names).toContain("finance_invoices_update");
+    expect(names).toContain("finance_invoices_delete");
+
+    expect(names).toContain("finance_clients_list");
+    expect(names).toContain("finance_clients_get");
+    expect(names).toContain("finance_clients_create");
+    expect(names).toContain("finance_clients_update");
+    expect(names).toContain("finance_clients_delete");
+
+    expect(names).toContain("finance_vendors_list");
+    expect(names).toContain("finance_vendors_get");
+    expect(names).toContain("finance_vendors_create");
+    expect(names).toContain("finance_vendors_update");
+    expect(names).toContain("finance_vendors_delete");
+
+    expect(names).toContain("finance_payroll_get_salary_sheet");
+
+    expect(names).toContain("finance_banks_get_names");
+    expect(names).toContain("finance_banks_get_branches");
+    expect(names).toContain("finance_banks_lookup_routing");
+    expect(names).toContain("finance_banks_lookup_swift");
+
+    expect(names).toContain("finance_accounts_list_debit");
+    expect(names).toContain("finance_accounts_set_default_debit");
+    expect(names).toContain("finance_accounts_list_payment");
+    expect(names).toContain("finance_accounts_create_payment");
+  });
+
+  describe("System Overview Tool: finance_get_overview", () => {
+    it("aggregates invoice stats, client count, payroll budget, and default debit account", async () => {
+      const tool = getTool("finance_get_overview");
+
+      const fromMock1 = vi.fn().mockResolvedValue([
+        { totalCount: 15, totalAmount: "75000", totalReceived: "74800" },
+      ]);
+      const fromMock2 = vi.fn().mockResolvedValue([{ count: 5 }]);
+      const whereMock3 = vi.fn().mockResolvedValue([
+        { headcount: 12, monthlyPayrollBdt: "850000" },
+      ]);
+      const fromMock3 = vi.fn().mockReturnValue({ where: whereMock3 });
+      const limitMock4 = vi.fn().mockResolvedValue([
+        { accountNumber: "0001914137101", bankName: "Standard Chartered Bank" },
+      ]);
+      const whereMock4 = vi.fn().mockReturnValue({ limit: limitMock4 });
+      const fromMock4 = vi.fn().mockReturnValue({ where: whereMock4 });
+
+      vi.mocked(db.select)
+        .mockReturnValueOnce({ from: fromMock1 } as any)
+        .mockReturnValueOnce({ from: fromMock2 } as any)
+        .mockReturnValueOnce({ from: fromMock3 } as any)
+        .mockReturnValueOnce({ from: fromMock4 } as any);
+
+      const result = (await tool.handler({})) as any;
+
+      expect(result.invoices.totalCount).toBe(15);
+      expect(result.invoices.totalAmountUsd).toBe(75000);
+      expect(result.invoices.totalReceivedUsd).toBe(74800);
+      expect(result.clients.totalActive).toBe(5);
+      expect(result.payroll.activeEmployeeCount).toBe(12);
+      expect(result.payroll.totalMonthlySalaryBdt).toBe(850000);
+      expect(result.defaultScbDebitAccount.accountNumber).toBe("0001914137101");
+    });
+  });
+
+  describe("Invoice Tools", () => {
+    it("finance_invoices_list supports search, client filtering, and pagination", async () => {
+      const tool = getTool("finance_invoices_list");
+      const mockItems = [
+        { id: "inv_1", invoiceNumber: "TF-2026-11-24-01", amount: "5000" },
+      ];
+
+      const offsetMock = vi.fn().mockResolvedValue(mockItems);
+      const limitMock = vi.fn().mockReturnValue({ offset: offsetMock });
+      const orderByMock = vi.fn().mockReturnValue({ limit: limitMock });
+      const whereMock = vi.fn().mockReturnValue({ orderBy: orderByMock });
+      const leftJoinMock = vi.fn().mockReturnValue({ where: whereMock });
+      const fromMock1 = vi.fn().mockReturnValue({ leftJoin: leftJoinMock });
+
+      const countMock = vi.fn().mockResolvedValue([{ count: 1 }]);
+      const fromMock2 = vi.fn().mockReturnValue({ where: countMock });
+
+      vi.mocked(db.select)
+        .mockReturnValueOnce({ from: fromMock1 } as any)
+        .mockReturnValueOnce({ from: fromMock2 } as any);
+
+      const result = (await tool.handler({
+        search: "TF-2026",
+        limit: 10,
+        offset: 0,
+      })) as any;
+
+      expect(result.items).toEqual(mockItems);
+      expect(result.total).toBe(1);
+      expect(result.hasMore).toBe(false);
+    });
+
+    it("finance_invoices_create inserts invoice and returns created record", async () => {
+      const tool = getTool("finance_invoices_create");
+      const createdRow = {
+        id: "inv_created_1",
+        invoice_number: "TF-2026-11-24-99",
+        amount: "5000",
+      };
+
+      const returningMock = vi.fn().mockResolvedValue([createdRow]);
+      const valuesMock = vi.fn().mockReturnValue({ returning: returningMock });
+      vi.mocked(db.insert).mockReturnValue({ values: valuesMock } as any);
+
+      const result = (await tool.handler({
+        clientId: "123e4567-e89b-12d3-a456-426614174000",
+        invoiceNumber: "TF-2026-11-24-99",
+        invoiceDate: "2026-11-24",
+        amount: 5000,
+        description: "Custom Web Application",
+        paymentMethods: ["Wire Transfer"],
+      })) as any;
+
+      expect(result.success).toBe(true);
+      expect(result.invoice).toEqual(createdRow);
+    });
+  });
+
+  describe("Vendor & Payroll Tools", () => {
+    it("finance_payroll_get_salary_sheet aggregates payroll total across employees", async () => {
+      const tool = getTool("finance_payroll_get_salary_sheet");
+      const mockEmployees = [
+        { id: "e1", receiver_name: "Engineer 1", salary: "80000" },
+        { id: "e2", receiver_name: "Engineer 2", salary: "70000" },
+      ];
+
+      const orderByMock = vi.fn().mockResolvedValue(mockEmployees);
+      const whereMock = vi.fn().mockReturnValue({ orderBy: orderByMock });
+      const fromMock = vi.fn().mockReturnValue({ where: whereMock });
+      vi.mocked(db.select).mockReturnValue({ from: fromMock } as any);
+
+      const result = (await tool.handler({})) as any;
+
+      expect(result.employeeCount).toBe(2);
+      expect(result.totalPayrollBdt).toBe(150000); // 80k + 70k
+      expect(result.employees[0].salaryBdt).toBe(80000);
+    });
+  });
+
+  describe("Bank Routing Tools", () => {
+    it("finance_banks_lookup_swift resolves bank details via SWIFT code lookup", async () => {
+      const tool = getTool("finance_banks_lookup_swift");
+      const result = (await tool.handler({ swiftCode: "SCBLBDDX" })) as any;
+
+      expect(result.bank_name).toBe("Standard Chartered Bank");
+      expect(result.country).toBe("BD");
+    });
+  });
+});

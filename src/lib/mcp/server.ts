@@ -10,6 +10,7 @@ import {
   type McpTokenRecord,
 } from "./token-service";
 import { tools } from "./tools";
+import { McpToolError } from "./tool-definition";
 import { completeWriteRequest, reserveWriteRequest } from "./write-requests";
 
 const writeRequestKey = z
@@ -71,19 +72,45 @@ export function buildMcpServer(token: McpTokenRecord) {
     }),
   );
 
-  // Register all permitted domain tools as first-class tools
-  for (const tool of tools) {
-    const isAllowed = tokenAllowsTool(token.allowedScopes, tool.name);
-    const isWritePermitted = !tool.write || !token.readOnly;
+  const permittedTools = tools.filter((tool) =>
+    tokenAllowsTool(token.allowedScopes, tool.name) && (!tool.write || !token.readOnly),
+  );
 
-    if (isAllowed && isWritePermitted) {
+  server.registerResource(
+    "workflows",
+    "finance://workflows",
+    {
+      title: "Finance workflows and available tools",
+      description: "Tool catalog for the current token and links to finance workflows",
+      mimeType: "application/json",
+    },
+    async (uri) => ({
+      contents: [{
+        uri: uri.href,
+        mimeType: "application/json",
+        text: JSON.stringify({
+          tools: permittedTools.map(({ name, scope, write, description }) => ({ name, scope, write, description })),
+          links: {
+            invoiceAndFormC: new URL("/invoice-tools", getMcpOrigin()).href,
+            remittancePdfImport: new URL("/create-invoice", getMcpOrigin()).href,
+            paymentRequestForm: new URL("/request-payment", getMcpOrigin()).href,
+            paymentRequestReview: new URL("/payment-requests", getMcpOrigin()).href,
+            paymentTracking: new URL("/track-payment", getMcpOrigin()).href,
+            scbTools: new URL("/scb-tools", getMcpOrigin()).href,
+          },
+        }),
+      }],
+    }),
+  );
+
+  for (const tool of permittedTools) {
       server.registerTool(
         tool.name,
         {
           description: tool.description,
           inputSchema:
             tool.write && tool.schema instanceof z.ZodObject
-              ? tool.schema.extend({ idempotencyKey: writeRequestKey })
+              ? tool.schema.safeExtend({ idempotencyKey: tool.requireIdempotency ? writeRequestKey.unwrap() : writeRequestKey })
               : (tool.schema as any),
           annotations: {
             readOnlyHint: !tool.write,
@@ -112,6 +139,9 @@ export function buildMcpServer(token: McpTokenRecord) {
             const key = tool.write
               ? writeRequestKey.parse(args?.idempotencyKey)
               : undefined;
+            if (tool.requireIdempotency && !key) {
+              throw new McpToolError("Provide an idempotencyKey and reuse it only when retrying this write.");
+            }
             if (key) {
               const requestHash = createHash("sha256")
                 .update(JSON.stringify({ tool: tool.name, args: parsedArgs }))
@@ -174,7 +204,7 @@ export function buildMcpServer(token: McpTokenRecord) {
           } catch (err: any) {
             const durationMs = Date.now() - startTime;
             const errorMessage =
-              err instanceof McpAuthError || err instanceof z.ZodError
+              err instanceof McpAuthError || err instanceof McpToolError || err instanceof z.ZodError
                 ? err.message
                 : "Operation failed. Verify the record before retrying a write.";
 
@@ -198,7 +228,6 @@ export function buildMcpServer(token: McpTokenRecord) {
           }
         },
       );
-    }
   }
 
   return server;

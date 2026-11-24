@@ -2,27 +2,10 @@
 
 import { db } from "@/db";
 import { activityLogs } from "@/db/schema";
+import { logActivity } from "@/lib/activity-log";
 import { requireBrowserSession } from "@/lib/browser-session";
-import type {
-  ActivityAction,
-  ActivityDomain,
-  ActivityExcelItem,
-  ActivityLog,
-  ActivityLogDetails,
-  ActivityLogStats,
-} from "@/types";
+import type { ActivityExcelItem, ActivityLog } from "@/types";
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
-import { headers } from "next/headers";
-
-export interface CreateActivityLogInput {
-  domain: ActivityDomain;
-  action: ActivityAction;
-  entityType?: string;
-  entityId?: string;
-  title: string;
-  details?: ActivityLogDetails;
-  status?: "success" | "failed" | "warning";
-}
 
 export interface LogExcelExportInput {
   type: "transfers" | "salary";
@@ -37,68 +20,12 @@ export interface LogExcelExportInput {
 }
 
 /**
- * Log an activity event to the audit trail (bypasses browser session check for system / public events).
- */
-export async function logSystemActivity(input: CreateActivityLogInput): Promise<ActivityLog> {
-  let ipAddress: string | null = null;
-  let userAgent: string | null = null;
-
-  try {
-    const headerList = await headers();
-    const forwarded = headerList.get("x-forwarded-for");
-    ipAddress = forwarded ? forwarded.split(",")[0].trim() : headerList.get("x-real-ip") || null;
-    userAgent = headerList.get("user-agent") || null;
-  } catch {
-    // Graceful fallback if headers cannot be read in some environments
-  }
-
-  try {
-    const insertResult = await db
-      .insert(activityLogs)
-      .values({
-        domain: input.domain,
-        action: input.action,
-        entityType: input.entityType || null,
-        entityId: input.entityId || null,
-        title: input.title,
-        details: input.details || null,
-        status: input.status || "success",
-        ipAddress,
-        userAgent,
-      })
-      .returning();
-
-    const created = Array.isArray(insertResult) ? insertResult[0] : insertResult;
-    return created as unknown as ActivityLog;
-  } catch {
-    return {
-      id: "mock-id",
-      domain: input.domain,
-      action: input.action,
-      entityType: input.entityType,
-      entityId: input.entityId,
-      title: input.title,
-      details: input.details,
-      status: input.status || "success",
-      ipAddress,
-      userAgent,
-      createdAt: new Date(),
-    } as unknown as ActivityLog;
-  }
-}
-
-/**
- * Log a general activity event to the audit trail (requires active browser session).
- */
-export async function logActivity(input: CreateActivityLogInput): Promise<ActivityLog> {
-  await requireBrowserSession();
-  return logSystemActivity(input);
-}
-
-/**
  * Specialized logger for SCB Bulk Transfers and Salary Sheets Excel generation.
  */
-export async function logExcelExport(input: LogExcelExportInput): Promise<ActivityLog> {
+export async function logExcelExport(
+  input: LogExcelExportInput,
+): Promise<ActivityLog> {
+  await requireBrowserSession();
   const isSalary = input.type === "salary";
   const formattedTotal = Number(input.totalAmount || 0).toLocaleString("en-US");
   const currency = input.currency || "BDT";
@@ -139,8 +66,13 @@ export interface GetActivityLogsFilters {
  * Fetch paginated activity logs with optional domain/action/search filters.
  */
 export async function getActivityLogs(
-  filters: GetActivityLogsFilters = {}
-): Promise<{ rows: ActivityLog[]; total: number; page: number; limit: number }> {
+  filters: GetActivityLogsFilters = {},
+): Promise<{
+  rows: ActivityLog[];
+  total: number;
+  page: number;
+  limit: number;
+}> {
   await requireBrowserSession();
 
   const page = Math.max(1, filters.page || 1);
@@ -165,8 +97,8 @@ export async function getActivityLogs(
         ilike(activityLogs.entityId, term),
         sql`(${activityLogs.details}->>'fileName') ILIKE ${term}`,
         sql`(${activityLogs.details}->>'reason') ILIKE ${term}`,
-        sql`(${activityLogs.details}->>'debitAccount') ILIKE ${term}`
-      )
+        sql`(${activityLogs.details}->>'debitAccount') ILIKE ${term}`,
+      ),
     );
   }
 
@@ -192,30 +124,5 @@ export async function getActivityLogs(
     total,
     page,
     limit,
-  };
-}
-
-/**
- * Get aggregate metrics for the Activity Log overview header cards.
- */
-export async function getActivityLogStats(): Promise<ActivityLogStats> {
-  await requireBrowserSession();
-
-  const [stats] = await db
-    .select({
-      totalActivities: sql<number>`count(*)::int`,
-      totalExcelExports: sql<number>`count(*) filter (where ${activityLogs.action} in ('excel_export_transfers', 'excel_export_salary'))::int`,
-      totalPayoutAmount: sql<number>`coalesce(sum(case when ${activityLogs.action} in ('excel_export_transfers', 'excel_export_salary') then (${activityLogs.details}->>'totalAmount')::numeric else 0 end), 0)::float`,
-      totalInvoices: sql<number>`count(*) filter (where ${activityLogs.domain} = 'invoice_tools')::int`,
-      totalVendorChanges: sql<number>`count(*) filter (where ${activityLogs.action} like 'vendor_%')::int`,
-    })
-    .from(activityLogs);
-
-  return {
-    totalActivities: Number(stats?.totalActivities || 0),
-    totalExcelExports: Number(stats?.totalExcelExports || 0),
-    totalPayoutAmount: Number(stats?.totalPayoutAmount || 0),
-    totalInvoices: Number(stats?.totalInvoices || 0),
-    totalVendorChanges: Number(stats?.totalVendorChanges || 0),
   };
 }

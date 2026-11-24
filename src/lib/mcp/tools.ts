@@ -17,29 +17,14 @@ import {
   invoiceDate,
   invoicePaymentMethods,
 } from "@/lib/invoice-validation";
-import { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
+import { verifyPaymentRequest } from "@/lib/payment-request-verification";
+import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { McpScopeKey } from "./scopes";
 
-export interface McpToolDefinition<T extends z.ZodTypeAny = z.ZodTypeAny> {
-  name: string;
-  scope: McpScopeKey | "system";
-  description: string;
-  write: boolean;
-  schema: T;
-  handler: (args: any, scopes?: readonly string[]) => Promise<unknown>;
-}
-
-export function defineTool<T extends z.ZodTypeAny>(tool: {
-  name: string;
-  scope: McpScopeKey | "system";
-  description: string;
-  write: boolean;
-  schema: T;
-  handler: (args: z.infer<T>, scopes?: readonly string[]) => Promise<unknown>;
-}): McpToolDefinition<T> {
-  return tool;
-}
+import { defineTool, type McpToolDefinition } from "./tool-definition";
+import { workflowTools } from "./workflow-tools";
+import { getMcpOrigin } from "./token-service";
 
 function allowsScope(scopes: readonly string[], scope: McpScopeKey) {
   return scopes.includes("*") || scopes.includes(scope);
@@ -296,7 +281,9 @@ export const tools: McpToolDefinition[] = [
         .limit(1);
 
       if (!invoice) throw new Error("Invoice not found");
-      return invoice;
+      const printUrl = new URL("/invoice-tools", getMcpOrigin());
+      printUrl.searchParams.set("invoiceId", invoice.id);
+      return { ...invoice, printUrl: printUrl.href };
     },
   }),
   defineTool({
@@ -853,7 +840,7 @@ export const tools: McpToolDefinition[] = [
       "Look up a 9-digit Bangladesh Bank routing number by bank and branch name. Use finance_banks_get_branches for ambiguous names.",
     write: false,
     schema: z.object({
-      bankName: z.string().min(1).describe("Bank name"),
+      bankName: z.string().trim().min(1).max(150).describe("Bank name"),
       branchName: z.string().min(1).describe("Branch name"),
     }),
     handler: async ({ bankName, branchName }) => {
@@ -956,9 +943,11 @@ export const tools: McpToolDefinition[] = [
     schema: z.object({
       bankName: z.string().min(1).describe("Bank name"),
       bankAddress: z.string().optional().describe("Bank branch address"),
-      nameOnAccount: z.string().min(1).describe("Official account holder name"),
+      nameOnAccount: z.string().trim().min(1).max(150).describe("Official account holder name"),
       bicSwift: z.string().optional().describe("SWIFT / BIC code"),
-      accountNumber: z.string().min(5).describe("Bank account / IBAN number"),
+      accountNumber: z.string().trim().min(5).max(100).describe("Bank account / IBAN number"),
+      accountName: z.string().trim().max(150).optional(),
+      accountDetails: z.string().trim().max(4000).optional(),
     }),
     handler: async (input) => {
       const [created] = await db
@@ -968,7 +957,9 @@ export const tools: McpToolDefinition[] = [
           bank_address: input.bankAddress,
           name_on_account: input.nameOnAccount.trim(),
           bic_swift: input.bicSwift?.trim().toUpperCase(),
-          account_number: input.accountNumber.trim(),
+          account_number: input.accountNumber,
+          account_name: input.accountName,
+          account_details: input.accountDetails,
         })
         .returning();
       return { success: true, paymentAccount: created };
@@ -1087,7 +1078,7 @@ export const tools: McpToolDefinition[] = [
       const [row] = await db
         .select()
         .from(activityLogs)
-        .where(condition)
+        .where(and(condition, or(eq(activityLogs.action, "excel_export_transfers"), eq(activityLogs.action, "excel_export_salary"))))
         .orderBy(desc(activityLogs.createdAt))
         .limit(1);
 
@@ -1108,6 +1099,7 @@ export const tools: McpToolDefinition[] = [
           currency: details?.currency || "BDT",
           itemCount: details?.itemCount,
           debitAccount: details?.debitAccount,
+          paymentDate: details?.paymentDate,
           reason: details?.reason,
         },
         items: details?.items || [],
@@ -1203,148 +1195,20 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_payment_requests_verify",
     scope: "payment_requests",
-    description:
-      "Audit and verify a payment request ('prepare & verify'). Validates the 9-digit routing number against the 11,426 BEFTN database, detects duplicate claims in the last 30 days, checks for matching existing vendors, attaches agent notes, and flags the request as verified and ready for the human admin to 1-click approve.",
+    description: "Check bank routing, duplicates, and existing beneficiary for a request awaiting review. Optionally attach review notes.",
     write: true,
-    schema: z.object({
-      id: z.string().uuid().describe("Payment request UUID to verify"),
-      notes: z
-        .string()
-        .optional()
-        .describe("Audit findings or notes to attach to the request"),
-    }),
+    schema: z.object({ id: z.uuid(), notes: z.string().trim().max(1000).optional() }),
     handler: async ({ id, notes }) => {
-      const [req] = await db
-        .select()
-        .from(paymentRequests)
-        .where(eq(paymentRequests.id, id))
-        .limit(1);
-
-      if (!req) {
-        throw new Error("Payment request not found");
-      }
-
-      const verificationNotes: string[] = [];
-
-      // 1. BEFTN check
-      const [branch] = await db
-        .select()
-        .from(bankBranches)
-        .where(eq(bankBranches.routing_number, req.routingNumber))
-        .limit(1);
-
-      const routingValid = Boolean(branch);
-      if (branch) {
-        verificationNotes.push(
-          `BEFTN routing number ${req.routingNumber} valid for ${branch.bank_name} (${branch.branch_name} Branch).`,
-        );
-      } else {
-        verificationNotes.push(
-          `Warning: Routing number ${req.routingNumber} was not found in Bangladesh Bank directory.`,
-        );
-      }
-
-      // 2. Duplicate check (last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const duplicates = await db
-        .select({
-          id: paymentRequests.id,
-          trackingCode: paymentRequests.trackingCode,
-          amount: paymentRequests.amount,
-          createdAt: paymentRequests.createdAt,
-          status: paymentRequests.status,
-        })
-        .from(paymentRequests)
-        .where(
-          and(
-            eq(paymentRequests.accountNumber, req.accountNumber),
-            gte(paymentRequests.createdAt, thirtyDaysAgo),
-            inArray(paymentRequests.status, [
-              "pending",
-              "verified",
-              "approved",
-              "exported",
-            ]),
-            sql`${paymentRequests.id} != ${id}`,
-          ),
-        );
-
-      const duplicateDetected = duplicates.length > 0;
-      if (duplicateDetected) {
-        verificationNotes.push(
-          `Alert: Found ${duplicates.length} other claim(s) for account ${req.accountNumber} in the last 30 days.`,
-        );
-      }
-
-      // 3. Existing vendor check
-      const [matchedVendor] = await db
-        .select()
-        .from(vendors)
-        .where(
-          or(
-            eq(vendors.account_number, req.accountNumber),
-            ilike(vendors.receiver_name, `%${req.payeeName}%`),
-          ),
-        )
-        .limit(1);
-
-      if (matchedVendor) {
-        verificationNotes.push(
-          `Matched existing registered beneficiary: ${matchedVendor.receiver_name}.`,
-        );
-      }
-
-      if (notes) {
-        verificationNotes.push(`Agent Note: ${notes}`);
-      }
-
-      const verificationDetails = {
-        routingValid,
-        bankMatch: Boolean(
-          branch &&
-            branch.bank_name.toLowerCase().includes(req.bankName.toLowerCase()),
-        ),
-        branchMatch: Boolean(
-          branch &&
-            branch.branch_name
-              .toLowerCase()
-              .includes(req.branchName.toLowerCase()),
-        ),
-        duplicateDetected,
-        duplicateRequests: duplicates.map((d) => ({
-          id: d.id,
-          trackingCode: d.trackingCode,
-          amount: d.amount,
-          createdAt: d.createdAt.toISOString(),
-          status: d.status,
-        })),
-        matchedVendorId: matchedVendor?.id,
-        matchedVendorName: matchedVendor?.receiver_name,
-        verifiedAt: new Date().toISOString(),
-        verifiedBy: "agent",
-        notes: verificationNotes,
-      };
-
-      const [updated] = await db
-        .update(paymentRequests)
-        .set({
-          status: "verified",
-          verificationDetails: verificationDetails as any,
-          vendorId: matchedVendor?.id || req.vendorId,
-          reviewNotes: notes || req.reviewNotes,
-          updatedAt: new Date(),
-        })
-        .where(eq(paymentRequests.id, id))
-        .returning();
-
+      const { updated, verification, status } = await verifyPaymentRequest(id, notes);
       return {
         success: true,
-        message: "Payment request verified and flagged as Ready for approval.",
+        message: status === "verified"
+          ? "Routing and duplicate checks passed. The request is ready for human review."
+          : "Verification checks completed. Review the flagged items before approval.",
         request: updated,
-        verification: verificationDetails,
+        verification,
       };
     },
   }),
+  ...workflowTools,
 ];

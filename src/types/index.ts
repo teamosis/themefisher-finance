@@ -194,8 +194,9 @@ export interface PaymentRequestFormData {
   website_hp?: string;
 }
 
-
 export interface ActivityExcelItem {
+  customerReference?: string;
+  email?: string;
   beneficiaryName: string;
   accountNumber: string;
   bankName?: string;
@@ -213,6 +214,7 @@ export interface ActivityLogDetails {
   currency?: string;
   itemCount?: number;
   debitAccount?: string;
+  paymentDate?: string;
   reason?: string;
   items?: ActivityExcelItem[];
   changes?: Record<string, { from: any; to: any }>;
@@ -232,13 +234,3 @@ export interface ActivityLog {
   userAgent?: string | null;
   createdAt: string | Date;
 }
-
-export interface ActivityLogStats {
-  totalActivities: number;
-  totalExcelExports: number;
-  totalPayoutAmount: number;
-  totalInvoices: number;
-  totalVendorChanges: number;
-}
-
-

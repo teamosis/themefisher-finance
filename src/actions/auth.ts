@@ -2,12 +2,13 @@
 
 import {
   getAuthCookieOptions,
-  getExpectedAuthToken,
+  createAuthToken,
   getSafeRedirectPath,
   isAuthConfigured,
 } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 export interface AuthActionResult {
   success: boolean;
@@ -28,14 +29,15 @@ export async function loginAction(
   }
 
   const expectedPassword = process.env.AUTH_PASSWORD!;
-  if (password !== expectedPassword) {
+  const hash = (value: string) => createHash("sha256").update(value).digest();
+  if (typeof password !== "string" || !timingSafeEqual(hash(password), hash(expectedPassword))) {
     return {
       success: false,
       error: "Incorrect password. Please try again.",
     };
   }
 
-  const token = await getExpectedAuthToken();
+  const token = await createAuthToken();
   if (!token) {
     return {
       success: false,

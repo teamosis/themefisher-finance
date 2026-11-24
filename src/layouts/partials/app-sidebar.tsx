@@ -62,12 +62,12 @@ const navSections: NavSection[] = [
       },
       {
         name: "Create Invoice",
-        href: "/invoice-tools/create-invoice",
+        href: "/create-invoice",
         icon: PlusSquare,
       },
       {
         name: "Clients Directory",
-        href: "/invoice-tools/clients",
+        href: "/clients",
         icon: Users,
       },
     ],
@@ -83,17 +83,17 @@ const navSections: NavSection[] = [
       },
       {
         name: "Payment Requests",
-        href: "/scb-tools/payment-requests",
+        href: "/payment-requests",
         icon: Inbox,
       },
       {
         name: "Receiver Accounts",
-        href: "/scb-tools/vendors",
+        href: "/vendors",
         icon: UserCheck,
       },
       {
         name: "Debit Accounts",
-        href: "/scb-tools/debit-accounts",
+        href: "/debit-accounts",
         icon: CreditCard,
       },
     ],

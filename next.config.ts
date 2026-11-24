@@ -1,6 +1,35 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/invoice-tools/create-invoice",
+        destination: "/create-invoice",
+        permanent: true,
+      },
+      {
+        source: "/invoice-tools/clients",
+        destination: "/clients",
+        permanent: true,
+      },
+      {
+        source: "/scb-tools/payment-requests",
+        destination: "/payment-requests",
+        permanent: true,
+      },
+      {
+        source: "/scb-tools/vendors",
+        destination: "/vendors",
+        permanent: true,
+      },
+      {
+        source: "/scb-tools/debit-accounts",
+        destination: "/debit-accounts",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -22,12 +51,6 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  serverExternalPackages: ["canvas"],
-  webpack: (config) => {
-    config.resolve.alias.canvas = false;
-    return config;
-  },
-  turbopack: {},
 };
 
 export default nextConfig;

@@ -2,11 +2,11 @@
 
 import { db } from "@/db";
 import { clients, invoices } from "@/db/schema";
+import { logActivity } from "@/lib/activity-log";
 import { requireBrowserSession } from "@/lib/browser-session";
 import { invoiceFields } from "@/lib/invoice-validation";
 import type { Invoice } from "@/types";
 import { and, count, desc, eq, getTableColumns, or, sql } from "drizzle-orm";
-import { logActivity } from "./activity-logs";
 
 export async function getInvoices(): Promise<Invoice[]> {
   await requireBrowserSession();

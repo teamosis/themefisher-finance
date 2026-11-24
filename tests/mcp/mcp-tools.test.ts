@@ -49,7 +49,6 @@ describe("MCP Tools Registry & Handlers Suite", () => {
   });
 
   it("registers all financial domain tools across expected scopes", () => {
-    expect(tools.length).toBe(30);
     const names = tools.map((t) => t.name);
 
     expect(names).toContain("finance_get_overview");
@@ -89,6 +88,52 @@ describe("MCP Tools Registry & Handlers Suite", () => {
     expect(names).toContain("finance_payment_requests_list");
     expect(names).toContain("finance_payment_requests_get");
     expect(names).toContain("finance_payment_requests_verify");
+    expect(new Set(names).size).toBe(names.length);
+    expect(names).toEqual(expect.arrayContaining([
+      "finance_accounts_create_debit",
+      "finance_accounts_update_debit",
+      "finance_accounts_delete_debit",
+      "finance_accounts_delete_payment",
+      "finance_scb_prepare_workbook",
+      "finance_payouts_submit",
+      "finance_payouts_approve",
+      "finance_payouts_reject",
+      "finance_payouts_export",
+      "finance_payouts_get_workbook",
+      "finance_logs_list_mcp_runs",
+    ]));
+  });
+
+  it("prepares a readable SCB workbook with string account and routing identifiers", async () => {
+    const vendorId = "0bfce681-c13d-4b89-b6d8-47e425c35ad6";
+    const debitAccountId = "bbde12ea-6467-4e0b-bef6-e2ac87f92c63";
+    vi.mocked(db.select)
+      .mockReturnValueOnce({
+        from: () => ({ where: () => ({ limit: async () => [{ accountNumber: "000010203" }] }) }),
+      } as any)
+      .mockReturnValueOnce({
+        from: () => ({ where: async () => [{
+          id: vendorId, name: "Example Payee", accountNumber: "000404", routingNumber: "012345678",
+        }] }),
+      } as any);
+
+    const tool = getTool("finance_scb_prepare_workbook");
+    const result = await tool.handler({
+      type: "transfers", debitAccountId, paymentDate: "2026-11-24",
+      items: [{ vendorId, amount: "25.50" }],
+    }, ["vendors", "accounts"]) as { xlsxBase64: string; count: number };
+    const XLSX = await import("xlsx");
+    const workbook = XLSX.read(result.xlsxBase64, { type: "base64" });
+    expect(result.count).toBe(1);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets.Transfers)).toEqual([
+      expect.objectContaining({
+        "Beneficiary Account Number": "000404",
+        "Routing Number": "012345678",
+        "Payment Amount": "25.50",
+        "Date(DD/MM/YYYY)": "24/11/2026",
+        "Debit Account Number(Prefix- 00 BDT)": "000010203",
+      }),
+    ]);
   });
 
   describe("System Overview Tool: finance_get_overview", () => {

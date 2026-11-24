@@ -10,7 +10,6 @@ import type { ActivityAction, ActivityLog, ActivityLogDetails } from "@/types";
 import { format, formatDistanceToNow, isValid, parseISO } from "date-fns";
 import {
   Activity,
-  ArrowLeft,
   Building2,
   CheckCircle2,
   Clock,
@@ -168,17 +167,18 @@ export default function ActivityLogsClient({
     try {
       const { utils, writeFile } = await import("xlsx");
       const rows = details.items.map((item) => ({
-        "Customer Reference": "",
+        "Customer Reference": item.customerReference ?? "",
         "Beneficiary Name(120)": item.beneficiaryName,
         "Beneficiary Account Number": item.accountNumber,
         "Routing Number": item.routingNumber,
         "Payment Amount": item.amount,
         "Reason(140)": item.reason || details.reason || "",
-        "Date(DD/MM/YYYY)": format(new Date(), "dd/MM/yyyy"),
+        "Date(DD/MM/YYYY)":
+          details.paymentDate ?? format(new Date(), "dd/MM/yyyy"),
         "Debit Account Number(Prefix- 00 BDT)": (
           details.debitAccount || ""
         ).trim(),
-        "Beneficiary Email ID(Optional)": "",
+        "Beneficiary Email ID(Optional)": item.email ?? "",
       }));
 
       const worksheet = utils.json_to_sheet(rows);

@@ -2,10 +2,10 @@
 
 import { db } from "@/db";
 import { vendors } from "@/db/schema";
+import { logActivity } from "@/lib/activity-log";
 import { requireBrowserSession } from "@/lib/browser-session";
 import type { Vendor } from "@/types";
 import { eq, sql } from "drizzle-orm";
-import { logActivity } from "./activity-logs";
 
 export async function getVendors(): Promise<Vendor[]> {
   await requireBrowserSession();

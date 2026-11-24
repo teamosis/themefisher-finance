@@ -59,9 +59,11 @@ Configure clients, vendors, receiving accounts, and debit accounts through their
 
 ### Existing database upgrades
 
-Back up the database and apply the SQL files in `db-migrations/` to a staging copy before deploying this version. These incremental files assume the original Drizzle schema already exists. Apply the finance constraints first, then the MCP write-request table. Coordinate the deployment with a maintenance window so the older application cannot continue using its former debit account update flow. If a migration fails, its transaction rolls back. If application rollback is necessary after migration, restore the pre-deployment backup to a new database and verify it before switching the application.
+Back up the database and use a staging copy to compare its schema with `src/db/schema.ts` before upgrading. Generate and review any required schema changes against the deployed version before applying them.
 
-Client deletion is blocked while invoices reference the client. The debit account migration keeps the earliest existing default, or chooses the earliest account if there is no default. MCP clients may send an `idempotencyKey` on writes and should reuse that key after transport failures. A completed retry returns a duplicate acknowledgement. A pending key requires checking the underlying record before any further attempt. New MCP log entries store execution metadata without request or response bodies.
+The schema defines a cascade from clients to invoices. Confirm whether a client has invoice history before deleting it. Existing browser sessions require a fresh sign-in after the signed session update.
+
+MCP clients may send an `idempotencyKey` on writes and should reuse that key after transport failures. A completed retry returns a duplicate acknowledgement. A pending key requires checking the underlying record before any further attempt. New MCP log entries store execution metadata without request or response bodies.
 
 ### 3. Run Locally
 
@@ -73,6 +75,17 @@ pnpm dev
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
+
+## MCP access
+
+Open **Settings → MCP Setup**, generate a scoped token, and copy the JSON config into a client that supports Streamable HTTP and bearer headers. The endpoint is `/api/mcp` on the app origin. For a custom deployment, set `NEXT_PUBLIC_APP_URL` to its origin so the workflow links point to the right site.
+
+Start with `finance_get_overview`, then read `finance://workflows` or use `tools/list`. The catalog lists the tools your token can use and links to Form-C and invoice printing, MT103 PDF import, and the public payment pages.
+
+- Use the invoice, client, vendor, accounts, banking, payroll, and logs tools to find or manage records according to the token's scopes.
+- Use `finance_scb_prepare_workbook` with the vendors and accounts scopes to prepare a transfer workbook. Payroll preparation also requires payroll scope. Save `xlsxBase64` as a decoded binary file using the returned filename.
+- Use the **Payment Request Decisions & Exports** scope on a write-enabled token for submission, approval, rejection, and export. Confirm the exact decision with the operator and send an `idempotencyKey`. Final export and workbook recovery also require accounts scope. Use `finance_payouts_get_workbook` with a request ID to recover an export after a lost response.
+- Use the browser to create or rotate tokens, import a protected MT103 PDF, or print the official invoice and Form-C layouts.
 
 ## 📁 Architecture & Structure
 

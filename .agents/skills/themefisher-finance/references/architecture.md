@@ -23,9 +23,14 @@ Themefisher Admin Tools (Finance Tools Suite) is a Next.js App Router applicatio
 │   │   ├── (dashboard)/                  # Persistent AppSidebar Layout Group
 │   │   │   ├── layout.tsx                # AppSidebar persistent shell
 │   │   │   ├── page.tsx                  # Server component: financial operations dashboard
-│   │   │   ├── dashboard-client.tsx      # Client component: metrics, link share, recent feeds
-│   │   │   ├── invoice-tools/            # Inward docs, Form-C, invoice creator, clients
-│   │   │   ├── scb-tools/                # Bulk transaction generator, payment requests, vendors
+│   │   │   ├── dashboard-summary.tsx     # Client component: metrics, link share, recent feeds
+│   │   │   ├── invoice-tools/            # Inward docs, Form-C & Bank Invoice printer
+│   │   │   ├── create-invoice/           # Invoice creator & MT103 remittance parser
+│   │   │   ├── clients/                  # International client directory
+│   │   │   ├── scb-tools/                # Bulk transaction generator & XLSX exporter
+│   │   │   ├── payment-requests/         # Beneficiary claim review & 1-click approvals
+│   │   │   ├── vendors/                  # Beneficiary & employee directory
+│   │   │   ├── debit-accounts/           # SCB funding sources
 │   │   │   └── settings/                 # Activity logs, MCP tokens, MCP logs, receiving accounts
 │   │   ├── login/                        # Protected access login page (standalone)
 │   │   ├── request-payment/              # Public beneficiary payment claim form (standalone)

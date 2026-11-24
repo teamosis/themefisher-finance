@@ -1,4 +1,4 @@
-import { AUTH_COOKIE_NAME, generateAuthToken } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, createAuthToken } from "@/lib/auth";
 import { proxy } from "@/proxy";
 import { NextRequest } from "next/server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -11,10 +11,7 @@ describe("Proxy & Route Protection Integration Suite", () => {
     process.env = { ...originalEnv };
     process.env.AUTH_PASSWORD = "test_master_password_2026";
     process.env.AUTH_SECRET = "test_secret_salt_hash_987654321";
-    validToken = await generateAuthToken(
-      process.env.AUTH_PASSWORD,
-      process.env.AUTH_SECRET,
-    );
+    validToken = (await createAuthToken())!;
   });
 
   afterEach(() => {
@@ -126,14 +123,14 @@ describe("Proxy & Route Protection Integration Suite", () => {
 
     it("redirects authenticated user away from /login to safe relative redirect target", async () => {
       const req = createReq(
-        "http://localhost:3000/login?redirect=/scb-tools/vendors",
+        "http://localhost:3000/login?redirect=/vendors",
         validToken,
       );
       const res = await proxy(req);
 
       expect(res.status).toBe(307);
       expect(res.headers.get("location")).toBe(
-        "http://localhost:3000/scb-tools/vendors",
+        "http://localhost:3000/vendors",
       );
     });
 

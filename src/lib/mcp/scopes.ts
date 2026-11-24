@@ -53,14 +53,23 @@ export const MCP_SCOPES = [
       "Read, audit, and verify submitted public beneficiary payment requests",
     prefixes: ["finance_payment_requests_"],
   },
+  {
+    key: "payment_operations",
+    label: "Payment Request Decisions & Exports",
+    description: "Submit, approve, reject, and export payment requests after operator review",
+    prefixes: ["finance_payouts_"],
+  },
 ] as const;
 
 export type McpScopeKey = (typeof MCP_SCOPES)[number]["key"];
 
 export const ALL_SCOPE_KEYS: McpScopeKey[] = MCP_SCOPES.map((s) => s.key);
 
+export const DEFAULT_SCOPE_KEYS = ALL_SCOPE_KEYS.filter((scope) => scope !== "payment_operations");
+
 export function getToolScope(toolName: string): McpScopeKey | "system" {
   if (toolName === "finance_get_overview") return "system";
+  if (toolName === "finance_scb_prepare_workbook") return "vendors";
   for (const scope of MCP_SCOPES) {
     if (scope.prefixes.some((prefix) => toolName.startsWith(prefix))) {
       return scope.key;
@@ -76,6 +85,16 @@ export function tokenAllowsTool(
   if (toolName === "finance_get_overview") return true;
   const scope = getToolScope(toolName);
   if (scope === "system" || !allowedScopes?.length) return false;
+  if (scope === "payment_operations") {
+    if (!allowedScopes.includes(scope)) return false;
+    if (toolName === "finance_payouts_export" || toolName === "finance_payouts_get_workbook") {
+      return allowedScopes.includes("accounts") || allowedScopes.includes("*");
+    }
+    return true;
+  }
+  if (toolName === "finance_scb_prepare_workbook") {
+    return allowedScopes.includes("*") || (allowedScopes.includes("accounts") && allowedScopes.includes("vendors"));
+  }
   if (allowedScopes.includes("*")) return true;
   // The database cascade deletes this client's invoices as well.
   if (toolName === "finance_clients_delete") {

@@ -2,10 +2,10 @@
 
 import { db } from "@/db";
 import { clients } from "@/db/schema";
+import { logActivity } from "@/lib/activity-log";
 import { requireBrowserSession } from "@/lib/browser-session";
 import type { Client } from "@/types";
 import { asc, eq } from "drizzle-orm";
-import { logActivity } from "./activity-logs";
 
 export async function getClients(): Promise<Client[]> {
   await requireBrowserSession();

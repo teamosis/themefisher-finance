@@ -32,7 +32,7 @@ Store in `.env.local` (never commit):
 ```env
 DATABASE_URL=postgresql://user:password@ep-...neon.tech/neondb?sslmode=require
 AUTH_PASSWORD=change_this_to_your_secure_password
-AUTH_SECRET=optional_random_secret_for_signing
+AUTH_SECRET=replace_with_a_long_random_signing_secret
 PDF_PASSWORD=your_pdf_password_here
 ```
 
@@ -54,12 +54,12 @@ The project follows standard Next.js App Router conventions with domain-separate
   - `(dashboard)/` — Unified AppSidebar shell
     - `/` — Financial operations dashboard with instant payment link sharing
     - `/invoice-tools` — Document viewer, Form-C & Bank Invoice printer
-    - `/invoice-tools/create-invoice` — Invoice creator & MT103 remittance PDF parser
-    - `/invoice-tools/clients` — International client directory
+    - `/create-invoice` — Invoice creator & MT103 remittance PDF parser
+    - `/clients` — International client directory
     - `/scb-tools` — Bulk transaction generator & XLSX exporter
-    - `/scb-tools/payment-requests` — Beneficiary claim review & 1-click approvals
-    - `/scb-tools/vendors` — Beneficiary & employee directory
-    - `/scb-tools/debit-accounts` — SCB funding sources
+    - `/payment-requests` — Beneficiary claim review & 1-click approvals
+    - `/vendors` — Beneficiary & employee directory
+    - `/debit-accounts` — SCB funding sources
     - `/settings/*` — Activity audit logs, MCP agent tokens & execution logs, receiving accounts
   - `/request-payment` — Public beneficiary payment request submission form
   - `/track-payment` — Public claim status tracking page

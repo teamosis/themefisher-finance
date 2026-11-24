@@ -9,47 +9,35 @@ import {
 import { Modal } from "@/components/modals/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import type { DebitAccount, PaymentRequest, PaymentRequestStatus } from "@/types";
+import type {
+  DebitAccount,
+  PaymentRequest,
+  PaymentRequestStatus,
+} from "@/types";
 import { format } from "date-fns";
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowRight,
-  Building2,
   Check,
   CheckCircle2,
   Clock,
   Copy,
-  CreditCard,
   Download,
   ExternalLink,
   Eye,
   FileSpreadsheet,
-  FileText,
-  Filter,
   History,
-  Info,
   Loader2,
   RefreshCw,
   Search,
-  ShieldAlert,
   ShieldCheck,
   UserCheck,
-  UserPlus,
-  Users,
   X,
   XCircle,
 } from "lucide-react";
-import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 
 interface PaymentRequestsClientProps {
@@ -89,7 +77,10 @@ export default function PaymentRequestsClient({
   );
 
   // Reject modal state
-  const [rejectingItem, setRejectingItem] = useState<PaymentRequest | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [rejectingItem, setRejectingItem] = useState<PaymentRequest | null>(
+    null,
+  );
   const [rejectReason, setRejectReason] = useState("");
 
   // Audit / Details modal state
@@ -163,10 +154,17 @@ export default function PaymentRequestsClient({
   // 1-Click Approve single request
   const handleApprove = (req: PaymentRequest, saveAsVendor = true) => {
     startTransition(async () => {
-      const updated = await approvePaymentRequest(req.id, { saveAsVendor });
-      setRequests((prev) =>
-        prev.map((item) => (item.id === updated.id ? updated : item)),
-      );
+      setActionError(null);
+      try {
+        const updated = await approvePaymentRequest(req.id, { saveAsVendor });
+        setRequests((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item)),
+        );
+      } catch {
+        setActionError(
+          "Could not update the request. Refresh the list and try again.",
+        );
+      }
     });
   };
 
@@ -180,13 +178,22 @@ export default function PaymentRequestsClient({
     if (actionableSelected.length === 0) return;
 
     startTransition(async () => {
-      for (const req of actionableSelected) {
-        const updated = await approvePaymentRequest(req.id, { saveAsVendor: true });
-        setRequests((prev) =>
-          prev.map((item) => (item.id === updated.id ? updated : item)),
+      setActionError(null);
+      try {
+        for (const req of actionableSelected) {
+          const updated = await approvePaymentRequest(req.id, {
+            saveAsVendor: true,
+          });
+          setRequests((prev) =>
+            prev.map((item) => (item.id === updated.id ? updated : item)),
+          );
+        }
+        setSelectedIds([]);
+      } catch {
+        setActionError(
+          "Could not update the request. Refresh the list and try again.",
         );
       }
-      setSelectedIds([]);
     });
   };
 
@@ -194,15 +201,22 @@ export default function PaymentRequestsClient({
   const handleConfirmReject = () => {
     if (!rejectingItem || !rejectReason.trim()) return;
     startTransition(async () => {
-      const updated = await rejectPaymentRequest(
-        rejectingItem.id,
-        rejectReason.trim(),
-      );
-      setRequests((prev) =>
-        prev.map((item) => (item.id === updated.id ? updated : item)),
-      );
-      setRejectingItem(null);
-      setRejectReason("");
+      setActionError(null);
+      try {
+        const updated = await rejectPaymentRequest(
+          rejectingItem.id,
+          rejectReason.trim(),
+        );
+        setRequests((prev) =>
+          prev.map((item) => (item.id === updated.id ? updated : item)),
+        );
+        setRejectingItem(null);
+        setRejectReason("");
+      } catch {
+        setActionError(
+          "Could not update the request. Refresh the list and try again.",
+        );
+      }
     });
   };
 
@@ -211,14 +225,14 @@ export default function PaymentRequestsClient({
     if (requestIds.length === 0) return;
 
     startTransition(async () => {
+      setActionError(null);
       try {
+        const { utils, writeFile } = await import("xlsx");
         const res = await exportPaymentRequestsToScb(
           requestIds,
           selectedDebitAccountId,
         );
 
-        // Download via SheetJS in browser
-        const { utils, writeFile } = await import("xlsx");
         const worksheet = utils.json_to_sheet(res.rows);
         const workbook = utils.book_new();
         utils.book_append_sheet(workbook, worksheet, "Payment Requests");
@@ -243,8 +257,10 @@ export default function PaymentRequestsClient({
           count: res.count,
           totalAmount: res.totalAmount,
         });
-      } catch (err: any) {
-        alert(err.message || "Failed to export SCB Straight2Bank file.");
+      } catch {
+        setActionError(
+          "Export failed. Refresh the requests and check Activity Logs for a saved export.",
+        );
       }
     });
   };
@@ -327,6 +343,15 @@ export default function PaymentRequestsClient({
 
   return (
     <div className="space-y-6">
+      {actionError && (
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+        >
+          {actionError}
+        </p>
+      )}
+
       {/* Page Title & Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -339,7 +364,8 @@ export default function PaymentRequestsClient({
             )}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Review submitted beneficiary forms, verify bank routing details, and generate SCB Straight2Bank files.
+            Review submitted beneficiary forms, verify bank routing details, and
+            generate SCB Straight2Bank files.
           </p>
         </div>
 
@@ -383,7 +409,9 @@ export default function PaymentRequestsClient({
             className="h-9 w-9 p-0 cursor-pointer"
             title="Refresh requests"
           >
-            <RefreshCw className={`size-4 ${isPending ? "animate-spin" : ""}`} />
+            <RefreshCw
+              className={`size-4 ${isPending ? "animate-spin" : ""}`}
+            />
           </Button>
         </div>
       </div>
@@ -420,7 +448,9 @@ export default function PaymentRequestsClient({
             <span className="text-2xl font-bold text-text-strong">
               {approvedCount}
             </span>
-            <span className="text-[11px] text-muted-foreground">ready for SCB</span>
+            <span className="text-[11px] text-muted-foreground">
+              ready for SCB
+            </span>
           </div>
         </Card>
 
@@ -495,7 +525,8 @@ export default function PaymentRequestsClient({
                   : "text-muted-foreground hover:text-text-strong hover:bg-muted"
               }`}
             >
-              Exported ({requests.filter((r) => r.status === "exported").length})
+              Exported ({requests.filter((r) => r.status === "exported").length}
+              )
             </button>
             <button
               type="button"
@@ -506,7 +537,8 @@ export default function PaymentRequestsClient({
                   : "text-muted-foreground hover:text-text-strong hover:bg-muted"
               }`}
             >
-              Rejected ({requests.filter((r) => r.status === "rejected").length})
+              Rejected ({requests.filter((r) => r.status === "rejected").length}
+              )
             </button>
             <button
               type="button"
@@ -569,9 +601,7 @@ export default function PaymentRequestsClient({
                   className="h-7 text-xs font-semibold gap-1.5 cursor-pointer"
                 >
                   <Download className="size-3" />
-                  <span>
-                    Export {selectedApprovedIds.length} to SCB Excel
-                  </span>
+                  <span>Export {selectedApprovedIds.length} to SCB Excel</span>
                 </Button>
               )}
 
@@ -615,12 +645,18 @@ export default function PaymentRequestsClient({
             <tbody className="divide-y divide-border">
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                  <td
+                    colSpan={8}
+                    className="p-8 text-center text-muted-foreground"
+                  >
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Inbox className="size-8 text-muted-foreground/50" />
-                      <p className="text-sm font-medium">No payment requests found</p>
+                      <p className="text-sm font-medium">
+                        No payment requests found
+                      </p>
                       <p className="text-xs max-w-sm">
-                        Share your public link to start receiving payment requests from contractors and beneficiaries.
+                        Share your public link to start receiving payment
+                        requests from contractors and beneficiaries.
                       </p>
                     </div>
                   </td>
@@ -655,7 +691,10 @@ export default function PaymentRequestsClient({
                           {req.trackingCode}
                         </div>
                         <div className="text-[10px] text-muted-foreground mt-0.5">
-                          {format(new Date(req.createdAt), "dd MMM yyyy, hh:mm a")}
+                          {format(
+                            new Date(req.createdAt),
+                            "dd MMM yyyy, hh:mm a",
+                          )}
                         </div>
                       </td>
 
@@ -664,8 +703,10 @@ export default function PaymentRequestsClient({
                         <div className="font-semibold text-text-strong">
                           {req.payeeName}
                         </div>
-                        <div className="text-[11px] text-muted-foreground truncate max-w-[160px]">
-                          {req.payeeEmail || req.payeePhone || "No contact info"}
+                        <div className="text-[11px] text-muted-foreground truncate max-w-40">
+                          {req.payeeEmail ||
+                            req.payeePhone ||
+                            "No contact info"}
                         </div>
                         {verification?.matchedVendorName && (
                           <div className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
@@ -714,8 +755,11 @@ export default function PaymentRequestsClient({
                       </td>
 
                       {/* Purpose */}
-                      <td className="p-3 max-w-[180px]">
-                        <p className="truncate text-text-default text-xs" title={req.purpose}>
+                      <td className="p-3 max-w-45">
+                        <p
+                          className="truncate text-text-default text-xs"
+                          title={req.purpose}
+                        >
                           {req.purpose}
                         </p>
                         {verification?.duplicateDetected && (
@@ -792,7 +836,7 @@ export default function PaymentRequestsClient({
                           {/* Exported info */}
                           {req.status === "exported" && (
                             <span
-                              className="text-[10px] text-muted-foreground font-mono truncate max-w-[100px]"
+                              className="text-[10px] text-muted-foreground font-mono truncate max-w-25"
                               title={req.scbFileName || "Exported"}
                             >
                               {req.scbFileName ? "Downloaded" : "Exported"}
@@ -852,7 +896,9 @@ export default function PaymentRequestsClient({
                 disabled={!rejectReason.trim() || isPending}
                 className="text-xs font-semibold gap-1.5 cursor-pointer"
               >
-                {isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+                {isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : null}
                 <span>Confirm Rejection</span>
               </Button>
             </div>
@@ -881,7 +927,9 @@ export default function PaymentRequestsClient({
                   {viewingItem.payeeName}
                 </span>
                 <span className="text-muted-foreground block text-[11px]">
-                  {viewingItem.payeeEmail || viewingItem.payeePhone || "No contact"}
+                  {viewingItem.payeeEmail ||
+                    viewingItem.payeePhone ||
+                    "No contact"}
                 </span>
               </div>
               <div className="text-right">
@@ -904,21 +952,33 @@ export default function PaymentRequestsClient({
               </div>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Bank</span>
-                  <span className="font-medium text-text-strong">{viewingItem.bankName}</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Bank
+                  </span>
+                  <span className="font-medium text-text-strong">
+                    {viewingItem.bankName}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Branch</span>
-                  <span className="font-medium text-text-strong">{viewingItem.branchName}</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Branch
+                  </span>
+                  <span className="font-medium text-text-strong">
+                    {viewingItem.branchName}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">Account Number</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    Account Number
+                  </span>
                   <span className="font-mono font-semibold text-text-strong">
                     {viewingItem.accountNumber}
                   </span>
                 </div>
                 <div>
-                  <span className="text-muted-foreground block text-[11px]">BEFTN Routing Number</span>
+                  <span className="text-muted-foreground block text-[11px]">
+                    BEFTN Routing Number
+                  </span>
                   <span className="font-mono font-semibold text-text-strong">
                     {viewingItem.routingNumber}
                   </span>
@@ -928,32 +988,47 @@ export default function PaymentRequestsClient({
 
             {/* Purpose */}
             <div className="border border-border rounded-xl p-3.5 space-y-1">
-              <span className="font-semibold text-text-strong block">Purpose / Reason</span>
-              <p className="text-text-default text-xs leading-relaxed">{viewingItem.purpose}</p>
+              <span className="font-semibold text-text-strong block">
+                Purpose / Reason
+              </span>
+              <p className="text-text-default text-xs leading-relaxed">
+                {viewingItem.purpose}
+              </p>
             </div>
 
             {/* Verification Checklist */}
             <div className="border border-border rounded-xl p-3.5 space-y-2.5">
-              <span className="font-semibold text-text-strong block">Automated Verification Checklist</span>
+              <span className="font-semibold text-text-strong block">
+                Automated Verification Checklist
+              </span>
 
               <div className="space-y-1.5 text-xs">
                 {viewingItem.verificationDetails?.notes &&
                 viewingItem.verificationDetails.notes.length > 0 ? (
                   viewingItem.verificationDetails.notes.map((note, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-text-default">
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2 text-text-default"
+                    >
                       <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0 mt-0.5" />
                       <span>{note}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-muted-foreground">No verification notes recorded.</div>
+                  <div className="text-muted-foreground">
+                    No verification notes recorded.
+                  </div>
                 )}
 
                 {viewingItem.verificationDetails?.duplicateDetected && (
                   <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs mt-2">
                     <span className="font-bold block">Duplicate Warning:</span>
-                    Found {viewingItem.verificationDetails.duplicateRequests?.length} previous
-                    request(s) with this account number in the last 30 days.
+                    Found{" "}
+                    {
+                      viewingItem.verificationDetails.duplicateRequests?.length
+                    }{" "}
+                    previous request(s) with this account number in the last 30
+                    days.
                   </div>
                 )}
               </div>
@@ -999,11 +1074,13 @@ export default function PaymentRequestsClient({
                 Excel File Downloaded
               </h3>
               <p className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
-                Successfully exported {exportedResult.count} payment request(s) totaling{" "}
+                Successfully exported {exportedResult.count} payment request(s)
+                totaling{" "}
                 <span className="font-bold text-text-strong">
                   ৳{Number(exportedResult.totalAmount).toLocaleString()} BDT
                 </span>
-                . Please upload the generated file to the Standard Chartered Straight2Bank portal.
+                . Please upload the generated file to the Standard Chartered
+                Straight2Bank portal.
               </p>
             </div>
 

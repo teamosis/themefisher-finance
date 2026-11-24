@@ -3,12 +3,7 @@
 import { getPaymentRequestByTrackingCode } from "@/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import {
@@ -31,18 +26,16 @@ export default function TrackPaymentClient() {
   const initialCode = searchParams.get("code") || "";
 
   const [trackCodeInput, setTrackCodeInput] = useState(initialCode);
-  const [trackingResult, setTrackingResult] = useState<{
-    trackingCode: string;
-    payeeName: string;
-    bankName: string;
-    branchName: string;
-    amount: string;
-    currency: string;
-    purpose: string;
-    status: string;
-    createdAt: Date | string;
-    exportedAt?: Date | string | null;
-  } | null | undefined>(undefined);
+  const [trackingResult, setTrackingResult] = useState<
+    | {
+        trackingCode: string;
+        status: string;
+        createdAt: Date | string;
+        exportedAt?: Date | string | null;
+      }
+    | null
+    | undefined
+  >(undefined);
   const [isTracking, startTrackTransition] = useTransition();
   const [trackError, setTrackError] = useState<string | null>(null);
 
@@ -50,13 +43,16 @@ export default function TrackPaymentClient() {
     if (!code.trim()) return;
     setTrackError(null);
     startTrackTransition(async () => {
-      const res = await getPaymentRequestByTrackingCode(code.trim());
-      if (res) {
+      try {
+        const res = await getPaymentRequestByTrackingCode(code.trim());
         setTrackingResult(res);
-        setTrackError(null);
-      } else {
+        if (!res)
+          setTrackError(
+            "No payment request found matching this tracking reference.",
+          );
+      } catch {
         setTrackingResult(null);
-        setTrackError("No payment request found matching this tracking reference.");
+        setTrackError("Could not check the payment status. Please try again.");
       }
     });
   };
@@ -64,19 +60,23 @@ export default function TrackPaymentClient() {
   useEffect(() => {
     let cancelled = false;
     if (initialCode.trim()) {
-      getPaymentRequestByTrackingCode(initialCode.trim()).then((res) => {
-        if (!cancelled) {
-          if (res) {
-            setTrackingResult(res);
-            setTrackError(null);
-          } else {
-            setTrackingResult(null);
-            setTrackError(
-              "No payment request found matching this tracking reference.",
-            );
-          }
-        }
-      });
+      getPaymentRequestByTrackingCode(initialCode.trim())
+        .then((res) => {
+          if (cancelled) return;
+          setTrackingResult(res);
+          setTrackError(
+            res
+              ? null
+              : "No payment request found matching this tracking reference.",
+          );
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setTrackingResult(null);
+          setTrackError(
+            "Could not check the payment status. Please try again.",
+          );
+        });
     }
     return () => {
       cancelled = true;
@@ -177,7 +177,9 @@ export default function TrackPaymentClient() {
             <div className="flex gap-2">
               <Input
                 value={trackCodeInput}
-                onChange={(e) => setTrackCodeInput(e.target.value.toUpperCase())}
+                onChange={(e) =>
+                  setTrackCodeInput(e.target.value.toUpperCase())
+                }
                 placeholder="PR-20261124-XXXX"
                 disabled={isTracking}
                 className="font-mono text-xs uppercase h-8.5 bg-background"
@@ -218,38 +220,21 @@ export default function TrackPaymentClient() {
                   <div>{getStatusBadge(trackingResult.status)}</div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <span className="text-muted-foreground text-[10px] block">Beneficiary</span>
-                    <span className="font-semibold text-text-strong">{trackingResult.payeeName}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground text-[10px] block">Amount</span>
-                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
-                      ৳{Number(trackingResult.amount).toLocaleString()} {trackingResult.currency}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-xs pt-0.5">
-                  <span className="text-muted-foreground text-[10px] block">Bank & Branch</span>
-                  <span className="font-medium text-text-strong">
-                    {trackingResult.bankName} ({trackingResult.branchName})
-                  </span>
-                </div>
-
-                <div className="text-xs pt-0.5">
-                  <span className="text-muted-foreground text-[10px] block">Purpose</span>
-                  <span className="text-text-strong">{trackingResult.purpose}</span>
-                </div>
-
                 <div className="pt-2 border-t border-border/50 text-[10px] text-muted-foreground flex justify-between">
                   <span>
-                    Submitted: {format(new Date(trackingResult.createdAt), "dd MMM yyyy, hh:mm a")}
+                    Submitted:{" "}
+                    {format(
+                      new Date(trackingResult.createdAt),
+                      "dd MMM yyyy, hh:mm a",
+                    )}
                   </span>
                   {trackingResult.exportedAt && (
                     <span className="text-purple-600 dark:text-purple-400 font-medium">
-                      Exported: {format(new Date(trackingResult.exportedAt), "dd MMM yyyy")}
+                      Exported:{" "}
+                      {format(
+                        new Date(trackingResult.exportedAt),
+                        "dd MMM yyyy",
+                      )}
                     </span>
                   )}
                 </div>

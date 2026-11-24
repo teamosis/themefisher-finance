@@ -1,3 +1,4 @@
+import config from "@/config/config.json";
 import { db } from "@/db";
 import { mcpAccessTokens, mcpLimits, mcpRuns } from "@/db/schema";
 import { and, desc, eq, gte, isNull, sql } from "drizzle-orm";
@@ -25,7 +26,7 @@ export function getMcpOrigin(): string {
   if (process.env.NEXT_PUBLIC_APP_URL) {
     return new URL(process.env.NEXT_PUBLIC_APP_URL).origin;
   }
-  return "http://localhost:3000";
+  return process.env.NODE_ENV === "production" ? new URL(config.site.base_url).origin : "http://localhost:3000";
 }
 
 export interface McpTokenRecord {

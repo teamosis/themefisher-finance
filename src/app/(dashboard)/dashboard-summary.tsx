@@ -1,5 +1,3 @@
-"use client";
-
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -8,14 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import type {
-  ActivityLog,
-  Client,
-  Invoice,
-  PaymentRequest,
-  PaymentRequestStatus,
-  Vendor,
-} from "@/types";
+import type { activityLogs, invoices, paymentRequests } from "@/db/schema";
 import { format } from "date-fns";
 import {
   AlertCircle,
@@ -34,47 +25,56 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
-interface DashboardClientProps {
-  initialInvoices: Invoice[];
-  initialClients: Client[];
-  initialVendors: Vendor[];
-  initialPaymentStats: {
-    total: number;
-    pending: number;
-    verified: number;
-    approved: number;
-    rejected: number;
-    exported: number;
+interface DashboardSummaryProps {
+  invoiceCount: number;
+  totalInvoicedUsd: number;
+  clientCount: number;
+  vendorCount: number;
+  employeesCount: number;
+  paymentStats: {
     actionableCount: number;
+    approved: number;
     totalPendingAmount: number;
   };
-  initialPaymentRequests: PaymentRequest[];
-  initialActivityLogs: ActivityLog[];
+  recentInvoices: (Pick<
+    typeof invoices.$inferSelect,
+    | "id"
+    | "invoice_number"
+    | "invoice_date"
+    | "amount"
+    | "currency"
+    | "description"
+  > & { clientName: string | null })[];
+  recentPaymentRequests: Pick<
+    typeof paymentRequests.$inferSelect,
+    | "id"
+    | "payeeName"
+    | "status"
+    | "bankName"
+    | "branchName"
+    | "purpose"
+    | "amount"
+  >[];
+  recentLogs: Pick<
+    typeof activityLogs.$inferSelect,
+    "id" | "title" | "domain" | "status" | "createdAt"
+  >[];
 }
 
-export default function DashboardClient({
-  initialInvoices,
-  initialClients,
-  initialVendors,
-  initialPaymentStats,
-  initialPaymentRequests,
-  initialActivityLogs,
-}: DashboardClientProps) {
-  // Metrics calculations
-  const totalInvoicedUsd = initialInvoices.reduce(
-    (sum, inv) => sum + Number(inv.amount || 0),
-    0,
-  );
-  const employeesCount = initialVendors.filter((v) => v.is_employee).length;
-  const externalVendorsCount = initialVendors.filter(
-    (v) => !v.is_employee,
-  ).length;
+export default function DashboardSummary({
+  invoiceCount,
+  totalInvoicedUsd,
+  clientCount,
+  vendorCount,
+  employeesCount,
+  paymentStats,
+  recentInvoices,
+  recentPaymentRequests,
+  recentLogs,
+}: DashboardSummaryProps) {
+  const externalVendorsCount = vendorCount - employeesCount;
 
-  const recentInvoices = initialInvoices.slice(0, 5);
-  const recentPaymentRequests = initialPaymentRequests.slice(0, 5);
-  const recentLogs = initialActivityLogs.slice(0, 5);
-
-  const getStatusBadge = (status: PaymentRequestStatus) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
         return (
@@ -125,7 +125,10 @@ export default function DashboardClient({
       {/* Financial Metrics KPI Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Inward Remittances */}
-        <Link href="/invoice-tools" className="group block focus:outline-hidden">
+        <Link
+          href="/invoice-tools"
+          className="group block focus:outline-hidden"
+        >
           <Card className="p-5 bg-card border-border hover:border-primary/40 transition-all duration-200 shadow-xs hover:shadow-md h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
@@ -138,13 +141,15 @@ export default function DashboardClient({
               </div>
               <div className="mt-3">
                 <span className="text-2xl sm:text-3xl font-bold text-text-strong block tracking-tight">
-                  ${totalInvoicedUsd.toLocaleString(undefined, {
+                  $
+                  {totalInvoicedUsd.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
                   })}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Across {initialInvoices.length} billing document{initialInvoices.length === 1 ? "" : "s"}
+                  Across {invoiceCount} billing document
+                  {invoiceCount === 1 ? "" : "s"}
                 </p>
               </div>
             </div>
@@ -156,7 +161,10 @@ export default function DashboardClient({
         </Link>
 
         {/* Metric 2: Pending Claims */}
-        <Link href="/scb-tools/payment-requests" className="group block focus:outline-hidden">
+        <Link
+          href="/payment-requests"
+          className="group block focus:outline-hidden"
+        >
           <Card className="p-5 bg-card border-border hover:border-primary/40 transition-all duration-200 shadow-xs hover:shadow-md h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
@@ -169,13 +177,15 @@ export default function DashboardClient({
               </div>
               <div className="mt-3">
                 <span className="text-2xl sm:text-3xl font-bold text-text-strong block tracking-tight">
-                  ৳{initialPaymentStats.totalPendingAmount.toLocaleString(undefined, {
+                  ৳
+                  {paymentStats.totalPendingAmount.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 0,
                   })}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {initialPaymentStats.actionableCount} awaiting review &bull; {initialPaymentStats.approved} approved
+                  {paymentStats.actionableCount} awaiting review &bull;{" "}
+                  {paymentStats.approved} approved
                 </p>
               </div>
             </div>
@@ -187,7 +197,10 @@ export default function DashboardClient({
         </Link>
 
         {/* Metric 3: Beneficiaries & Payroll */}
-        <Link href="/scb-tools/vendors" className="group block focus:outline-hidden">
+        <Link
+          href="/vendors"
+          className="group block focus:outline-hidden"
+        >
           <Card className="p-5 bg-card border-border hover:border-primary/40 transition-all duration-200 shadow-xs hover:shadow-md h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
@@ -200,10 +213,11 @@ export default function DashboardClient({
               </div>
               <div className="mt-3">
                 <span className="text-2xl sm:text-3xl font-bold text-text-strong block tracking-tight">
-                  {initialVendors.length}
+                  {vendorCount}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {employeesCount} employees &bull; {externalVendorsCount} contractors
+                  {employeesCount} employees &bull; {externalVendorsCount}{" "}
+                  contractors
                 </p>
               </div>
             </div>
@@ -215,7 +229,10 @@ export default function DashboardClient({
         </Link>
 
         {/* Metric 4: International Clients */}
-        <Link href="/invoice-tools/clients" className="group block focus:outline-hidden">
+        <Link
+          href="/clients"
+          className="group block focus:outline-hidden"
+        >
           <Card className="p-5 bg-card border-border hover:border-primary/40 transition-all duration-200 shadow-xs hover:shadow-md h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
@@ -228,7 +245,7 @@ export default function DashboardClient({
               </div>
               <div className="mt-3">
                 <span className="text-2xl sm:text-3xl font-bold text-text-strong block tracking-tight">
-                  {initialClients.length}
+                  {clientCount}
                 </span>
                 <p className="text-xs text-muted-foreground mt-1">
                   Active remittance partners
@@ -250,7 +267,7 @@ export default function DashboardClient({
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Link
-            href="/invoice-tools/create-invoice"
+            href="/create-invoice"
             className="group block p-4 rounded-xl bg-card border border-border hover:border-foreground/30 transition-all duration-150 shadow-2xs hover:shadow-xs"
           >
             <div className="flex items-center gap-3">
@@ -350,11 +367,11 @@ export default function DashboardClient({
           <CardContent className="p-0 divide-y divide-border flex-1">
             {recentInvoices.length === 0 ? (
               <div className="p-8 text-center text-xs text-muted-foreground">
-                No invoices recorded yet. Click &quot;Create Invoice&quot; to generate one.
+                No invoices recorded yet. Click &quot;Create Invoice&quot; to
+                generate one.
               </div>
             ) : (
               recentInvoices.map((inv) => {
-                const client = initialClients.find((c) => c.id === inv.client_id);
                 return (
                   <div
                     key={inv.id}
@@ -370,13 +387,15 @@ export default function DashboardClient({
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground truncate mt-0.5">
-                        {client?.name || "Client"} &bull; {inv.description || "Web development services"}
+                        {inv.clientName || "Client"} &bull;{" "}
+                        {inv.description || "Web development services"}
                       </p>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
                       <span className="text-sm font-semibold text-text-strong">
-                        ${Number(inv.amount || 0).toLocaleString()}
+                        {Number(inv.amount || 0).toLocaleString()}{" "}
+                        {inv.currency || "USD"}
                       </span>
                       <Link
                         href={`/invoice-tools?invoiceId=${inv.id}`}
@@ -412,7 +431,7 @@ export default function DashboardClient({
               </CardTitle>
             </div>
             <Link
-              href="/scb-tools/payment-requests"
+              href="/payment-requests"
               className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
             >
               <span>View all</span>
@@ -423,7 +442,8 @@ export default function DashboardClient({
           <CardContent className="p-0 divide-y divide-border flex-1">
             {recentPaymentRequests.length === 0 ? (
               <div className="p-8 text-center text-xs text-muted-foreground">
-                No payment requests submitted yet. Share the public link above to receive claims.
+                No payment requests submitted yet. Share the public link above
+                to receive claims.
               </div>
             ) : (
               recentPaymentRequests.map((req) => (
@@ -448,7 +468,7 @@ export default function DashboardClient({
                       ৳{Number(req.amount || 0).toLocaleString()}
                     </span>
                     <Link
-                      href="/scb-tools/payment-requests"
+                      href="/payment-requests"
                       className="p-1.5 rounded-lg text-muted-foreground hover:text-primary hover:bg-muted transition-colors cursor-pointer"
                       title="Review claim"
                     >
@@ -462,7 +482,7 @@ export default function DashboardClient({
 
           <CardFooter className="p-3 border-t border-border bg-muted/20">
             <Link
-              href="/scb-tools/payment-requests"
+              href="/payment-requests"
               className="w-full text-center text-xs font-medium text-muted-foreground hover:text-text-strong transition-colors py-1"
             >
               Open Payment Requests &amp; Approvals Manager &rarr;
@@ -503,9 +523,13 @@ export default function DashboardClient({
                     <span className="text-[11px] font-medium text-primary">
                       {log.domain.replace("_", " ").toUpperCase()}
                     </span>
-                    <span className="text-xs text-muted-foreground">&bull;</span>
                     <span className="text-xs text-muted-foreground">
-                      {log.createdAt ? format(new Date(log.createdAt), "dd MMM yyyy, HH:mm") : ""}
+                      &bull;
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {log.createdAt
+                        ? format(new Date(log.createdAt), "dd MMM yyyy, HH:mm")
+                        : ""}
                     </span>
                   </div>
                 </div>

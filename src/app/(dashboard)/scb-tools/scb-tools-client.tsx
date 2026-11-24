@@ -5,8 +5,9 @@ import SearchableVendorSelect from "@/components/forms/searchable-vendor-select"
 import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button";
+import { buildScbWorkbook, formatTransferDate, isPaymentAmount } from "@/lib/scb-workbook";
 import type { ActivityExcelItem, DebitAccount, Vendor } from "@/types";
-import { format, isValid, parseISO } from "date-fns";
+import { format } from "date-fns";
 import {
   ArrowRight,
   Briefcase,
@@ -47,21 +48,6 @@ type AdditionalSalaryRow = {
   description: string;
 };
 
-function isPaymentAmount(value: string) {
-  return (
-    /^\d+(?:\.\d{1,2})?$/.test(value) &&
-    Number.isFinite(Number(value)) &&
-    Number(value) > 0
-  );
-}
-
-function formatTransferDate(value: string) {
-  const date = parseISO(value);
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && isValid(date)
-    ? format(date, "dd/MM/yyyy")
-    : undefined;
-}
-
 function isPayableVendor(vendor: Vendor | undefined): vendor is Vendor {
   return Boolean(
     vendor &&
@@ -76,12 +62,9 @@ async function downloadScbWorkbook(
   sheetName: string,
   filePrefix: string,
 ): Promise<string> {
-  const { utils, writeFile } = await import("xlsx");
-  const worksheet = utils.json_to_sheet(rows);
-  const workbook = utils.book_new();
-  utils.book_append_sheet(workbook, worksheet, sheetName);
+  const { xlsx, workbook } = await buildScbWorkbook(rows, sheetName);
   const fileName = `${filePrefix}_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`;
-  writeFile(workbook, fileName);
+  xlsx.writeFile(workbook, fileName);
   return fileName;
 }
 
@@ -861,7 +844,7 @@ export default function ScbToolsClient({
                     </span>
                   </div>
                   <Link
-                    href="/scb-tools/vendors"
+                    href="/vendors"
                     className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-normal whitespace-nowrap transition-colors hover:opacity-90"
                   >
                     <span>Mark Employees</span>

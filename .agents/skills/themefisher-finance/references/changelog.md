@@ -4,6 +4,37 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Flattened Dashboard Routes to Root Hierarchy
+
+- Flattened sub-tool nested routes under `(dashboard)` to root URL paths following the introduction of global `AppSidebar`:
+  - `/invoice-tools/create-invoice` -> `/create-invoice`
+  - `/invoice-tools/clients` -> `/clients`
+  - `/scb-tools/payment-requests` -> `/payment-requests`
+  - `/scb-tools/vendors` -> `/vendors`
+  - `/scb-tools/debit-accounts` -> `/debit-accounts`
+- Maintained `/invoice-tools` and `/scb-tools` as top-level hub pages.
+- Configured permanent redirects in `next.config.ts` from legacy nested paths to root routes for backward compatibility.
+- Updated all sidebar navigation, dashboard workflow launchpad links, and MCP workflow links.
+
+---
+
+### 2026-11-24 — MCP Workflow Access
+
+- MCP publishes a token-scoped workflow catalog, supports debit and receiving account maintenance, and returns SCB transfer and payroll workbooks.
+- Payment request decisions require the explicit `payment_operations` scope and an idempotency key. Final export and recovery also require account access. Existing wildcard tokens retain standard scopes.
+
+---
+
+### 2026-11-24 — Payment Request Privacy and Export Integrity
+
+- Browser sessions use individual HMAC-signed cookies with server-enforced expiration. Existing sessions require sign-in after deployment.
+- Public tracking returns status and dates. New references use cryptographic randomness, and previously issued references still resolve.
+- Payment request verification and approval are restricted to requests awaiting review. Verification matches vendors by account number and routing number.
+- SCB payment-request exports update eligible requests and save the workbook data for re-download in one PostgreSQL statement.
+- Generic audit event writing is internal server code. The browser-facing Excel logger requires a valid session.
+
+---
+
 ### 2026-11-24 — Unified Single-Sidebar Layout & Interactive Finance Dashboard
 
 - Replaced separate sub-tool sidebars (`InvoiceSidebar`, `SCBSidebar`, `SettingsSidebar`) and isolated header/footer with a single persistent, unified `AppSidebar` housed within a Next.js App Router route group `src/app/(dashboard)/layout.tsx`.

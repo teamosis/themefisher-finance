@@ -11,6 +11,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 async function resolveOrigin(): Promise<string> {
+  if (process.env.NEXT_PUBLIC_APP_URL) return getMcpOrigin();
   try {
     const h = await headers();
     const origin = h.get("origin");
@@ -52,7 +53,7 @@ export async function createMcpTokenAction(input: {
   const prompt = setupPrompt(origin, result.token);
   const mcpConfig = mcpClientConfig(origin, result.token);
 
-  revalidatePath("/mcp");
+  revalidatePath("/settings/mcp-setup");
   return {
     ...result,
     prompt,
@@ -63,14 +64,14 @@ export async function createMcpTokenAction(input: {
 export async function revokeMcpTokenAction(id: string): Promise<boolean> {
   await requireBrowserSession();
   const result = await mcpTokenService.revokeToken(id);
-  revalidatePath("/mcp");
+  revalidatePath("/settings/mcp-setup");
   return result;
 }
 
 export async function deleteMcpTokenAction(id: string): Promise<boolean> {
   await requireBrowserSession();
   const result = await mcpTokenService.deleteToken(id);
-  revalidatePath("/mcp");
+  revalidatePath("/settings/mcp-setup");
   return result;
 }
 
@@ -88,7 +89,7 @@ export async function rotateMcpTokenAction(id: string): Promise<{
   const prompt = setupPrompt(origin, result.token);
   const mcpConfig = mcpClientConfig(origin, result.token);
 
-  revalidatePath("/mcp");
+  revalidatePath("/settings/mcp-setup");
   return {
     ...result,
     prompt,

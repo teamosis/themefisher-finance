@@ -4,8 +4,10 @@ import { Suspense } from "react";
 import TrackPaymentClient from "./track-payment-client";
 
 export const metadata: Metadata = {
+  referrer: "no-referrer",
   title: `Track Payment Request | ${config.site.title}`,
-  description: "Check the review and SCB Straight2Bank payout status of your submitted payment request.",
+  description:
+    "Check the review and SCB Straight2Bank payout status of your submitted payment request.",
 };
 
 export default function TrackPaymentPage() {

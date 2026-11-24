@@ -123,6 +123,18 @@ describe("MCP Policy & Scopes Contract Suite", () => {
     });
   });
 
+  it("requires explicit payment operations permissions and access to funding account data", () => {
+    expect(tokenAllowsTool(["*"], "finance_payouts_approve")).toBe(false);
+    expect(tokenAllowsTool(["payment_requests"], "finance_payouts_approve")).toBe(false);
+    expect(tokenAllowsTool(["payment_operations"], "finance_payouts_approve")).toBe(true);
+    for (const tool of ["finance_payouts_export", "finance_payouts_get_workbook"]) {
+      expect(tokenAllowsTool(["payment_operations"], tool)).toBe(false);
+      expect(tokenAllowsTool(["payment_operations", "accounts"], tool)).toBe(true);
+    }
+    expect(tokenAllowsTool(["vendors"], "finance_scb_prepare_workbook")).toBe(false);
+    expect(tokenAllowsTool(["vendors", "accounts"], "finance_scb_prepare_workbook")).toBe(true);
+  });
+
   describe("mcpClientConfig & setupPrompt", () => {
     it("generates valid JSON client configuration with Bearer token header", () => {
       const jsonStr = mcpClientConfig(

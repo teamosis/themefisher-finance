@@ -93,7 +93,7 @@ export default function PaymentRequestFormClient() {
       return;
     }
     const numAmount = Number(formData.amount);
-    if (!formData.amount || isNaN(numAmount) || numAmount <= 0) {
+    if (!formData.amount || !Number.isFinite(numAmount) || numAmount <= 0) {
       setFormError("Please enter a valid payment amount in BDT.");
       return;
     }
@@ -103,22 +103,26 @@ export default function PaymentRequestFormClient() {
     }
 
     startSubmitTransition(async () => {
-      const res = await submitPaymentRequest(formData);
-      if (res.success && res.trackingCode) {
-        setSubmittedResult({
-          trackingCode: res.trackingCode,
-          amount: formData.amount,
-          payeeName: formData.payeeName,
-          bankName: formData.bankName,
-          branchName: formData.branchName,
-          accountNumber: formData.accountNumber,
-          purpose: formData.purpose,
-        });
-        setFormData(initialFormState);
-      } else {
-        setFormError(
-          res.error || "Failed to submit request. Please try again.",
-        );
+      try {
+        const res = await submitPaymentRequest(formData);
+        if (res.success && res.trackingCode) {
+          setSubmittedResult({
+            trackingCode: res.trackingCode,
+            amount: formData.amount,
+            payeeName: formData.payeeName,
+            bankName: formData.bankName,
+            branchName: formData.branchName,
+            accountNumber: formData.accountNumber,
+            purpose: formData.purpose,
+          });
+          setFormData(initialFormState);
+        } else {
+          setFormError(
+            res.error || "Failed to submit request. Please try again.",
+          );
+        }
+      } catch {
+        setFormError("Could not submit the payment request. Please try again.");
       }
     });
   };
@@ -428,7 +432,7 @@ export default function PaymentRequestFormClient() {
                   <Input
                     id="amount"
                     type="number"
-                    step="any"
+                    step="0.01"
                     min="1"
                     value={formData.amount}
                     onChange={(e) =>

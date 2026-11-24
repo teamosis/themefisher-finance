@@ -382,7 +382,7 @@ export default function InvoiceToolsClient({
             asChild
             className="gap-1.5 text-xs sm:text-sm font-normal rounded-xl"
           >
-            <Link href="/invoice-tools/create-invoice">
+            <Link href="/create-invoice">
               <span>Create New Invoice</span>
               <ArrowRight className="size-4" />
             </Link>

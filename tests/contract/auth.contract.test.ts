@@ -1,15 +1,14 @@
 import {
   AUTH_COOKIE_MAX_AGE,
   AUTH_COOKIE_NAME,
-  generateAuthToken,
   getAuthCookieOptions,
-  getExpectedAuthToken,
+  createAuthToken,
   getSafeRedirectPath,
   isAuthConfigured,
   verifyAuthToken,
 } from "@/lib/auth";
 import assert from "node:assert";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 describe("Authentication & Security Contract Suite", () => {
   const originalEnv = process.env;
@@ -61,31 +60,38 @@ describe("Authentication & Security Contract Suite", () => {
     });
   });
 
-  describe("generateAuthToken", () => {
-    it("deterministically generates a 64-character hex string via Web Crypto SHA-256", async () => {
-      const token1 = await generateAuthToken("pass123", "secret456");
-      const token2 = await generateAuthToken("pass123", "secret456");
-
-      expect(token1).toBe(token2);
-      expect(token1).toHaveLength(64);
-      expect(token1).toMatch(/^[0-9a-f]{64}$/);
+  describe("createAuthToken and verifyAuthToken", () => {
+    it("issues a unique token for each login", async () => {
+      const first = await createAuthToken();
+      const second = await createAuthToken();
+      expect(first).not.toBe(second);
+      await expect(verifyAuthToken(first)).resolves.toBe(true);
+      await expect(verifyAuthToken(second)).resolves.toBe(true);
     });
 
-    it("produces completely different hashes when secret or password changes (avoids hash collisions)", async () => {
-      const base = await generateAuthToken("pass123", "secret456");
-      const diffPass = await generateAuthToken("pass124", "secret456");
-      const diffSecret = await generateAuthToken("pass123", "secret457");
-
-      expect(base).not.toBe(diffPass);
-      expect(base).not.toBe(diffSecret);
-      expect(diffPass).not.toBe(diffSecret);
+    it("rejects a signed token after its server-side expiration", async () => {
+      const issuedAt = Date.now();
+      const token = await createAuthToken();
+      const clock = vi.spyOn(Date, "now").mockReturnValue(issuedAt + AUTH_COOKIE_MAX_AGE * 1000);
+      try {
+        await expect(verifyAuthToken(token)).resolves.toBe(false);
+      } finally {
+        clock.mockRestore();
+      }
     });
-  });
 
-  describe("getExpectedAuthToken and verifyAuthToken", () => {
+    it("invalidates sessions when either credential changes", async () => {
+      const first = await createAuthToken();
+      process.env.AUTH_PASSWORD = "new_password";
+      await expect(verifyAuthToken(first)).resolves.toBe(false);
+      const second = await createAuthToken();
+      process.env.AUTH_SECRET = "new_secret";
+      await expect(verifyAuthToken(second)).resolves.toBe(false);
+    });
+
     it("returns null when configuration is missing (fail-closed behavior)", async () => {
       delete process.env.AUTH_PASSWORD;
-      const expected = await getExpectedAuthToken();
+      const expected = await createAuthToken();
       expect(expected).toBeNull();
 
       // verifyAuthToken should return false
@@ -93,7 +99,7 @@ describe("Authentication & Security Contract Suite", () => {
     });
 
     it("verifies matching token successfully", async () => {
-      const expected = await getExpectedAuthToken();
+      const expected = await createAuthToken();
       expect(expected).toBeTruthy();
       expect(await verifyAuthToken(expected)).toBe(true);
     });

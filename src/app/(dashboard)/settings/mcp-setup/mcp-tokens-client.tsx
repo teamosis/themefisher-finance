@@ -20,7 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ALL_SCOPE_KEYS, MCP_SCOPES, type McpScopeKey } from "@/lib/mcp/scopes";
+import { DEFAULT_SCOPE_KEYS, MCP_SCOPES, type McpScopeKey } from "@/lib/mcp/scopes";
 import type { McpTokenRecord } from "@/lib/mcp/token-service";
 import {
   AlertTriangle,
@@ -54,11 +54,11 @@ export default function McpTokensClient({
   // Create Token Modal state
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [agentName, setAgentName] = useState("");
-  const [isReadOnly, setIsReadOnly] = useState(false);
-  const [selectAllScopes, setSelectAllScopes] = useState(true);
+  const [isReadOnly, setIsReadOnly] = useState(true);
   const [selectedScopes, setSelectedScopes] = useState<string[]>([
-    ...ALL_SCOPE_KEYS,
+    ...DEFAULT_SCOPE_KEYS,
   ]);
+  const allStandardScopesSelected = DEFAULT_SCOPE_KEYS.every((scope) => selectedScopes.includes(scope));
   const [expiresInDays, setExpiresInDays] = useState(90);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -115,11 +115,10 @@ export default function McpTokensClient({
 
     setIsSubmitting(true);
     try {
-      const scopes = selectAllScopes ? ["*"] : selectedScopes;
       const res = await createMcpTokenAction({
         name: agentName.trim(),
         readOnly: isReadOnly,
-        allowedScopes: scopes,
+        allowedScopes: selectedScopes,
         expiresInDays,
       });
 
@@ -131,9 +130,8 @@ export default function McpTokensClient({
 
       setCreateModalOpen(false);
       setAgentName("");
-      setIsReadOnly(false);
-      setSelectAllScopes(true);
-      setSelectedScopes([...ALL_SCOPE_KEYS]);
+      setIsReadOnly(true);
+      setSelectedScopes([...DEFAULT_SCOPE_KEYS]);
 
       await refreshData();
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -195,16 +193,9 @@ export default function McpTokensClient({
   };
 
   const toggleScope = (scope: McpScopeKey) => {
-    if (selectedScopes.includes(scope)) {
-      setSelectedScopes(selectedScopes.filter((s) => s !== scope));
-      setSelectAllScopes(false);
-    } else {
-      const updated = [...selectedScopes, scope];
-      setSelectedScopes(updated);
-      if (updated.length === ALL_SCOPE_KEYS.length) {
-        setSelectAllScopes(true);
-      }
-    }
+    setSelectedScopes((current) => current.includes(scope)
+      ? current.filter((selected) => selected !== scope)
+      : [...current, scope]);
   };
 
   return (
@@ -456,10 +447,10 @@ export default function McpTokensClient({
                         <div className="flex flex-wrap gap-1 max-w-xs">
                           {token.allowedScopes.includes("*") ? (
                             <Badge variant="secondary" className="text-[10px]">
-                              All Scopes (*)
+                              Standard scopes (*)
                             </Badge>
-                          ) : (
-                            token.allowedScopes.map((scope) => (
+                          ) : null}
+                          {token.allowedScopes.filter((scope) => scope !== "*").map((scope) => (
                               <Badge
                                 key={scope}
                                 variant="secondary"
@@ -467,8 +458,7 @@ export default function McpTokensClient({
                               >
                                 {scope}
                               </Badge>
-                            ))
-                          )}
+                          ))}
                         </div>
                       </td>
 
@@ -606,32 +596,26 @@ export default function McpTokensClient({
             </span>
           </label>
 
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-text-strong">
-                Allowed Scopes
-              </label>
+          <fieldset>
+            <legend className="text-xs font-semibold text-text-strong">Allowed Scopes</legend>
+            <div className="mb-2 flex justify-end">
               <button
                 type="button"
                 onClick={() => {
-                  if (selectAllScopes) {
-                    setSelectAllScopes(false);
-                    setSelectedScopes([]);
-                  } else {
-                    setSelectAllScopes(true);
-                    setSelectedScopes([...ALL_SCOPE_KEYS]);
-                  }
+                  setSelectedScopes((current) => {
+                    const explicitScopes = current.filter((scope) => scope === "payment_operations");
+                    return allStandardScopesSelected ? explicitScopes : [...DEFAULT_SCOPE_KEYS, ...explicitScopes];
+                  });
                 }}
                 className="text-xs text-primary hover:underline cursor-pointer font-medium"
               >
-                {selectAllScopes ? "Deselect All" : "Select All"}
+                {allStandardScopesSelected ? "Clear standard scopes" : "Select standard scopes"}
               </button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
               {MCP_SCOPES.map((scopeItem) => {
-                const checked =
-                  selectAllScopes || selectedScopes.includes(scopeItem.key);
+                const checked = selectedScopes.includes(scopeItem.key);
                 return (
                   <label
                     key={scopeItem.key}
@@ -647,12 +631,15 @@ export default function McpTokensClient({
                       onChange={() => toggleScope(scopeItem.key)}
                       className="size-4 rounded border-border text-primary focus:ring-primary shrink-0"
                     />
-                    <span className="truncate">{scopeItem.label}</span>
+                    <span>{scopeItem.label}</span>
                   </label>
                 );
               })}
             </div>
-          </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Select Payment Request Decisions &amp; Exports and turn off Read-Only Mode to approve, reject, or export requests through MCP.
+            </p>
+          </fieldset>
 
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-border mt-1">
             <Button

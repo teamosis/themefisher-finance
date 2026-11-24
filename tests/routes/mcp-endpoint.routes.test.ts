@@ -26,6 +26,47 @@ describe("MCP API Route Handler (/api/mcp) Suite", () => {
     vi.clearAllMocks();
   });
 
+  async function rpc(method: string, params: object, scopes: string[], readOnly: boolean) {
+    vi.mocked(mcpTokenService.verify).mockResolvedValueOnce({
+      id: "tok_1",
+      name: "Test agent",
+      allowedScopes: scopes,
+      readOnly,
+    } as Awaited<ReturnType<typeof mcpTokenService.verify>>);
+
+    const response = await POST(new Request("http://localhost:3000/api/mcp", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+        authorization: "Bearer tff_" + "a".repeat(43),
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+    }));
+    expect(response.status).toBe(200);
+    if (response.headers.get("content-type")?.includes("text/event-stream")) {
+      const message = (await response.text()).split("\n").find((line) => line.startsWith("data: "));
+      if (!message) throw new Error("MCP response is missing an SSE message");
+      return JSON.parse(message.slice(6)).result;
+    }
+    return (await response.json()).result;
+  }
+
+  it("publishes only the current token's tools and requires payout idempotency and confirmation", async () => {
+    const standard = await rpc("tools/list", {}, ["*"], false);
+    expect(standard.tools.map(({ name }: { name: string }) => name)).not.toContain("finance_payouts_export");
+
+    const scopes = ["payment_operations", "accounts"];
+    const write = await rpc("tools/list", {}, scopes, false);
+    const payoutExport = write.tools.find(({ name }: { name: string }) => name === "finance_payouts_export");
+    expect(payoutExport.inputSchema.required).toEqual(expect.arrayContaining(["idempotencyKey", "operatorConfirmed"]));
+
+    const read = await rpc("resources/read", { uri: "finance://workflows" }, scopes, true);
+    const catalog = JSON.parse(read.contents[0].text);
+    expect(catalog.tools.map(({ name }: { name: string }) => name)).toContain("finance_payouts_get_workbook");
+    expect(catalog.tools.map(({ name }: { name: string }) => name)).not.toContain("finance_payouts_export");
+  });
+
   describe("HTTP Method Enforcement", () => {
     it("rejects GET requests with 405 Method Not Allowed and Allow: POST header", async () => {
       const res = await GET();

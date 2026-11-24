@@ -1,5 +1,5 @@
 import { loginAction, logoutAction } from "@/actions/auth";
-import { AUTH_COOKIE_NAME, generateAuthToken } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, verifyAuthToken } from "@/lib/auth";
 import { cookieStore } from "../setup";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -44,11 +44,7 @@ describe("Auth Server Actions Suite", () => {
       expect(result.redirectTo).toBe("/scb-tools");
       expect(cookieStore.has(AUTH_COOKIE_NAME)).toBe(true);
 
-      const expectedToken = await generateAuthToken(
-        process.env.AUTH_PASSWORD!,
-        process.env.AUTH_SECRET!,
-      );
-      expect(cookieStore.get(AUTH_COOKIE_NAME)?.value).toBe(expectedToken);
+      await expect(verifyAuthToken(cookieStore.get(AUTH_COOKIE_NAME)?.value)).resolves.toBe(true);
     });
 
     it("sanitizes open-redirect targets and defaults to /", async () => {

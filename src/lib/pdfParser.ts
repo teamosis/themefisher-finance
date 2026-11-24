@@ -33,9 +33,7 @@ export async function parseMT103(file: File, password?: string) {
   const data = new Uint8Array(arrayBuffer);
 
   const envPassword =
-    typeof process !== "undefined"
-      ? process.env.PDF_PASSWORD || process.env.NEXT_PUBLIC_PDF_PASSWORD
-      : undefined;
+    typeof process !== "undefined" ? process.env.PDF_PASSWORD : undefined;
   const configuredPassword = password ?? envPassword;
 
   const loadingTask = getDocument({

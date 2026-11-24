@@ -9,15 +9,11 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow MCP API endpoints to pass through for Bearer token authentication
-  if (pathname.startsWith("/api/mcp")) {
-    return NextResponse.next();
-  }
-
-  // Allow public payment request form and tracking to pass through without authentication
   if (
-    pathname.startsWith("/request-payment") ||
-    pathname.startsWith("/track-payment")
+    pathname === "/api/mcp" ||
+    pathname.startsWith("/api/mcp/") ||
+    pathname === "/request-payment" ||
+    pathname === "/track-payment"
   ) {
     return NextResponse.next();
   }

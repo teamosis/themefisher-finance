@@ -1,11 +1,4 @@
-import {
-  getActivityLogs,
-  getClients,
-  getInvoices,
-  getPaymentRequests,
-  getPaymentRequestsStats,
-  getVendors,
-} from "@/actions";
+import { getPaymentRequestsStats } from "@/actions";
 import {
   Card,
   CardDescription,
@@ -14,9 +7,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import config from "@/config/config.json";
+import { db } from "@/db";
+import {
+  activityLogs,
+  clients,
+  invoices,
+  paymentRequests,
+  vendors,
+} from "@/db/schema";
 import { isAuthConfigured } from "@/lib/auth";
+import { requireBrowserSession } from "@/lib/browser-session";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { AlertTriangle, KeyRound } from "lucide-react";
-import DashboardClient from "./dashboard-client";
+import DashboardSummary from "./dashboard-summary";
 
 export const dynamic = "force-dynamic";
 
@@ -84,39 +87,83 @@ export default async function DashboardPage() {
     );
   }
 
+  await requireBrowserSession();
+
   const [
-    invoices,
-    clients,
-    vendors,
+    [invoiceTotals],
+    [clientTotals],
+    [vendorTotals],
     paymentStats,
-    paymentRequests,
-    activityLogsResult,
+    recentInvoices,
+    recentPaymentRequests,
+    recentLogs,
   ] = await Promise.all([
-    getInvoices().catch(() => []),
-    getClients().catch(() => []),
-    getVendors().catch(() => []),
-    getPaymentRequestsStats().catch(() => ({
-      total: 0,
-      pending: 0,
-      verified: 0,
-      approved: 0,
-      rejected: 0,
-      exported: 0,
-      actionableCount: 0,
-      totalPendingAmount: 0,
-    })),
-    getPaymentRequests({ status: "all" }).catch(() => []),
-    getActivityLogs({ limit: 6 }).catch(() => ({ rows: [] })),
+    db
+      .select({
+        count: count(),
+        totalUsd: sql<string>`coalesce(sum(${invoices.amount}) filter (where coalesce(${invoices.currency}, 'USD') = 'USD'), 0)`,
+      })
+      .from(invoices),
+    db.select({ count: count() }).from(clients),
+    db
+      .select({
+        count: count(),
+        employees: sql<number>`count(*) filter (where ${vendors.is_employee})::int`,
+      })
+      .from(vendors)
+      .where(sql`${vendors.is_hidden} IS NOT TRUE`),
+    getPaymentRequestsStats(),
+    db
+      .select({
+        id: invoices.id,
+        invoice_number: invoices.invoice_number,
+        invoice_date: invoices.invoice_date,
+        amount: invoices.amount,
+        currency: invoices.currency,
+        description: invoices.description,
+        clientName: clients.name,
+      })
+      .from(invoices)
+      .leftJoin(clients, eq(invoices.client_id, clients.id))
+      .orderBy(desc(invoices.createdAt), desc(invoices.id))
+      .limit(5),
+    db
+      .select({
+        id: paymentRequests.id,
+        payeeName: paymentRequests.payeeName,
+        status: paymentRequests.status,
+        bankName: paymentRequests.bankName,
+        branchName: paymentRequests.branchName,
+        purpose: paymentRequests.purpose,
+        amount: paymentRequests.amount,
+      })
+      .from(paymentRequests)
+      .orderBy(desc(paymentRequests.createdAt), desc(paymentRequests.id))
+      .limit(5),
+    db
+      .select({
+        id: activityLogs.id,
+        title: activityLogs.title,
+        domain: activityLogs.domain,
+        status: activityLogs.status,
+        createdAt: activityLogs.createdAt,
+      })
+      .from(activityLogs)
+      .orderBy(desc(activityLogs.createdAt), desc(activityLogs.id))
+      .limit(5),
   ]);
 
   return (
-    <DashboardClient
-      initialInvoices={invoices}
-      initialClients={clients}
-      initialVendors={vendors}
-      initialPaymentStats={paymentStats}
-      initialPaymentRequests={paymentRequests}
-      initialActivityLogs={activityLogsResult.rows || []}
+    <DashboardSummary
+      invoiceCount={invoiceTotals.count}
+      totalInvoicedUsd={Number(invoiceTotals.totalUsd)}
+      clientCount={clientTotals.count}
+      vendorCount={vendorTotals.count}
+      employeesCount={vendorTotals.employees}
+      paymentStats={paymentStats}
+      recentInvoices={recentInvoices}
+      recentPaymentRequests={recentPaymentRequests}
+      recentLogs={recentLogs}
     />
   );
 }

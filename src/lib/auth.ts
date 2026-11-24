@@ -25,44 +25,54 @@ export function isAuthConfigured(): boolean {
   );
 }
 
-/**
- * Generate a SHA-256 hex string from password and secret.
- * Fully compatible with Edge Runtime and Node.js environments via standard Web Crypto API.
- */
-export async function generateAuthToken(
-  password: string,
-  secret: string = ""
-): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(`${password}:${secret}`);
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+const encoder = new TextEncoder();
+
+async function importSigningKey(secret: string) {
+  return crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
 }
 
-/**
- * Get the expected authentication token based on environment variables.
- * Returns null if AUTH_PASSWORD or AUTH_SECRET is not set (fail-closed behavior).
- */
-export async function getExpectedAuthToken(): Promise<string | null> {
-  if (!isAuthConfigured()) {
-    return null;
-  }
+function signedSessionData(password: string, expiration: string, nonce: string) {
+  return encoder.encode(JSON.stringify(["tf_auth_v1", password, expiration, nonce]));
+}
+
+export async function createAuthToken(): Promise<string | null> {
+  if (!isAuthConfigured()) return null;
+
   const password = process.env.AUTH_PASSWORD!;
   const secret = (process.env.AUTH_SECRET || process.env.AUTH_secret)!;
-  return generateAuthToken(password, secret);
+  const expiration = String(Math.floor(Date.now() / 1000) + AUTH_COOKIE_MAX_AGE);
+  const nonce = crypto.randomUUID();
+  const key = await importSigningKey(secret);
+  const signature = new Uint8Array(await crypto.subtle.sign(
+    "HMAC", key, signedSessionData(password, expiration, nonce),
+  ));
+  const hex = Array.from(signature, (byte) => byte.toString(16).padStart(2, "0")).join("");
+
+  return `${expiration}.${nonce}.${hex}`;
 }
 
-/**
- * Verifies if the provided token matches the expected hash.
- */
-export async function verifyAuthToken(
-  token: string | null | undefined
-): Promise<boolean> {
-  if (!token) return false;
-  const expected = await getExpectedAuthToken();
-  if (!expected) return false;
-  return token === expected;
+export async function verifyAuthToken(token: string | null | undefined): Promise<boolean> {
+  if (!token || !isAuthConfigured()) return false;
+  const match = /^(\d{1,11})\.([a-f0-9-]{36})\.([a-f0-9]{64})$/.exec(token);
+  if (!match) return false;
+
+  const [, expiration, nonce, signature] = match;
+  if (Number(expiration) <= Math.floor(Date.now() / 1000)) return false;
+
+  const password = process.env.AUTH_PASSWORD!;
+  const secret = (process.env.AUTH_SECRET || process.env.AUTH_secret)!;
+  return crypto.subtle.verify(
+    "HMAC",
+    await importSigningKey(secret),
+    Uint8Array.from(signature.match(/../g)!, (byte) => Number.parseInt(byte, 16)),
+    signedSessionData(password, expiration, nonce),
+  );
 }
 
 /**

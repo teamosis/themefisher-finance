@@ -1,14 +1,4 @@
 {
-  "main": [
-    {
-      "name": "Invoice & Form-C",
-      "url": "/invoice-tools"
-    },
-    {
-      "name": "SCB Bulk Tools",
-      "url": "/scb-tools"
-    }
-  ],
   "invoice": [
     {
       "name": "Generate Inward Docs",

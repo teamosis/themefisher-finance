@@ -4,6 +4,17 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Site-Wide Password Protection & Setup Safeguards
+
+- Added Next.js Edge Middleware (`src/middleware.ts`) to intercept all incoming requests and lock down the entire application.
+- Implemented Edge-compatible Web Crypto token generation (`src/lib/auth.ts`) using SHA-256 with `AUTH_PASSWORD` and `AUTH_SECRET`.
+- Stored session tokens in secure `httpOnly`, `sameSite: "lax"`, `maxAge: 30 days` cookies.
+- Created `/login` page with brand-aligned card layout and responsive password visibility toggle.
+- Added `loginAction` and `logoutAction` Server Actions in `src/actions/auth.ts`.
+- Integrated `LogoutButton` in main `Header` as well as `InvoiceSidebar` and `SCBSidebar`.
+- Polished Header controls: removed redundant navigation menu items, adjusted `ThemeSwitcher` to `h-9 w-9` (size-9) with matching `border-border`, and upgraded `LogoutButton` to a proper button with icon and text matching button height.
+- Implemented environment safeguard: when `AUTH_PASSWORD` or `AUTH_SECRET` is unset/empty, all sub-routes redirect to the homepage (`/`), where an informative "Setup Required" card is displayed indicating that environment variables must be configured.
+
 ### 2026-11-24 — Standardize Container Sizes & Add Loading Skeletons
 
 - Standardized container width across all pages (`/`, `/invoice-tools`, `/invoice-tools/create-invoice`, `/invoice-tools/clients`, `/invoice-tools/settings`, `/scb-tools`, `/scb-tools/vendors`, `/scb-tools/debit-accounts`) to `max-w-7xl mx-auto`.

@@ -1,6 +1,8 @@
 // UI Primitives (Shadcn Base UI)
 export { default as ThemeSwitcher } from "./ThemeSwitcher";
+export { default as LogoutButton } from "./LogoutButton";
 export * from "./ui/alert-dialog";
+
 export * from "./ui/button";
 export * from "./ui/card";
 export * from "./ui/dropdown-menu";

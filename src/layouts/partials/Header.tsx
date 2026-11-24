@@ -1,6 +1,6 @@
+import LogoutButton from "@/components/LogoutButton";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
 import config from "@/config/config.json";
-import menu from "@/config/menu.json";
 import { Landmark } from "lucide-react";
 import Link from "next/link";
 
@@ -17,19 +17,9 @@ export default function Header() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-2 sm:gap-3">
-          <nav className="hidden md:flex items-center gap-1.5">
-            {menu.main.map((item) => (
-              <Link
-                key={item.url}
-                href={item.url}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-text-default hover:text-text-strong hover:bg-light transition-all duration-150"
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {config.settings.theme_switcher && <ThemeSwitcher />}
+          <LogoutButton />
         </div>
       </div>
     </header>

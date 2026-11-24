@@ -1,5 +1,7 @@
 "use client";
 
+import LogoutButton from "@/components/LogoutButton";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 import {
   ArrowLeft,
   CreditCard,
@@ -104,6 +106,14 @@ export default function SCBSidebar() {
           );
         })}
       </nav>
+
+      {/* Footer / Controls */}
+      <div className="p-3 border-t border-border shrink-0 flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <LogoutButton showLabel />
+        </div>
+        <ThemeSwitcher />
+      </div>
     </>
   );
 

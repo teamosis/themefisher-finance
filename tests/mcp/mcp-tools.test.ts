@@ -33,6 +33,21 @@ describe("MCP Tools Registry & Handlers Suite", () => {
     return t;
   };
 
+  it("reports ambiguous branch names instead of choosing a routing number", async () => {
+    const limit = vi.fn().mockResolvedValue([
+      { branchName: "Sadar", routingNumber: "012345678" },
+      { branchName: "Sadar", routingNumber: "098765432" },
+    ]);
+    const from = vi.fn().mockReturnValue({ where: () => ({ limit }) });
+    vi.mocked(db.select).mockReturnValueOnce({ from } as any);
+
+    const tool = getTool("finance_banks_lookup_routing");
+    await expect(
+      tool.handler({ bankName: "Test Bank", branchName: "Sadar" }),
+    ).rejects.toThrow("Multiple routing numbers");
+    expect(limit).toHaveBeenCalledWith(2);
+  });
+
   it("registers all 25 financial domain tools across expected scopes", () => {
     expect(tools.length).toBe(25);
     const names = tools.map((t) => t.name);
@@ -70,19 +85,32 @@ describe("MCP Tools Registry & Handlers Suite", () => {
   });
 
   describe("System Overview Tool: finance_get_overview", () => {
+    it("does not query financial data for a banking-only token", async () => {
+      const tool = getTool("finance_get_overview");
+      await expect(tool.handler({}, ["banking"])).resolves.toEqual({
+        connected: true,
+      });
+      expect(db.select).not.toHaveBeenCalled();
+    });
+
     it("aggregates invoice stats, client count, payroll budget, and default debit account", async () => {
       const tool = getTool("finance_get_overview");
 
-      const fromMock1 = vi.fn().mockResolvedValue([
-        { totalCount: 15, totalAmount: "75000", totalReceived: "74800" },
-      ]);
+      const fromMock1 = vi
+        .fn()
+        .mockResolvedValue([
+          { totalCount: 15, totalAmount: "75000", totalReceived: "74800" },
+        ]);
       const fromMock2 = vi.fn().mockResolvedValue([{ count: 5 }]);
-      const whereMock3 = vi.fn().mockResolvedValue([
-        { headcount: 12, monthlyPayrollBdt: "850000" },
-      ]);
+      const whereMock3 = vi
+        .fn()
+        .mockResolvedValue([{ headcount: 12, monthlyPayrollBdt: "850000" }]);
       const fromMock3 = vi.fn().mockReturnValue({ where: whereMock3 });
       const limitMock4 = vi.fn().mockResolvedValue([
-        { accountNumber: "0001914137101", bankName: "Standard Chartered Bank" },
+        {
+          accountNumber: "0001914137101",
+          bankName: "Standard Chartered Bank",
+        },
       ]);
       const whereMock4 = vi.fn().mockReturnValue({ limit: limitMock4 });
       const fromMock4 = vi.fn().mockReturnValue({ where: whereMock4 });
@@ -93,7 +121,7 @@ describe("MCP Tools Registry & Handlers Suite", () => {
         .mockReturnValueOnce({ from: fromMock3 } as any)
         .mockReturnValueOnce({ from: fromMock4 } as any);
 
-      const result = (await tool.handler({})) as any;
+      const result = (await tool.handler({}, ["*"])) as any;
 
       expect(result.invoices.totalCount).toBe(15);
       expect(result.invoices.totalAmountUsd).toBe(75000);

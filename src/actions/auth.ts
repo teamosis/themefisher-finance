@@ -1,12 +1,13 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import {
   getAuthCookieOptions,
   getExpectedAuthToken,
+  getSafeRedirectPath,
   isAuthConfigured,
 } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export interface AuthActionResult {
   success: boolean;
@@ -16,7 +17,7 @@ export interface AuthActionResult {
 
 export async function loginAction(
   password: string,
-  redirectTo?: string
+  redirectTo?: string,
 ): Promise<AuthActionResult> {
   if (!isAuthConfigured()) {
     return {
@@ -52,14 +53,9 @@ export async function loginAction(
     maxAge: options.maxAge,
   });
 
-  const safeTarget =
-    redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")
-      ? redirectTo
-      : "/";
-
   return {
     success: true,
-    redirectTo: safeTarget,
+    redirectTo: getSafeRedirectPath(redirectTo),
   };
 }
 

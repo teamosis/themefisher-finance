@@ -14,26 +14,26 @@ A unified internal financial operations suite for [Themefisher](https://themefis
 ## 1. Quick Reference & Core Stack
 
 | Layer | Technology | Details |
-|---|---|---|
+| --- | --- | --- |
 | **Framework** | Next.js 16.3.4 (App Router, Turbopack) | Server Components + Server Actions |
 | **Language** | TypeScript 5 (Strict mode) | `noUnusedLocals`, `noUnusedParameters` enabled |
 | **Styling** | Tailwind CSS v4 | Native `@media print` A4 document styles |
 | **Database** | NeonDB (Serverless PostgreSQL) | `@neondatabase/serverless` HTTP driver |
 | **ORM** | Drizzle ORM (`drizzle-orm`) | Schema in `src/db/schema.ts` |
 | **Document Export** | `react-to-print`, `xlsx` | A4 PDF printing and SCB Excel files |
-| **PDF Parser** | `pdfjs-dist` (Spatial coordinate parser) | Password `T137101` |
+| **PDF Parser** | `pdfjs-dist` (Spatial coordinate parser) | Prompts for a password when required |
 
 ---
 
 ## 2. Environment Variables
 
 Store in `.env.local` (never commit):
+
 ```env
 DATABASE_URL=postgresql://user:password@ep-...neon.tech/neondb?sslmode=require
-NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=0001914137101
 ```
 
-> ⚠️ **Security:** The default SCB debit account number must never be hardcoded in client source or README. Always read from `process.env.NEXT_PUBLIC_SCB_DEBIT_ACCOUNT`.
+Use authenticated debit account settings for SCB accounts.
 
 ---
 
@@ -65,7 +65,8 @@ For the complete file tree and design patterns, see [architecture.md](./referenc
 
 The database is managed with Drizzle ORM against Neon PostgreSQL.
 
-### Core Commands:
+### Core Commands
+
 ```bash
 # Push schema updates directly to NeonDB
 pnpm db:push
@@ -91,7 +92,7 @@ For schema definition and column details, see [database.md](./references/databas
 
 1. **Invoice Numbering:** Auto-generated format `TF-YYYY-MM-DD-XX`. Must be unique in the database.
 2. **Form-C Declaration:** Bangladesh Bank inward remittance declaration. Date represents current submission date. Remitted amount reflects net remittance received.
-3. **Remittance PDF Parsing:** Fast deterministic spatial extraction (`src/lib/pdfParser.ts`) with fixed password `T137101`. Uses 3-pass fuzzy client name matching.
+3. **Remittance PDF Parsing:** Fast deterministic spatial extraction (`src/lib/pdfParser.ts`) with a password prompt for protected files. Uses 3-pass fuzzy client name matching.
 4. **SCB Straight2Bank Bulk Excel:** Exported `.xlsx` files conform strictly to SCB specifications.
 5. **Bank Branch Routing:** 11,426 branches across 63 banks. Selecting a bank dynamically filters branches and auto-populates the 9-digit routing number.
 6. **Salary Sheets:** Filters vendors where `is_employee: true`. Allows salary adjustments, additional bonus/allowance rows, and real-time total payroll calculations.

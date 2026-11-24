@@ -1,4 +1,6 @@
+import { lookupSwiftCode } from "@/actions/banks";
 import { db } from "@/db";
+import { assignDefaultDebitAccount } from "@/db/debit-accounts";
 import {
   bankBranches,
   clients,
@@ -7,9 +9,14 @@ import {
   paymentAccounts,
   vendors,
 } from "@/db/schema";
+import {
+  invoiceAmount,
+  invoiceCurrency,
+  invoiceDate,
+  invoicePaymentMethods,
+} from "@/lib/invoice-validation";
 import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { lookupSwiftCode } from "@/actions/banks";
 import type { McpScopeKey } from "./scopes";
 
 export interface McpToolDefinition<T extends z.ZodTypeAny = z.ZodTypeAny> {
@@ -18,7 +25,7 @@ export interface McpToolDefinition<T extends z.ZodTypeAny = z.ZodTypeAny> {
   description: string;
   write: boolean;
   schema: T;
-  handler: (args: any) => Promise<unknown>;
+  handler: (args: any, scopes?: readonly string[]) => Promise<unknown>;
 }
 
 export function defineTool<T extends z.ZodTypeAny>(tool: {
@@ -27,9 +34,22 @@ export function defineTool<T extends z.ZodTypeAny>(tool: {
   description: string;
   write: boolean;
   schema: T;
-  handler: (args: z.infer<T>) => Promise<unknown>;
+  handler: (args: z.infer<T>, scopes?: readonly string[]) => Promise<unknown>;
 }): McpToolDefinition<T> {
   return tool;
+}
+
+function allowsScope(scopes: readonly string[], scope: McpScopeKey) {
+  return scopes.includes("*") || scopes.includes(scope);
+}
+
+function vendorForScopes<T extends { salary: unknown }>(
+  vendor: T,
+  scopes: readonly string[],
+) {
+  if (allowsScope(scopes, "payroll")) return vendor;
+  const { salary: _salary, ...publicFields } = vendor;
+  return publicFields;
 }
 
 export const tools: McpToolDefinition[] = [
@@ -40,59 +60,81 @@ export const tools: McpToolDefinition[] = [
     name: "finance_get_overview",
     scope: "system",
     description:
-      "Get a high-level summary of the entire Themefisher Finance posture in one call: total invoices, total invoiced USD, total received inward remittance, active international client count, employee payroll headcount and monthly salary budget, and active default SCB debit account.",
+      "Confirm connectivity and return financial summaries for the domains permitted by the token.",
     write: false,
     schema: z.object({}),
-    handler: async () => {
-      const [invoiceStats] = await db
-        .select({
-          totalCount: sql<number>`count(*)::int`,
-          totalAmount: sql<string>`coalesce(sum(amount), 0)::text`,
-          totalReceived: sql<string>`coalesce(sum(received_amount), 0)::text`,
-        })
-        .from(invoices);
+    handler: async (_args, scopes = []) => {
+      const allows = (scope: McpScopeKey) =>
+        scopes.includes("*") || scopes.includes(scope);
+      const [invoiceStats] = allows("invoices")
+        ? await db
+            .select({
+              totalCount: sql<number>`count(*)::int`,
+              totalAmount: sql<string>`coalesce(sum(amount), 0)::text`,
+              totalReceived: sql<string>`coalesce(sum(received_amount), 0)::text`,
+            })
+            .from(invoices)
+        : [];
 
-      const [clientStats] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(clients);
+      const [clientStats] = allows("clients")
+        ? await db.select({ count: sql<number>`count(*)::int` }).from(clients)
+        : [];
 
-      const [employeeStats] = await db
-        .select({
-          headcount: sql<number>`count(*)::int`,
-          monthlyPayrollBdt: sql<string>`coalesce(sum(salary), 0)::text`,
-        })
-        .from(vendors)
-        .where(
-          and(
-            eq(vendors.is_employee, true),
-            or(eq(vendors.is_hidden, false), sql`${vendors.is_hidden} is null`),
-          ),
-        );
+      const [employeeStats] = allows("payroll")
+        ? await db
+            .select({
+              headcount: sql<number>`count(*)::int`,
+              monthlyPayrollBdt: sql<string>`coalesce(sum(salary), 0)::text`,
+            })
+            .from(vendors)
+            .where(
+              and(
+                eq(vendors.is_employee, true),
+                or(
+                  eq(vendors.is_hidden, false),
+                  sql`${vendors.is_hidden} is null`,
+                ),
+              ),
+            )
+        : [];
 
-      const [defaultDebit] = await db
-        .select({
-          accountNumber: debitAccounts.account_number,
-          accountLabel: debitAccounts.account_label,
-          bankName: debitAccounts.bank_name,
-        })
-        .from(debitAccounts)
-        .where(eq(debitAccounts.is_default, true))
-        .limit(1);
+      const [defaultDebit] = allows("accounts")
+        ? await db
+            .select({
+              accountNumber: debitAccounts.account_number,
+              accountLabel: debitAccounts.account_label,
+              bankName: debitAccounts.bank_name,
+            })
+            .from(debitAccounts)
+            .where(eq(debitAccounts.is_default, true))
+            .limit(1)
+        : [];
 
       return {
-        invoices: {
-          totalCount: Number(invoiceStats?.totalCount ?? 0),
-          totalAmountUsd: Number(invoiceStats?.totalAmount ?? 0),
-          totalReceivedUsd: Number(invoiceStats?.totalReceived ?? 0),
-        },
-        clients: {
-          totalActive: Number(clientStats?.count ?? 0),
-        },
-        payroll: {
-          activeEmployeeCount: Number(employeeStats?.headcount ?? 0),
-          totalMonthlySalaryBdt: Number(employeeStats?.monthlyPayrollBdt ?? 0),
-        },
-        defaultScbDebitAccount: defaultDebit ?? null,
+        connected: true,
+        ...(allows("invoices") && {
+          invoices: {
+            totalCount: Number(invoiceStats?.totalCount ?? 0),
+            totalAmountUsd: Number(invoiceStats?.totalAmount ?? 0),
+            totalReceivedUsd: Number(invoiceStats?.totalReceived ?? 0),
+          },
+        }),
+        ...(allows("clients") && {
+          clients: {
+            totalActive: Number(clientStats?.count ?? 0),
+          },
+        }),
+        ...(allows("payroll") && {
+          payroll: {
+            activeEmployeeCount: Number(employeeStats?.headcount ?? 0),
+            totalMonthlySalaryBdt: Number(
+              employeeStats?.monthlyPayrollBdt ?? 0,
+            ),
+          },
+        }),
+        ...(allows("accounts") && {
+          defaultScbDebitAccount: defaultDebit ?? null,
+        }),
       };
     },
   }),
@@ -144,7 +186,8 @@ export const tools: McpToolDefinition[] = [
         conditions.push(eq(invoices.client_id, clientId));
       }
 
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
 
       const [items, totalResult] = await Promise.all([
         db
@@ -197,7 +240,9 @@ export const tools: McpToolDefinition[] = [
       invoiceNumber: z
         .string()
         .optional()
-        .describe("Invoice number in format 'TF-YYYY-MM-DD-XX' (e.g. 'TF-2026-03-15-01')"),
+        .describe(
+          "Invoice number in format 'TF-YYYY-MM-DD-XX' (e.g. 'TF-2026-03-15-01')",
+        ),
     }),
     handler: async ({ id, invoiceNumber }) => {
       if (!id && !invoiceNumber) {
@@ -247,28 +292,22 @@ export const tools: McpToolDefinition[] = [
         .string()
         .min(5)
         .describe("Unique invoice number, e.g. 'TF-2026-11-24-01'"),
-      invoiceDate: z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be formatted as YYYY-MM-DD")
-        .describe("Invoice date formatted as 'YYYY-MM-DD'"),
-      currency: z
-        .string()
+      invoiceDate: invoiceDate.describe(
+        "Invoice date formatted as 'YYYY-MM-DD'",
+      ),
+      currency: invoiceCurrency
         .default("USD")
         .describe("Currency code (default: 'USD')"),
-      amount: z
-        .number()
-        .positive()
-        .describe("Billed amount (e.g. 5000.00)"),
-      receivedAmount: z
-        .number()
-        .positive()
+      amount: invoiceAmount.describe("Billed amount (e.g. 5000.00)"),
+      receivedAmount: invoiceAmount
         .optional()
         .describe("Net remittance amount received in bank (e.g. 4985.00)"),
       description: z
         .string()
-        .describe("Description of services (e.g. 'Software development & UI theme licenses')"),
-      paymentMethods: z
-        .array(z.string())
+        .describe(
+          "Description of services (e.g. 'Software development & UI theme licenses')",
+        ),
+      paymentMethods: invoicePaymentMethods
         .default(["Wire Transfer", "Bank Remittance"])
         .describe("Allowed payment methods list"),
     }),
@@ -296,23 +335,27 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_invoices_update",
     scope: "invoices",
-    description: "Update an existing invoice's amounts, date, or details by invoice ID.",
+    description:
+      "Update an existing invoice's amounts, date, or details by invoice ID.",
     write: true,
     schema: z.object({
       id: z.string().uuid().describe("Invoice UUID to update"),
-      invoiceDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-      amount: z.number().positive().optional(),
-      receivedAmount: z.number().positive().optional(),
+      invoiceDate: invoiceDate.optional(),
+      amount: invoiceAmount.optional(),
+      receivedAmount: invoiceAmount.optional(),
       description: z.string().optional(),
-      paymentMethods: z.array(z.string()).optional(),
+      paymentMethods: invoicePaymentMethods.optional(),
     }),
     handler: async ({ id, ...updates }) => {
       const updateData: Record<string, unknown> = {};
-      if (updates.invoiceDate !== undefined) updateData.invoice_date = updates.invoiceDate;
-      if (updates.amount !== undefined) updateData.amount = updates.amount.toString();
+      if (updates.invoiceDate !== undefined)
+        updateData.invoice_date = updates.invoiceDate;
+      if (updates.amount !== undefined)
+        updateData.amount = updates.amount.toString();
       if (updates.receivedAmount !== undefined)
         updateData.received_amount = updates.receivedAmount.toString();
-      if (updates.description !== undefined) updateData.description = updates.description;
+      if (updates.description !== undefined)
+        updateData.description = updates.description;
       if (updates.paymentMethods !== undefined)
         updateData.payment_methods = updates.paymentMethods;
 
@@ -350,10 +393,14 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_clients_list",
     scope: "clients",
-    description: "List all international clients with optional search by client name.",
+    description:
+      "List all international clients with optional search by client name.",
     write: false,
     schema: z.object({
-      search: z.string().optional().describe("Search term matched against client name"),
+      search: z
+        .string()
+        .optional()
+        .describe("Search term matched against client name"),
     }),
     handler: async ({ search }) => {
       const whereClause = search?.trim()
@@ -372,7 +419,8 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_clients_get",
     scope: "clients",
-    description: "Get client profile and international remittance banking details by ID or name.",
+    description:
+      "Get client profile and international remittance banking details by ID or name.",
     write: false,
     schema: z.object({
       id: z.string().uuid().optional().describe("Client UUID"),
@@ -380,8 +428,14 @@ export const tools: McpToolDefinition[] = [
     }),
     handler: async ({ id, name }) => {
       if (!id && !name) throw new Error("Must provide either 'id' or 'name'");
-      const condition = id ? eq(clients.id, id) : ilike(clients.name, `%${name!.trim()}%`);
-      const [client] = await db.select().from(clients).where(condition).limit(1);
+      const condition = id
+        ? eq(clients.id, id)
+        : ilike(clients.name, `%${name!.trim()}%`);
+      const [client] = await db
+        .select()
+        .from(clients)
+        .where(condition)
+        .limit(1);
       if (!client) throw new Error("Client not found");
       return client;
     },
@@ -394,10 +448,22 @@ export const tools: McpToolDefinition[] = [
     write: true,
     schema: z.object({
       name: z.string().min(1).describe("Client company or individual name"),
-      address: z.string().optional().describe("Full physical street/city/country address"),
-      taxId: z.string().optional().describe("Client Tax ID / VAT / Registration number"),
-      bankName: z.string().optional().describe("Remitting bank name (e.g. 'JPMorgan Chase Bank')"),
-      bankAddress: z.string().optional().describe("Remitting bank branch address"),
+      address: z
+        .string()
+        .optional()
+        .describe("Full physical street/city/country address"),
+      taxId: z
+        .string()
+        .optional()
+        .describe("Client Tax ID / VAT / Registration number"),
+      bankName: z
+        .string()
+        .optional()
+        .describe("Remitting bank name (e.g. 'JPMorgan Chase Bank')"),
+      bankAddress: z
+        .string()
+        .optional()
+        .describe("Remitting bank branch address"),
     }),
     handler: async (input) => {
       const [created] = await db
@@ -416,7 +482,8 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_clients_update",
     scope: "clients",
-    description: "Update client name, address, tax ID, or bank details by client ID.",
+    description:
+      "Update client name, address, tax ID, or bank details by client ID.",
     write: true,
     schema: z.object({
       id: z.string().uuid().describe("Client UUID to update"),
@@ -431,8 +498,10 @@ export const tools: McpToolDefinition[] = [
       if (updates.name !== undefined) updateData.name = updates.name.trim();
       if (updates.address !== undefined) updateData.address = updates.address;
       if (updates.taxId !== undefined) updateData.tax_id = updates.taxId;
-      if (updates.bankName !== undefined) updateData.bank_name = updates.bankName;
-      if (updates.bankAddress !== undefined) updateData.bank_address = updates.bankAddress;
+      if (updates.bankName !== undefined)
+        updateData.bank_name = updates.bankName;
+      if (updates.bankAddress !== undefined)
+        updateData.bank_address = updates.bankAddress;
 
       const [updated] = await db
         .update(clients)
@@ -447,13 +516,17 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_clients_delete",
     scope: "clients",
-    description: "Delete a client profile by client ID.",
+    description:
+      "Delete a client profile with no linked invoices by client ID.",
     write: true,
     schema: z.object({
       id: z.string().uuid().describe("Client UUID to delete"),
     }),
     handler: async ({ id }) => {
-      const [deleted] = await db.delete(clients).where(eq(clients.id, id)).returning();
+      const [deleted] = await db
+        .delete(clients)
+        .where(eq(clients.id, id))
+        .returning();
       if (!deleted) throw new Error("Client not found");
       return { success: true, deleted };
     },
@@ -472,7 +545,9 @@ export const tools: McpToolDefinition[] = [
       isEmployee: z
         .boolean()
         .optional()
-        .describe("Filter: true for staff on payroll, false for vendor/contractor"),
+        .describe(
+          "Filter: true for staff on payroll, false for vendor/contractor",
+        ),
       includeHidden: z
         .boolean()
         .default(false)
@@ -482,7 +557,7 @@ export const tools: McpToolDefinition[] = [
         .optional()
         .describe("Search term matched against beneficiary receiver name"),
     }),
-    handler: async ({ isEmployee, includeHidden, search }) => {
+    handler: async ({ isEmployee, includeHidden, search }, scopes = []) => {
       const conditions = [];
       if (!includeHidden) {
         conditions.push(
@@ -502,7 +577,10 @@ export const tools: McpToolDefinition[] = [
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(asc(vendors.receiver_name));
 
-      return { items, count: items.length };
+      return {
+        items: items.map((item) => vendorForScopes(item, scopes)),
+        count: items.length,
+      };
     },
   }),
   defineTool({
@@ -513,10 +591,14 @@ export const tools: McpToolDefinition[] = [
     schema: z.object({
       id: z.string().uuid().describe("Vendor UUID"),
     }),
-    handler: async ({ id }) => {
-      const [vendor] = await db.select().from(vendors).where(eq(vendors.id, id)).limit(1);
+    handler: async ({ id }, scopes = []) => {
+      const [vendor] = await db
+        .select()
+        .from(vendors)
+        .where(eq(vendors.id, id))
+        .limit(1);
       if (!vendor) throw new Error("Beneficiary not found");
-      return vendor;
+      return vendorForScopes(vendor, scopes);
     },
   }),
   defineTool({
@@ -526,15 +608,42 @@ export const tools: McpToolDefinition[] = [
       "Add a new beneficiary or payroll employee with bank account, branch, and 9-digit routing number.",
     write: true,
     schema: z.object({
-      receiverName: z.string().min(1).describe("Beneficiary full name on bank account"),
+      receiverName: z
+        .string()
+        .min(1)
+        .describe("Beneficiary full name on bank account"),
       accountNumber: z.string().min(5).describe("Bank account number"),
-      bankName: z.string().min(1).describe("Bank name (e.g. 'Dutch-Bangla Bank PLC')"),
-      branchName: z.string().min(1).describe("Branch name (e.g. 'Dhanmondi Branch')"),
-      routingNumber: z.string().length(9).describe("9-digit Bangladesh bank routing code"),
-      isEmployee: z.boolean().default(false).describe("Set to true for monthly salary payroll"),
-      salary: z.number().min(0).default(0).describe("Monthly salary amount in BDT"),
+      bankName: z
+        .string()
+        .min(1)
+        .describe("Bank name (e.g. 'Dutch-Bangla Bank PLC')"),
+      branchName: z
+        .string()
+        .min(1)
+        .describe("Branch name (e.g. 'Dhanmondi Branch')"),
+      routingNumber: z
+        .string()
+        .length(9)
+        .describe("9-digit Bangladesh bank routing code"),
+      isEmployee: z
+        .boolean()
+        .default(false)
+        .describe("Set to true for monthly salary payroll"),
+      salary: z
+        .number()
+        .min(0)
+        .default(0)
+        .describe("Monthly salary amount in BDT"),
     }),
-    handler: async (input) => {
+    handler: async (input, scopes = []) => {
+      if (
+        (input.isEmployee || input.salary > 0) &&
+        !allowsScope(scopes, "payroll")
+      ) {
+        throw new Error(
+          "Payroll scope is required to set employment or salary.",
+        );
+      }
       const [created] = await db
         .insert(vendors)
         .values({
@@ -548,13 +657,14 @@ export const tools: McpToolDefinition[] = [
           is_hidden: false,
         })
         .returning();
-      return { success: true, vendor: created };
+      return { success: true, vendor: vendorForScopes(created, scopes) };
     },
   }),
   defineTool({
     name: "finance_vendors_update",
     scope: "vendors",
-    description: "Update beneficiary bank account details, routing number, or salary by ID.",
+    description:
+      "Update beneficiary bank account details, routing number, or salary by ID.",
     write: true,
     schema: z.object({
       id: z.string().uuid().describe("Vendor UUID to update"),
@@ -567,16 +677,32 @@ export const tools: McpToolDefinition[] = [
       salary: z.number().min(0).optional(),
       isHidden: z.boolean().optional(),
     }),
-    handler: async ({ id, ...updates }) => {
+    handler: async ({ id, ...updates }, scopes = []) => {
+      if (
+        (updates.isEmployee !== undefined || updates.salary !== undefined) &&
+        !allowsScope(scopes, "payroll")
+      ) {
+        throw new Error(
+          "Payroll scope is required to change employment or salary.",
+        );
+      }
       const updateData: Record<string, unknown> = {};
-      if (updates.receiverName !== undefined) updateData.receiver_name = updates.receiverName.trim();
-      if (updates.accountNumber !== undefined) updateData.account_number = updates.accountNumber.trim();
-      if (updates.bankName !== undefined) updateData.bank_name = updates.bankName.trim();
-      if (updates.branchName !== undefined) updateData.branch_name = updates.branchName.trim();
-      if (updates.routingNumber !== undefined) updateData.routing_number = updates.routingNumber.trim();
-      if (updates.isEmployee !== undefined) updateData.is_employee = updates.isEmployee;
-      if (updates.salary !== undefined) updateData.salary = updates.salary.toString();
-      if (updates.isHidden !== undefined) updateData.is_hidden = updates.isHidden;
+      if (updates.receiverName !== undefined)
+        updateData.receiver_name = updates.receiverName.trim();
+      if (updates.accountNumber !== undefined)
+        updateData.account_number = updates.accountNumber.trim();
+      if (updates.bankName !== undefined)
+        updateData.bank_name = updates.bankName.trim();
+      if (updates.branchName !== undefined)
+        updateData.branch_name = updates.branchName.trim();
+      if (updates.routingNumber !== undefined)
+        updateData.routing_number = updates.routingNumber.trim();
+      if (updates.isEmployee !== undefined)
+        updateData.is_employee = updates.isEmployee;
+      if (updates.salary !== undefined)
+        updateData.salary = updates.salary.toString();
+      if (updates.isHidden !== undefined)
+        updateData.is_hidden = updates.isHidden;
 
       const [updated] = await db
         .update(vendors)
@@ -585,7 +711,7 @@ export const tools: McpToolDefinition[] = [
         .returning();
 
       if (!updated) throw new Error("Beneficiary not found");
-      return { success: true, vendor: updated };
+      return { success: true, vendor: vendorForScopes(updated, scopes) };
     },
   }),
   defineTool({
@@ -596,10 +722,13 @@ export const tools: McpToolDefinition[] = [
     schema: z.object({
       id: z.string().uuid().describe("Vendor UUID to delete"),
     }),
-    handler: async ({ id }) => {
-      const [deleted] = await db.delete(vendors).where(eq(vendors.id, id)).returning();
+    handler: async ({ id }, scopes = []) => {
+      const [deleted] = await db
+        .delete(vendors)
+        .where(eq(vendors.id, id))
+        .returning();
       if (!deleted) throw new Error("Beneficiary not found");
-      return { success: true, deleted };
+      return { success: true, deleted: vendorForScopes(deleted, scopes) };
     },
   }),
 
@@ -654,7 +783,8 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_banks_get_names",
     scope: "banking",
-    description: "List all supported banks across Bangladesh from the branch directory.",
+    description:
+      "List all supported banks across Bangladesh from the branch directory.",
     write: false,
     schema: z.object({}),
     handler: async () => {
@@ -668,10 +798,16 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_banks_get_branches",
     scope: "banking",
-    description: "Get all branch names and district locations for a specified bank name.",
+    description:
+      "Get all branch names and district locations for a specified bank name.",
     write: false,
     schema: z.object({
-      bankName: z.string().min(1).describe("Exact bank name, e.g. 'Standard Chartered Bank' or 'Dutch-Bangla Bank PLC'"),
+      bankName: z
+        .string()
+        .min(1)
+        .describe(
+          "Exact bank name, e.g. 'Standard Chartered Bank' or 'Dutch-Bangla Bank PLC'",
+        ),
     }),
     handler: async ({ bankName }) => {
       const branches = await db
@@ -694,14 +830,15 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_banks_lookup_routing",
     scope: "banking",
-    description: "Look up the exact 9-digit Bangladesh Bank routing number given bank name and branch name.",
+    description:
+      "Look up a 9-digit Bangladesh Bank routing number by bank and branch name. Use finance_banks_get_branches for ambiguous names.",
     write: false,
     schema: z.object({
       bankName: z.string().min(1).describe("Bank name"),
       branchName: z.string().min(1).describe("Branch name"),
     }),
     handler: async ({ bankName, branchName }) => {
-      const [branch] = await db
+      const [branch, duplicate] = await db
         .select({
           bankName: bankBranches.bank_name,
           branchName: bankBranches.branch_name,
@@ -715,10 +852,17 @@ export const tools: McpToolDefinition[] = [
             eq(bankBranches.branch_name, branchName.trim()),
           ),
         )
-        .limit(1);
+        .limit(2);
 
       if (!branch) {
-        throw new Error(`Routing number not found for bank '${bankName}' and branch '${branchName}'`);
+        throw new Error(
+          `Routing number not found for bank '${bankName}' and branch '${branchName}'`,
+        );
+      }
+      if (duplicate) {
+        throw new Error(
+          "Multiple routing numbers match this bank and branch name. Use finance_banks_get_branches to identify the correct record.",
+        );
       }
       return branch;
     },
@@ -726,10 +870,15 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_banks_lookup_swift",
     scope: "banking",
-    description: "Look up international SWIFT/BIC code details (bank name, city, branch, country).",
+    description:
+      "Look up international SWIFT/BIC code details (bank name, city, branch, country).",
     write: false,
     schema: z.object({
-      swiftCode: z.string().min(8).max(11).describe("8 or 11 character SWIFT/BIC code (e.g. 'SCBLBDDX')"),
+      swiftCode: z
+        .string()
+        .min(8)
+        .max(11)
+        .describe("8 or 11 character SWIFT/BIC code (e.g. 'SCBLBDDX')"),
     }),
     handler: async ({ swiftCode }) => {
       const result = await lookupSwiftCode(swiftCode.trim().toUpperCase());
@@ -744,7 +893,8 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_accounts_list_debit",
     scope: "accounts",
-    description: "List Standard Chartered Bank funding debit accounts with active default indicator.",
+    description:
+      "List Standard Chartered Bank funding debit accounts with active default indicator.",
     write: false,
     schema: z.object({}),
     handler: async () => {
@@ -755,26 +905,22 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_accounts_set_default_debit",
     scope: "accounts",
-    description: "Set the active default SCB debit account for bulk payroll transactions.",
+    description:
+      "Set the active default SCB debit account for bulk payroll transactions.",
     write: true,
     schema: z.object({
       id: z.string().uuid().describe("Debit account UUID to set as default"),
     }),
     handler: async ({ id }) => {
-      await db.update(debitAccounts).set({ is_default: false });
-      const [updated] = await db
-        .update(debitAccounts)
-        .set({ is_default: true })
-        .where(eq(debitAccounts.id, id))
-        .returning();
-      if (!updated) throw new Error("Debit account not found");
-      return { success: true, defaultAccount: updated };
+      const defaultAccount = await assignDefaultDebitAccount(id);
+      return { success: true, defaultAccount };
     },
   }),
   defineTool({
     name: "finance_accounts_list_payment",
     scope: "accounts",
-    description: "List Themefisher receiving bank accounts displayed on Form-C and invoices.",
+    description:
+      "List Themefisher receiving bank accounts displayed on Form-C and invoices.",
     write: false,
     schema: z.object({}),
     handler: async () => {
@@ -785,7 +931,8 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_accounts_create_payment",
     scope: "accounts",
-    description: "Register a new Themefisher receiving bank account for international remittance.",
+    description:
+      "Register a new Themefisher receiving bank account for international remittance.",
     write: true,
     schema: z.object({
       bankName: z.string().min(1).describe("Bank name"),

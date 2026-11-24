@@ -3,11 +3,14 @@ import { vi } from "vitest";
 const cookieStore = new Map<string, any>();
 
 vi.mock("next/headers", () => ({
-  headers: vi.fn(async () => new Headers({
-    host: "localhost:3000",
-    origin: "http://localhost:3000",
-    "x-forwarded-proto": "http",
-  })),
+  headers: vi.fn(
+    async () =>
+      new Headers({
+        host: "localhost:3000",
+        origin: "http://localhost:3000",
+        "x-forwarded-proto": "http",
+      }),
+  ),
   cookies: vi.fn(async () => ({
     get: vi.fn((key: string) => cookieStore.get(key)),
     set: vi.fn((key: string, val: any, _options?: any) => {
@@ -37,6 +40,7 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("next/cache", () => ({
   revalidatePath: vi.fn(),
+  unstable_cache: (fn: unknown) => fn,
   revalidateTag: vi.fn(),
 }));
 

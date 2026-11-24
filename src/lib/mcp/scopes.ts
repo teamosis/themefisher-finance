@@ -14,25 +14,29 @@ export const MCP_SCOPES = [
   {
     key: "vendors",
     label: "Beneficiaries & Vendors",
-    description: "Read, create, update, and manage vendor/employee beneficiary accounts",
+    description:
+      "Read, create, update, and manage vendor/employee beneficiary accounts",
     prefixes: ["finance_vendors_"],
   },
   {
     key: "payroll",
     label: "Payroll & Salaries",
-    description: "Calculate employee salary sheets and payroll statistics for SCB export",
+    description:
+      "Calculate employee salary sheets and payroll statistics for SCB export",
     prefixes: ["finance_payroll_"],
   },
   {
     key: "banking",
     label: "Bank Routing & SWIFT",
-    description: "Access 11,426 Bangladesh bank branches, 9-digit routing codes, and SWIFT lookups",
+    description:
+      "Access 11,426 Bangladesh bank branches, 9-digit routing codes, and SWIFT lookups",
     prefixes: ["finance_banks_"],
   },
   {
     key: "accounts",
     label: "Bank & Debit Accounts",
-    description: "Manage Standard Chartered funding debit accounts and Themefisher receiving accounts",
+    description:
+      "Manage Standard Chartered funding debit accounts and Themefisher receiving accounts",
     prefixes: ["finance_accounts_"],
   },
 ] as const;
@@ -56,10 +60,14 @@ export function tokenAllowsTool(
   toolName: string,
 ): boolean {
   if (toolName === "finance_get_overview") return true;
-  if (!allowedScopes || allowedScopes.length === 0 || allowedScopes.includes("*")) {
-    return true;
-  }
   const scope = getToolScope(toolName);
-  if (scope === "system") return true;
+  if (scope === "system" || !allowedScopes?.length) return false;
+  if (allowedScopes.includes("*")) return true;
+  // The database cascade deletes this client's invoices as well.
+  if (toolName === "finance_clients_delete") {
+    return (
+      allowedScopes.includes("clients") && allowedScopes.includes("invoices")
+    );
+  }
   return allowedScopes.includes(scope);
 }

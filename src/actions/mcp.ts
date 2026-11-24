@@ -1,5 +1,6 @@
 "use server";
 
+import { requireBrowserSession } from "@/lib/browser-session";
 import { mcpClientConfig, setupPrompt } from "@/lib/mcp/policy";
 import {
   getMcpOrigin,
@@ -24,6 +25,7 @@ async function resolveOrigin(): Promise<string> {
 }
 
 export async function getMcpTokensAction(): Promise<McpTokenRecord[]> {
+  await requireBrowserSession();
   return mcpTokenService.listTokens();
 }
 
@@ -40,6 +42,7 @@ export async function createMcpTokenAction(input: {
   prompt: string;
   mcpConfig: string;
 }> {
+  await requireBrowserSession();
   if (!input.name || !input.name.trim()) {
     throw new Error("Agent / Token name is required");
   }
@@ -58,12 +61,14 @@ export async function createMcpTokenAction(input: {
 }
 
 export async function revokeMcpTokenAction(id: string): Promise<boolean> {
+  await requireBrowserSession();
   const result = await mcpTokenService.revokeToken(id);
   revalidatePath("/mcp");
   return result;
 }
 
 export async function deleteMcpTokenAction(id: string): Promise<boolean> {
+  await requireBrowserSession();
   const result = await mcpTokenService.deleteToken(id);
   revalidatePath("/mcp");
   return result;
@@ -77,6 +82,7 @@ export async function rotateMcpTokenAction(id: string): Promise<{
   prompt: string;
   mcpConfig: string;
 }> {
+  await requireBrowserSession();
   const result = await mcpTokenService.rotateToken(id);
   const origin = await resolveOrigin();
   const prompt = setupPrompt(origin, result.token);
@@ -91,5 +97,6 @@ export async function rotateMcpTokenAction(id: string): Promise<{
 }
 
 export async function getMcpRecentRunsAction(limit: number = 50) {
+  await requireBrowserSession();
   return mcpTokenService.getRecentRuns(limit);
 }

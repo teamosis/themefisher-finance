@@ -1,7 +1,33 @@
-import assert from "node:assert";
-import { describe, expect, it } from "vitest";
+import { getInvoiceDateFromValueDate, parseMT103 } from "@/lib/pdfParser";
+import { describe, expect, it, vi } from "vitest";
+
+const { getDocument } = vi.hoisted(() => ({ getDocument: vi.fn() }));
+vi.mock("pdfjs-dist", () => ({ getDocument, GlobalWorkerOptions: {} }));
 
 describe("MT103 Remittance Advice PDF Parser Logic Suite", () => {
+  it("extracts text and releases the PDF worker", async () => {
+    const destroy = vi.fn();
+    getDocument.mockReturnValueOnce({
+      destroy,
+      promise: Promise.resolve({
+        numPages: 1,
+        getPage: async () => ({
+          getTextContent: async () => ({
+            items: [
+              { type: "beginMarkedContent" },
+              {
+                str: "Payment for TF-2026-08-15-01",
+                transform: [1, 0, 0, 1, 30, 50],
+              },
+            ],
+          }),
+        }),
+      }),
+    });
+    const result = await parseMT103(new File(["test"], "advice.pdf"));
+    expect(result.invoice_number).toBe("TF-2026-08-15-01");
+    expect(destroy).toHaveBeenCalledOnce();
+  });
   describe("Spatial Coordinate Sorting", () => {
     it("sorts text tokens primarily by Y descending (top-to-bottom), then X ascending (left-to-right) with 5px tolerance", () => {
       const items = [
@@ -90,15 +116,10 @@ describe("MT103 Remittance Advice PDF Parser Logic Suite", () => {
       expect(s3).toBeNull();
     });
 
-    it("computes invoice date as Value Date minus 7 days", () => {
-      const valueDateStr = "15/08/2026";
-      const parts = valueDateStr.split("/");
-      const valDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
-
-      valDate.setDate(valDate.getDate() - 7);
-      const invoiceDateStr = valDate.toISOString().split("T")[0];
-
-      expect(invoiceDateStr).toBe("2026-08-08");
+    it("subtracts seven days from a day-first bank date and rejects invalid dates", () => {
+      expect(getInvoiceDateFromValueDate("15/08/2026")).toBe("2026-08-08");
+      expect(getInvoiceDateFromValueDate("6/1/2026")).toBe("2025-12-30");
+      expect(getInvoiceDateFromValueDate("31/02/2026")).toBeUndefined();
     });
   });
 
@@ -119,14 +140,19 @@ describe("MT103 Remittance Advice PDF Parser Logic Suite", () => {
       const cleanNoise = (str: string) =>
         str
           .toLowerCase()
-          .replace(/\b(pty|ltd|limited|inc|incorporated|corp|corporation|co|private)\b/gi, "")
+          .replace(
+            /\b(pty|ltd|limited|inc|incorporated|corp|corporation|co|private)\b/gi,
+            "",
+          )
           .replace(/[^a-z0-9 ]/g, " ")
           .trim();
 
       const cleanedQ = cleanNoise(q);
       matched = clients.find((c) => {
         const cleanedClient = cleanNoise(c.name);
-        return cleanedQ.includes(cleanedClient) || cleanedClient.includes(cleanedQ);
+        return (
+          cleanedQ.includes(cleanedClient) || cleanedClient.includes(cleanedQ)
+        );
       });
       return matched || null;
     };
@@ -137,7 +163,9 @@ describe("MT103 Remittance Advice PDF Parser Logic Suite", () => {
     });
 
     it("Pass 2: Matches when company legal suffix varies (e.g. LIMITED vs Ltd)", () => {
-      const matched = matchClient("STRIPE PAYMENTS EUROPE, LIMITED - 1 GRAND CANAL");
+      const matched = matchClient(
+        "STRIPE PAYMENTS EUROPE, LIMITED - 1 GRAND CANAL",
+      );
       expect(matched?.id).toBe("c2");
     });
 

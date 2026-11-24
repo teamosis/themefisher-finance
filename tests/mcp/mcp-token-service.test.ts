@@ -2,7 +2,6 @@ import { db } from "@/db";
 import {
   generateMcpToken,
   hashMcpToken,
-  McpAuthError,
   mcpTokenService,
 } from "@/lib/mcp/token-service";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -13,6 +12,7 @@ vi.mock("@/db", () => {
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    execute: vi.fn(),
   };
   return { db: mockDb };
 });
@@ -97,18 +97,13 @@ describe("McpTokenService Security & Lifecycle Suite", () => {
       const whereMock1 = vi.fn().mockReturnValue({ limit: limitMock1 });
       const fromMock1 = vi.fn().mockReturnValue({ where: whereMock1 });
 
-      // 2. Rate limit lookup
-      const limitMock2 = vi.fn().mockResolvedValue([{ count: 1 }]);
-      const whereMock2 = vi.fn().mockReturnValue({ limit: limitMock2 });
-      const fromMock2 = vi.fn().mockReturnValue({ where: whereMock2 });
+      vi.mocked(db.select).mockReturnValueOnce({ from: fromMock1 } as any);
 
-      vi.mocked(db.select)
-        .mockReturnValueOnce({ from: fromMock1 } as any)
-        .mockReturnValueOnce({ from: fromMock2 } as any);
-
-      // Rate limit insert
-      const onConflictMock = vi.fn().mockResolvedValue(undefined);
-      const valuesMock = vi.fn().mockReturnValue({ onConflictDoUpdate: onConflictMock });
+      const returning = vi.fn().mockResolvedValue([{ count: 1 }]);
+      const onConflictMock = vi.fn().mockReturnValue({ returning });
+      const valuesMock = vi
+        .fn()
+        .mockReturnValue({ onConflictDoUpdate: onConflictMock });
       vi.mocked(db.insert).mockReturnValue({ values: valuesMock } as any);
 
       const req = makeReq("Bearer " + validToken);
@@ -120,7 +115,7 @@ describe("McpTokenService Security & Lifecycle Suite", () => {
       expect(principal.allowedScopes).toEqual(["*"]);
     });
 
-    it("throws 429 when sliding window rate limit exceeds 120 requests/minute", async () => {
+    it("throws 429 when fixed-window rate limit exceeds 120 requests/minute", async () => {
       const validToken = "tff_" + "c".repeat(43);
       const tokenRecord = {
         id: "tok_456",
@@ -138,17 +133,13 @@ describe("McpTokenService Security & Lifecycle Suite", () => {
       const whereMock1 = vi.fn().mockReturnValue({ limit: limitMock1 });
       const fromMock1 = vi.fn().mockReturnValue({ where: whereMock1 });
 
-      // Return count > 120
-      const limitMock2 = vi.fn().mockResolvedValue([{ count: 121 }]);
-      const whereMock2 = vi.fn().mockReturnValue({ limit: limitMock2 });
-      const fromMock2 = vi.fn().mockReturnValue({ where: whereMock2 });
+      vi.mocked(db.select).mockReturnValueOnce({ from: fromMock1 } as any);
 
-      vi.mocked(db.select)
-        .mockReturnValueOnce({ from: fromMock1 } as any)
-        .mockReturnValueOnce({ from: fromMock2 } as any);
-
-      const onConflictMock = vi.fn().mockResolvedValue(undefined);
-      const valuesMock = vi.fn().mockReturnValue({ onConflictDoUpdate: onConflictMock });
+      const returning = vi.fn().mockResolvedValue([{ count: 121 }]);
+      const onConflictMock = vi.fn().mockReturnValue({ returning });
+      const valuesMock = vi
+        .fn()
+        .mockReturnValue({ onConflictDoUpdate: onConflictMock });
       vi.mocked(db.insert).mockReturnValue({ values: valuesMock } as any);
 
       const req = makeReq("Bearer " + validToken);
@@ -157,6 +148,21 @@ describe("McpTokenService Security & Lifecycle Suite", () => {
         message: expect.stringContaining("Rate limit exceeded"),
       });
     });
+  });
+
+  it("rotates an active token with one database statement", async () => {
+    vi.mocked(db.execute).mockResolvedValueOnce({
+      rows: [{ id: "replacement", name: "Agent (Rotated)" }],
+    } as any);
+    const replacement = await mcpTokenService.rotateToken("old-token");
+    expect(replacement).toMatchObject({
+      id: "replacement",
+      name: "Agent (Rotated)",
+    });
+    expect(replacement.token).toMatch(/^tff_/);
+    expect(db.execute).toHaveBeenCalledOnce();
+    expect(db.insert).not.toHaveBeenCalled();
+    expect(db.update).not.toHaveBeenCalled();
   });
 
   describe("Token Management Actions", () => {

@@ -6,3 +6,6 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - lucide-react@1.78.0
+
+overrides:
+  "@esbuild-kit/core-utils>esbuild": 0.28.2

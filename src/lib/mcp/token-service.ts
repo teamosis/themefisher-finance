@@ -83,13 +83,13 @@ export class McpTokenService {
       );
     }
 
-    // Rate limiting: 120 req/minute sliding window
+    // Rate limiting: 120 requests per fixed minute
     const now = Date.now();
     const windowStart = new Date(Math.floor(now / 60000) * 60000);
     const limitId = `${tokenRecord.id}:${windowStart.getTime()}`;
 
     try {
-      await db
+      const [limitRecord] = await db
         .insert(mcpLimits)
         .values({
           id: limitId,
@@ -100,15 +100,11 @@ export class McpTokenService {
         .onConflictDoUpdate({
           target: mcpLimits.id,
           set: { count: sql`${mcpLimits.count} + 1` },
-        });
+        })
+        .returning({ count: mcpLimits.count });
 
-      const [limitRecord] = await db
-        .select()
-        .from(mcpLimits)
-        .where(eq(mcpLimits.id, limitId))
-        .limit(1);
-
-      if (limitRecord && limitRecord.count > 120) {
+      if (!limitRecord) throw new Error("Rate counter returned no row");
+      if (limitRecord.count > 120) {
         throw new McpAuthError(
           "Rate limit exceeded (max 120 requests/minute)",
           429,
@@ -116,7 +112,10 @@ export class McpTokenService {
       }
     } catch (err) {
       if (err instanceof McpAuthError) throw err;
-      // Allow through if rate limiter table is temporarily locked
+      throw new McpAuthError(
+        "Request rate control is temporarily unavailable",
+        503,
+      );
     }
 
     // Update lastUsedAt if not updated in the last 60 seconds
@@ -167,10 +166,7 @@ export class McpTokenService {
         tokenHash,
         prefix,
         readOnly: Boolean(input.readOnly),
-        allowedScopes:
-          input.allowedScopes && input.allowedScopes.length > 0
-            ? input.allowedScopes
-            : ["*"],
+        allowedScopes: input.allowedScopes ?? [],
         expiresAt,
       })
       .returning();
@@ -213,25 +209,29 @@ export class McpTokenService {
   async rotateToken(
     id: string,
   ): Promise<{ token: string; id: string; prefix: string; name: string }> {
-    const [existing] = await db
-      .select()
-      .from(mcpAccessTokens)
-      .where(eq(mcpAccessTokens.id, id))
-      .limit(1);
-
-    if (!existing) {
-      throw new Error("Token not found");
-    }
-
-    const created = await this.createToken({
-      name: `${existing.name} (Rotated)`,
-      readOnly: existing.readOnly,
-      allowedScopes: existing.allowedScopes,
-    });
-
-    await this.revokeToken(id);
-
-    return created;
+    const token = generateMcpToken();
+    const tokenHash = hashMcpToken(token);
+    const prefix = token.slice(0, 10);
+    const result = await db.execute(sql`
+      WITH revoked AS (
+        UPDATE ${mcpAccessTokens}
+        SET revoked_at = now()
+        WHERE id = ${id} AND revoked_at IS NULL AND expires_at > now()
+        RETURNING name, read_only, allowed_scopes, expires_at
+      )
+      INSERT INTO ${mcpAccessTokens} (name, token_hash, prefix, read_only, allowed_scopes, expires_at)
+      SELECT name || ' (Rotated)', ${tokenHash}, ${prefix}, read_only, allowed_scopes, expires_at
+      FROM revoked
+      RETURNING id, name
+    `);
+    const replacement = result.rows[0];
+    if (!replacement) throw new Error("Active token not found");
+    return {
+      token,
+      id: String(replacement.id),
+      prefix,
+      name: String(replacement.name),
+    };
   }
 
   /**

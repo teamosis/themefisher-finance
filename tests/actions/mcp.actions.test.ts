@@ -2,12 +2,19 @@ import {
   createMcpTokenAction,
   deleteMcpTokenAction,
   getMcpRecentRunsAction,
-  getMcpTokensAction,
   revokeMcpTokenAction,
   rotateMcpTokenAction,
 } from "@/actions/mcp";
 import { mcpTokenService } from "@/lib/mcp/token-service";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  describe,
+  beforeEach as establishBeforeEach,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { establishBrowserSession } from "../browser-session-fixture";
 
 vi.mock("@/lib/mcp/token-service", () => ({
   getMcpOrigin: vi.fn(() => "http://localhost:3000"),
@@ -21,6 +28,8 @@ vi.mock("@/lib/mcp/token-service", () => ({
   },
 }));
 
+establishBeforeEach(establishBrowserSession);
+
 describe("MCP Server Actions Suite", () => {
   afterEach(() => {
     vi.clearAllMocks();
@@ -28,9 +37,9 @@ describe("MCP Server Actions Suite", () => {
 
   describe("createMcpTokenAction", () => {
     it("rejects token creation when name is empty or whitespace", async () => {
-      await expect(
-        createMcpTokenAction({ name: "   " }),
-      ).rejects.toThrow("Agent / Token name is required");
+      await expect(createMcpTokenAction({ name: "   " })).rejects.toThrow(
+        "Agent / Token name is required",
+      );
     });
 
     it("creates token, builds client configuration and setup prompt", async () => {
@@ -85,8 +94,12 @@ describe("MCP Server Actions Suite", () => {
     });
 
     it("getMcpRecentRunsAction queries service audit logs", async () => {
-      const mockRuns = [{ id: "run_1", toolName: "finance_get_overview", status: "completed" }];
-      vi.mocked(mcpTokenService.getRecentRuns).mockResolvedValueOnce(mockRuns as any);
+      const mockRuns = [
+        { id: "run_1", toolName: "finance_get_overview", status: "completed" },
+      ];
+      vi.mocked(mcpTokenService.getRecentRuns).mockResolvedValueOnce(
+        mockRuns as any,
+      );
 
       const res = await getMcpRecentRunsAction(20);
       expect(res).toEqual(mockRuns);

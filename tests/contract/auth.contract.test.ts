@@ -4,6 +4,7 @@ import {
   generateAuthToken,
   getAuthCookieOptions,
   getExpectedAuthToken,
+  getSafeRedirectPath,
   isAuthConfigured,
   verifyAuthToken,
 } from "@/lib/auth";
@@ -21,6 +22,14 @@ describe("Authentication & Security Contract Suite", () => {
 
   afterEach(() => {
     process.env = originalEnv;
+  });
+
+  it("preserves local destinations and falls back to the homepage for external URLs", () => {
+    expect(getSafeRedirectPath("/invoice-tools?tab=invoice")).toBe(
+      "/invoice-tools?tab=invoice",
+    );
+    expect(getSafeRedirectPath("https://example.com")).toBe("/");
+    expect(getSafeRedirectPath(null)).toBe("/");
   });
 
   describe("isAuthConfigured", () => {

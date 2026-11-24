@@ -5,7 +5,6 @@ import {
   deleteDebitAccount as deleteDebitAccountAction,
   getDebitAccounts,
   setDefaultDebitAccount as setDefaultDebitAccountAction,
-  unsetAllDefaultDebitAccounts,
   updateDebitAccount,
 } from "@/actions";
 import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
@@ -88,19 +87,16 @@ export default function DebitAccountsClient({
     setSaving(true);
     setErrorMessage(null);
 
-    if (formData.is_default && accounts.length > 0) {
-      await unsetAllDefaultDebitAccounts();
-    }
-
     try {
-      await createDebitAccount({
+      const created = await createDebitAccount({
         account_number: formData.account_number.trim(),
         account_label: formData.account_label.trim() || "Debit Account",
         bank_name: formData.bank_name.trim() || "Standard Chartered Bank",
-        is_default: formData.is_default || accounts.length === 0,
       });
 
-      localStorage.setItem("scb_debit_account", formData.account_number.trim());
+      if (formData.is_default || accounts.length === 0) {
+        await setDefaultDebitAccountAction(created.id);
+      }
       setFormData({
         account_number: "",
         account_label: "Main SCB Account",
@@ -120,7 +116,6 @@ export default function DebitAccountsClient({
   const handleSetDefault = async (acc: DebitAccount) => {
     try {
       await setDefaultDebitAccountAction(acc.id);
-      localStorage.setItem("scb_debit_account", acc.account_number);
       triggerSuccess(
         `Set "${acc.account_label}" as the default debit account!`,
       );
@@ -147,23 +142,15 @@ export default function DebitAccountsClient({
     if (!editingAccount) return;
     setEditSaving(true);
 
-    if (editFormData.is_default) {
-      await unsetAllDefaultDebitAccounts();
-    }
-
     try {
       await updateDebitAccount(editingAccount.id, {
         account_number: editFormData.account_number.trim(),
         account_label: editFormData.account_label.trim(),
         bank_name: editFormData.bank_name.trim(),
-        is_default: editFormData.is_default,
       });
 
       if (editFormData.is_default) {
-        localStorage.setItem(
-          "scb_debit_account",
-          editFormData.account_number.trim(),
-        );
+        await setDefaultDebitAccountAction(editingAccount.id);
       }
       triggerSuccess("Debit account updated successfully!");
       setEditingAccount(null);
@@ -519,6 +506,7 @@ export default function DebitAccountsClient({
               <input
                 type="checkbox"
                 checked={editFormData.is_default}
+                disabled={editingAccount?.is_default}
                 onChange={(e) =>
                   setEditFormData({
                     ...editFormData,

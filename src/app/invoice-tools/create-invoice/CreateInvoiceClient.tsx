@@ -1,11 +1,15 @@
 "use client";
 
-import { createInvoice, deleteInvoice as deleteInvoiceAction } from "@/actions";
+import {
+  createInvoice,
+  deleteInvoice as deleteInvoiceAction,
+  getInvoiceHistory,
+} from "@/actions";
 import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
 import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
 import { EditInvoiceModal } from "@/components/modals/EditInvoiceModal";
 import { Button } from "@/components/ui/button";
-import { parseMT103 } from "@/lib/pdfParser";
+import { getInvoiceDateFromValueDate, parseMT103 } from "@/lib/pdfParser";
 import type { Client, Invoice, InvoiceFormData, PaymentAccount } from "@/types";
 import {
   AlertCircle,
@@ -20,22 +24,23 @@ import {
   UploadCloud,
 } from "lucide-react";
 import Link from "next/link";
-import Script from "next/script";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 export default function CreateInvoiceClient({
   initialClients,
   initialAccounts,
-  initialInvoices,
+  initialHistory,
 }: {
   initialClients: Client[];
   initialAccounts: PaymentAccount[];
-  initialInvoices: Invoice[];
+  initialHistory: Awaited<ReturnType<typeof getInvoiceHistory>>;
 }) {
   const [clients] = useState<Client[]>(initialClients);
   const [accounts] = useState<PaymentAccount[]>(initialAccounts);
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
+  const [history, setHistory] = useState(initialHistory);
+  const [historyVersion, setHistoryVersion] = useState(0);
+  const [historyError, setHistoryError] = useState(false);
   const [selectedPaymentMethods, setSelectedPaymentMethods] = useState<
     string[]
   >(initialAccounts.length > 0 ? [initialAccounts[0].id] : []);
@@ -46,7 +51,7 @@ export default function CreateInvoiceClient({
   const { register, handleSubmit, reset, setValue } = useForm<InvoiceFormData>({
     defaultValues: {
       description: "Web development services",
-      invoice_number: `TF-${initialDateStr}-01`,
+      invoice_number: "",
       invoice_date: initialDateStr,
       currency: "USD",
       payment_methods:
@@ -84,58 +89,36 @@ export default function CreateInvoiceClient({
 
     setIsUploadingPdf(true);
     try {
-      const pdfjsLib = (window as any).pdfjsLib;
-      if (!pdfjsLib) throw new Error("PDF library not loaded yet");
-
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-          "//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+      const parsedData = await parseMT103(file);
+      if (!parsedData.full_text) {
+        showAlert("Could not extract any text from the PDF.");
+        return;
       }
 
-      let finalInvoiceNumber = "";
-      try {
-        showAlert("Parsing document...", "success");
-        const parsedData = await parseMT103(file);
-
-        if (parsedData?.amount) {
-          setValue("amount", parsedData.amount as any);
-          setValue("received_amount", parsedData.amount as any);
-        }
-        if (parsedData?.currency) {
-          setValue("currency", parsedData.currency);
-        }
-
-        if (parsedData?.value_date) {
-          try {
-            let parsedDate = new Date(parsedData.value_date);
-            if (!isNaN(parsedDate.getTime())) {
-              parsedDate.setDate(parsedDate.getDate() - 7);
-              setValue("invoice_date", parsedDate.toISOString().split("T")[0]);
-            }
-          } catch {}
-        }
-
-        if (parsedData?.invoice_number) {
-          finalInvoiceNumber = parsedData.invoice_number;
-        }
-
-        if (parsedData?.client_name) {
-          const matched = clients.find((c) =>
-            parsedData.client_name
-              ?.toLowerCase()
-              .includes(c.name.toLowerCase()),
-          );
-          if (matched) {
-            setSelectedClientId(matched.id);
-            setValue("client_id", matched.id);
-          }
-        }
-      } catch (err: any) {
-        console.error("PDF parsing error", err);
+      if (parsedData.amount) {
+        setValue("amount", parsedData.amount);
+        setValue("received_amount", parsedData.amount);
       }
-
-      if (finalInvoiceNumber) {
-        setValue("invoice_number", finalInvoiceNumber);
+      if (parsedData.currency) {
+        setValue("currency", parsedData.currency);
+      }
+      const invoiceDate = getInvoiceDateFromValueDate(parsedData.value_date);
+      if (invoiceDate) {
+        setValue("invoice_date", invoiceDate);
+      }
+      if (parsedData.invoice_number) {
+        setValue("invoice_number", parsedData.invoice_number);
+      }
+      if (parsedData.client_name) {
+        const matched = clients.find((client) =>
+          parsedData.client_name
+            .toLowerCase()
+            .includes(client.name.toLowerCase()),
+        );
+        if (matched) {
+          setSelectedClientId(matched.id);
+          setValue("client_id", matched.id);
+        }
       }
 
       showAlert("Document data populated into form!", "success");
@@ -160,10 +143,6 @@ export default function CreateInvoiceClient({
       showAlert("Please select a client.", "error");
       return;
     }
-    if (!data.invoice_number?.trim()) {
-      showAlert("Please enter an invoice number.", "error");
-      return;
-    }
     if (!data.invoice_date) {
       showAlert("Please select an invoice date.", "error");
       return;
@@ -181,7 +160,7 @@ export default function CreateInvoiceClient({
     try {
       const payload = {
         client_id: selectedClientId,
-        invoice_number: data.invoice_number.trim(),
+        invoice_number: data.invoice_number?.trim(),
         invoice_date: data.invoice_date,
         description: data.description?.trim() || "Web development services",
         amount: Number(data.amount),
@@ -194,10 +173,11 @@ export default function CreateInvoiceClient({
 
       const newInv = await createInvoice(payload);
       if (newInv) {
-        setInvoices((prev) => [newInv as unknown as Invoice, ...prev]);
+        setCurrentPage(1);
+        setHistoryVersion((value) => value + 1);
         reset({
           description: "Web development services",
-          invoice_number: `TF-${new Date().toISOString().split("T")[0]}-01`,
+          invoice_number: "",
           invoice_date: new Date().toISOString().split("T")[0],
           currency: "USD",
           amount: "" as any,
@@ -219,7 +199,7 @@ export default function CreateInvoiceClient({
   const [searchTerm, setSearchTerm] = useState("");
   const [tableClientFilter, setTableClientFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 10;
+  const pageSize = history.pageSize;
 
   // Edit State
   const [editingInvoice, setEditingInvoice] = useState<Invoice | null>(null);
@@ -230,11 +210,7 @@ export default function CreateInvoiceClient({
     setIsEditModalOpen(true);
   };
 
-  const handleInvoiceSaved = (updated: Invoice) => {
-    setInvoices((prev) =>
-      prev.map((inv) => (inv.id === updated.id ? updated : inv)),
-    );
-  };
+  const handleInvoiceSaved = () => setHistoryVersion((value) => value + 1);
 
   const handleDeleteInvoice = async (inv: Invoice) => {
     setDeletingInvoice(inv);
@@ -245,7 +221,7 @@ export default function CreateInvoiceClient({
     setIsDeleting(true);
     try {
       await deleteInvoiceAction(deletingInvoice.id);
-      setInvoices((prev) => prev.filter((i) => i.id !== deletingInvoice.id));
+      setHistoryVersion((value) => value + 1);
       setDeletingInvoice(null);
     } catch (error: any) {
       console.error("Error deleting invoice:", error.message);
@@ -255,43 +231,34 @@ export default function CreateInvoiceClient({
     }
   };
 
-  const tableInvoices = useMemo(() => {
-    return invoices
-      .filter((inv) => {
-        if (tableClientFilter && inv.client_id !== tableClientFilter) {
-          return false;
+  useEffect(() => {
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        const next = await getInvoiceHistory(
+          currentPage,
+          searchTerm,
+          tableClientFilter,
+        );
+        if (!cancelled) {
+          setHistory(next);
+          setHistoryError(false);
         }
-        if (searchTerm.trim()) {
-          const term = searchTerm.toLowerCase();
-          const client = clients.find((c) => c.id === inv.client_id);
-          const matchNum = inv.invoice_number?.toLowerCase().includes(term);
-          const matchDesc = inv.description?.toLowerCase().includes(term);
-          const matchClient = client?.name?.toLowerCase().includes(term);
-          const matchDate = inv.invoice_date?.toLowerCase().includes(term);
-          return matchNum || matchDesc || matchClient || matchDate;
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        const dateA = a.invoice_date || "";
-        const dateB = b.invoice_date || "";
-        return dateB.localeCompare(dateA);
-      });
-  }, [invoices, tableClientFilter, searchTerm, clients]);
+      } catch {
+        if (!cancelled) setHistoryError(true);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [currentPage, searchTerm, tableClientFilter, historyVersion]);
 
-  const totalPages = Math.ceil(tableInvoices.length / pageSize) || 1;
-  const paginatedInvoices = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return tableInvoices.slice(start, start + pageSize);
-  }, [tableInvoices, currentPage, pageSize]);
+  const totalPages = Math.max(1, Math.ceil(history.total / pageSize));
+  const paginatedInvoices = history.rows;
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8 pb-16">
-      <Script
-        src="//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
-        strategy="lazyOnload"
-      />
-
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -350,10 +317,11 @@ export default function CreateInvoiceClient({
 
             <div className="relative z-10 flex flex-col gap-1.5">
               <label className="text-sm font-normal text-text-strong">
-                Invoice Number *
+                Invoice Number
               </label>
               <input
-                {...register("invoice_number", { required: true })}
+                {...register("invoice_number")}
+                placeholder="Assigned automatically if blank"
                 maxLength={60}
                 className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
               />
@@ -510,9 +478,7 @@ export default function CreateInvoiceClient({
             <h2 className="text-base sm:text-lg font-bold text-text-strong">
               Invoices
             </h2>
-            <span className="text-xs text-text-muted">
-              ({tableInvoices.length})
-            </span>
+            <span className="text-xs text-text-muted">({history.total})</span>
           </div>
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
@@ -637,7 +603,9 @@ export default function CreateInvoiceClient({
                     colSpan={7}
                     className="py-8 text-center text-text-muted text-sm"
                   >
-                    No invoices match your search criteria.
+                    {historyError
+                      ? "Unable to load invoice history."
+                      : "No invoices match your search criteria."}
                   </td>
                 </tr>
               )}
@@ -651,15 +619,15 @@ export default function CreateInvoiceClient({
             <div>
               Showing{" "}
               <span className="font-normal text-text-strong">
-                {(currentPage - 1) * pageSize + 1}
+                {(history.page - 1) * pageSize + 1}
               </span>{" "}
               to{" "}
               <span className="font-normal text-text-strong">
-                {Math.min(currentPage * pageSize, tableInvoices.length)}
+                {Math.min(history.page * pageSize, history.total)}
               </span>{" "}
               of{" "}
               <span className="font-normal text-text-strong">
-                {tableInvoices.length}
+                {history.total}
               </span>{" "}
               invoices
             </div>
@@ -667,22 +635,22 @@ export default function CreateInvoiceClient({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(Math.max(history.page - 1, 1))}
+                disabled={history.page === 1}
                 className="size-8"
               >
                 <ChevronLeft className="size-4" />
               </Button>
               <span className="text-text-strong px-2">
-                Page {currentPage} of {totalPages}
+                Page {history.page} of {totalPages}
               </span>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() =>
-                  setCurrentPage((p) => Math.min(p + 1, totalPages))
+                  setCurrentPage(Math.min(history.page + 1, totalPages))
                 }
-                disabled={currentPage === totalPages}
+                disabled={history.page === totalPages}
                 className="size-8"
               >
                 <ChevronRight className="size-4" />

@@ -1,6 +1,5 @@
 import { mcpClientConfig, redact, setupPrompt } from "@/lib/mcp/policy";
 import { tokenAllowsTool } from "@/lib/mcp/scopes";
-import assert from "node:assert";
 import { describe, expect, it } from "vitest";
 
 describe("MCP Policy & Scopes Contract Suite", () => {
@@ -9,9 +8,13 @@ describe("MCP Policy & Scopes Contract Suite", () => {
       const allWildcard = ["*"];
       expect(tokenAllowsTool(allWildcard, "finance_get_overview")).toBe(true);
       expect(tokenAllowsTool(allWildcard, "finance_invoices_list")).toBe(true);
-      expect(tokenAllowsTool(allWildcard, "finance_invoices_create")).toBe(true);
+      expect(tokenAllowsTool(allWildcard, "finance_invoices_create")).toBe(
+        true,
+      );
       expect(tokenAllowsTool(allWildcard, "finance_vendors_delete")).toBe(true);
-      expect(tokenAllowsTool(allWildcard, "finance_banks_get_names")).toBe(true);
+      expect(tokenAllowsTool(allWildcard, "finance_banks_get_names")).toBe(
+        true,
+      );
     });
 
     it("system scope allows system tools only", () => {
@@ -23,24 +26,48 @@ describe("MCP Policy & Scopes Contract Suite", () => {
 
     it("domain scope permits all tools matching domain prefix and rejects others", () => {
       const invoicesScope = ["invoices"];
-      expect(tokenAllowsTool(invoicesScope, "finance_invoices_list")).toBe(true);
-      expect(tokenAllowsTool(invoicesScope, "finance_invoices_create")).toBe(true);
-      expect(tokenAllowsTool(invoicesScope, "finance_invoices_delete")).toBe(true);
+      expect(tokenAllowsTool(invoicesScope, "finance_invoices_list")).toBe(
+        true,
+      );
+      expect(tokenAllowsTool(invoicesScope, "finance_invoices_create")).toBe(
+        true,
+      );
+      expect(tokenAllowsTool(invoicesScope, "finance_invoices_delete")).toBe(
+        true,
+      );
 
       // Rejects out of scope tools
-      expect(tokenAllowsTool(invoicesScope, "finance_clients_create")).toBe(false);
-      expect(tokenAllowsTool(invoicesScope, "finance_vendors_list")).toBe(false);
-      expect(tokenAllowsTool(invoicesScope, "finance_accounts_list_debit")).toBe(false);
+      expect(tokenAllowsTool(invoicesScope, "finance_clients_create")).toBe(
+        false,
+      );
+      expect(tokenAllowsTool(invoicesScope, "finance_vendors_list")).toBe(
+        false,
+      );
+      expect(
+        tokenAllowsTool(invoicesScope, "finance_accounts_list_debit"),
+      ).toBe(false);
     });
 
     it("supports multiple combined scopes", () => {
       const combined = ["clients", "banking"];
       expect(tokenAllowsTool(combined, "finance_clients_list")).toBe(true);
       expect(tokenAllowsTool(combined, "finance_clients_create")).toBe(true);
-      expect(tokenAllowsTool(combined, "finance_banks_lookup_routing")).toBe(true);
+      expect(tokenAllowsTool(combined, "finance_banks_lookup_routing")).toBe(
+        true,
+      );
 
       expect(tokenAllowsTool(combined, "finance_invoices_list")).toBe(false);
-      expect(tokenAllowsTool(combined, "finance_payroll_get_salary_sheet")).toBe(false);
+      expect(
+        tokenAllowsTool(combined, "finance_payroll_get_salary_sheet"),
+      ).toBe(false);
+    });
+
+    it("requires both client and invoice scopes for a cascading client deletion", () => {
+      const tool = "finance_clients_delete";
+      expect(tokenAllowsTool(["clients"], tool)).toBe(false);
+      expect(tokenAllowsTool(["invoices"], tool)).toBe(false);
+      expect(tokenAllowsTool(["clients", "invoices"], tool)).toBe(true);
+      expect(tokenAllowsTool(["*"], tool)).toBe(true);
     });
   });
 
@@ -60,10 +87,7 @@ describe("MCP Policy & Scopes Contract Suite", () => {
           credentialDetails: "cred123",
           safeNumber: 42,
         },
-        list: [
-          { safeField: "ok", token: "drop_me" },
-          "plain_string",
-        ],
+        list: [{ safeField: "ok", token: "drop_me" }, "plain_string"],
       };
 
       const cleaned = redact(sensitiveData) as Record<string, any>;
@@ -101,7 +125,10 @@ describe("MCP Policy & Scopes Contract Suite", () => {
 
   describe("mcpClientConfig & setupPrompt", () => {
     it("generates valid JSON client configuration with Bearer token header", () => {
-      const jsonStr = mcpClientConfig("https://finance.themefisher.com", "tff_abc123");
+      const jsonStr = mcpClientConfig(
+        "https://finance.themefisher.com",
+        "tff_abc123",
+      );
       const config = JSON.parse(jsonStr);
 
       expect(config.mcpServers["themefisher-finance"].url).toBe(

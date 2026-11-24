@@ -101,7 +101,9 @@ export default function ClientsClient({
       setDeletingClient(null);
     } catch (error: any) {
       console.error("Error deleting client:", error.message);
-      alert("Unable to delete client. Please try again.");
+      alert(
+        "Unable to delete client. Clients with linked invoices must be kept.",
+      );
     } finally {
       setIsDeleting(false);
     }
@@ -356,7 +358,7 @@ export default function ClientsClient({
         onClose={() => setDeletingClient(null)}
         onConfirm={handleConfirmDelete}
         title="Delete Client?"
-        description="Are you sure you want to permanently delete this client? All associated data will be removed."
+        description="Permanently delete this client? Clients with linked invoices cannot be deleted."
         itemName={deletingClient?.name}
         isDeleting={isDeleting}
       />

@@ -7,7 +7,9 @@ The application uses **NeonDB** (serverless PostgreSQL) via the `@neondatabase/s
 ## 1. Schema Tables (`src/db/schema.ts`)
 
 ### `clients`
+
 Foreign companies issuing payments to Themefisher.
+
 - `id` (UUID, PK, default random)
 - `name` (TEXT, NOT NULL)
 - `address` (TEXT)
@@ -17,7 +19,9 @@ Foreign companies issuing payments to Themefisher.
 - `created_at` (TIMESTAMP WITH TIME ZONE)
 
 ### `invoices`
+
 Invoices issued for inward remittances.
+
 - `id` (UUID, PK, default random)
 - `client_id` (UUID, FK -> clients.id ON DELETE CASCADE)
 - `invoice_number` (TEXT, UNIQUE, NOT NULL)
@@ -31,7 +35,9 @@ Invoices issued for inward remittances.
 - *Indexes:* `idx_invoices_client_id`, `idx_invoices_invoice_date`
 
 ### `payment_accounts`
+
 Themefisher's receiving bank accounts.
+
 - `id` (UUID, PK, default random)
 - `bank_name` (TEXT, NOT NULL)
 - `bank_address` (TEXT)
@@ -43,7 +49,9 @@ Themefisher's receiving bank accounts.
 - `created_at` (TIMESTAMP WITH TIME ZONE)
 
 ### `vendors`
+
 Beneficiaries and team members for SCB bulk transactions.
+
 - `id` (UUID, PK, default random)
 - `receiver_name` (TEXT, NOT NULL)
 - `account_number` (TEXT, NOT NULL)
@@ -57,7 +65,9 @@ Beneficiaries and team members for SCB bulk transactions.
 - *Indexes:* `idx_vendors_receiver_name`
 
 ### `debit_accounts`
+
 Standard Chartered Bank debit funding accounts.
+
 - `id` (UUID, PK, default random)
 - `account_number` (TEXT, NOT NULL)
 - `account_label` (TEXT, default 'Main SCB Account')
@@ -66,7 +76,9 @@ Standard Chartered Bank debit funding accounts.
 - `created_at` (TIMESTAMP WITH TIME ZONE)
 
 ### `bank_branches`
+
 Complete Bangladesh Bank branch routing dataset (11,426 records).
+
 - `id` (UUID, PK, default random)
 - `bank_code` (TEXT)
 - `bank_name` (TEXT, NOT NULL)
@@ -103,7 +115,7 @@ pnpm db:studio
 ## 3. Database Seeding (`src/db/seed.ts`)
 
 The seed script is fully idempotent (`onConflictDoNothing` and count checks):
-1. **Debit Accounts:** Inserts default SCB account from `$NEXT_PUBLIC_SCB_DEBIT_ACCOUNT` (fallback `0001914137101`).
+Use authenticated debit account settings for SCB accounts.
 2. **Payment Accounts:** Inserts Themefisher's official SCB inward receiving account.
 3. **Clients:** Inserts Envato Pty Ltd, Stripe Payments Europe Ltd, and FastSpring.
 4. **Vendors:** Inserts team employees with salaries and SCB/BRAC/City Bank accounts.

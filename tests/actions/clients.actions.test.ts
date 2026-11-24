@@ -5,7 +5,15 @@ import {
   updateClient,
 } from "@/actions/clients";
 import { db } from "@/db";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  describe,
+  beforeEach as establishBeforeEach,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { establishBrowserSession } from "../browser-session-fixture";
 
 vi.mock("@/db", () => {
   const mockDb = {
@@ -16,6 +24,8 @@ vi.mock("@/db", () => {
   };
   return { db: mockDb };
 });
+
+establishBeforeEach(establishBrowserSession);
 
 describe("Clients Server Actions Suite", () => {
   afterEach(() => {
@@ -71,7 +81,11 @@ describe("Clients Server Actions Suite", () => {
         createdAt: new Date(),
       };
 
-      const updatedRow = { id: "c1", name: "Acme", address: updateData.address };
+      const updatedRow = {
+        id: "c1",
+        name: "Acme",
+        address: updateData.address,
+      };
       const returningMock = vi.fn().mockResolvedValue([updatedRow]);
       const whereMock = vi.fn().mockReturnValue({ returning: returningMock });
       const setMock = vi.fn().mockReturnValue({ where: whereMock });

@@ -4,6 +4,27 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Finance Constraints and Private Configuration
+
+- Added migrations for protected invoice references, unique debit defaults, and scoped MCP write reservations.
+- Removed private seed records and public account fallbacks, prompted for protected PDF passwords, and stopped writing financial payloads to new MCP logs.
+- Added shared invoice field validation, cached bank routing lookups, and removed browser persistence of SCB accounts and salaries.
+- Overrode the migration loader’s esbuild dependency to the patched version already used by the project.
+
+### 2026-11-24 — Finance Remediation Implementation
+
+- Require browser sessions inside financial Server Actions and restrict MCP overview and salary data by token scope.
+- Bundle PDF.js and its worker locally, cap PDF file size and page count, and update SheetJS to 0.20.3.
+- Share debit default switching across UI and MCP, allocate invoice numbers when the reference is blank, and validate SCB exports before creating workbooks.
+- Run lint, tests, production builds, and dependency audit checks in CI.
+
+### 2026-11-24 — Finance Review, Routing, and Document Hardening
+
+- Require both client and invoice scopes for MCP client deletions because linked invoices are deleted by the database cascade.
+- Preserve the routing number of the selected bank branch in vendor forms. MCP routing lookups report ambiguous names instead of selecting an arbitrary match.
+- Share day-first MT103 date conversion, disable PDF.js evaluation, and release the PDF worker after extraction.
+- Centralize safe login redirects, defer SCB workbook loading until export, and remove unused UI modules and their OTP dependency.
+
 ### 2026-11-24 — Next.js 16 Proxy Migration & Global Typography Refinement
 
 - Migrated deprecated Next.js `src/middleware.ts` to `src/proxy.ts` exporting `proxy()` to adhere to Next.js 16 conventions and eliminate deprecation warnings.

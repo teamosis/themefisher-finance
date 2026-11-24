@@ -5,7 +5,15 @@ import {
   updateVendor,
 } from "@/actions/vendors";
 import { db } from "@/db";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  describe,
+  beforeEach as establishBeforeEach,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { establishBrowserSession } from "../browser-session-fixture";
 
 vi.mock("@/db", () => {
   const mockDb = {
@@ -16,6 +24,8 @@ vi.mock("@/db", () => {
   };
   return { db: mockDb };
 });
+
+establishBeforeEach(establishBrowserSession);
 
 describe("Vendors & Beneficiaries Server Actions Suite", () => {
   afterEach(() => {

@@ -4,7 +4,15 @@ import {
   getPaymentAccounts,
 } from "@/actions/payment-accounts";
 import { db } from "@/db";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  describe,
+  beforeEach as establishBeforeEach,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { establishBrowserSession } from "../browser-session-fixture";
 
 vi.mock("@/db", () => {
   const mockDb = {
@@ -14,6 +22,8 @@ vi.mock("@/db", () => {
   };
   return { db: mockDb };
 });
+
+establishBeforeEach(establishBrowserSession);
 
 describe("Payment Accounts Server Actions Suite", () => {
   afterEach(() => {

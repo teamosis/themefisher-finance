@@ -1,7 +1,6 @@
 import {
   getBankNames,
   getBranchesByBank,
-  getRoutingNumber,
   lookupSwiftCode,
 } from "@/actions/banks";
 import { db } from "@/db";
@@ -46,10 +45,18 @@ describe("Bank & Branch Routing Server Actions Suite", () => {
   });
 
   describe("getBranchesByBank", () => {
-    it("returns branches and districts for the specified bank name", async () => {
+    it("returns routing numbers for branches sharing a name", async () => {
       const mockBranches = [
-        { branchName: "Dhanmondi Branch", districtName: "Dhaka" },
-        { branchName: "Gulshan Branch", districtName: "Dhaka" },
+        {
+          branchName: "Sadar",
+          districtName: "Dhaka",
+          routingNumber: "012345678",
+        },
+        {
+          branchName: "Sadar",
+          districtName: "Barishal",
+          routingNumber: "098765432",
+        },
       ];
 
       const orderByMock = vi.fn().mockResolvedValue(mockBranches);
@@ -57,27 +64,17 @@ describe("Bank & Branch Routing Server Actions Suite", () => {
       const fromMock = vi.fn().mockReturnValue({ where: whereMock });
       vi.mocked(db.select).mockReturnValue({ from: fromMock } as any);
 
+      vi.mocked(db.selectDistinct).mockReturnValue({
+        from: () => ({
+          orderBy: async () => [{ bankName: "Standard Chartered Bank" }],
+        }),
+      } as any);
       const result = await getBranchesByBank("Standard Chartered Bank");
 
       expect(result).toEqual(mockBranches);
-    });
-  });
-
-  describe("getRoutingNumber", () => {
-    it("queries single 9-digit routing number for bank and branch pair", async () => {
-      const limitMock = vi
-        .fn()
-        .mockResolvedValue([{ routingNumber: "215260987" }]);
-      const whereMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const fromMock = vi.fn().mockReturnValue({ where: whereMock });
-      vi.mocked(db.select).mockReturnValue({ from: fromMock } as any);
-
-      const result = await getRoutingNumber(
-        "Standard Chartered Bank",
-        "Gulshan Branch",
+      expect(db.select).toHaveBeenCalledWith(
+        expect.objectContaining({ routingNumber: expect.anything() }),
       );
-
-      expect(result).toBe("215260987");
     });
   });
 

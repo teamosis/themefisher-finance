@@ -1,14 +1,26 @@
 import { createMcpHandler, McpServer } from "@modelcontextprotocol/server";
 import { createHash } from "node:crypto";
+import { z } from "zod";
 import { MCP_POLICY, redact } from "./policy";
 import { tokenAllowsTool } from "./scopes";
-import { tools } from "./tools";
 import {
   getMcpOrigin,
   McpAuthError,
   mcpTokenService,
   type McpTokenRecord,
 } from "./token-service";
+import { tools } from "./tools";
+import { completeWriteRequest, reserveWriteRequest } from "./write-requests";
+
+const writeRequestKey = z
+  .string()
+  .trim()
+  .min(1)
+  .max(128)
+  .optional()
+  .describe(
+    "Reuse this key when retrying the same write. A completed retry returns an acknowledgement.",
+  );
 
 const MAX_MCP_REQUEST_BYTES = 256 * 1024; // 256KB
 
@@ -69,7 +81,10 @@ export function buildMcpServer(token: McpTokenRecord) {
         tool.name,
         {
           description: tool.description,
-          inputSchema: tool.schema as any,
+          inputSchema:
+            tool.write && tool.schema instanceof z.ZodObject
+              ? tool.schema.extend({ idempotencyKey: writeRequestKey })
+              : (tool.schema as any),
           annotations: {
             readOnlyHint: !tool.write,
             destructiveHint: tool.write,
@@ -77,12 +92,7 @@ export function buildMcpServer(token: McpTokenRecord) {
         },
         async (args: any) => {
           const startTime = Date.now();
-          const requestId =
-            (typeof args?.requestId === "string" ? args.requestId : undefined) ||
-            crypto.randomUUID();
-          const requestHash = createHash("sha256")
-            .update(JSON.stringify({ tool: tool.name, args }))
-            .digest("hex");
+          const requestId = crypto.randomUUID();
 
           try {
             if (tool.write && token.readOnly) {
@@ -99,7 +109,43 @@ export function buildMcpServer(token: McpTokenRecord) {
             }
 
             const parsedArgs = tool.schema.parse(args ?? {});
-            const rawResult = await tool.handler(parsedArgs);
+            const key = tool.write
+              ? writeRequestKey.parse(args?.idempotencyKey)
+              : undefined;
+            if (key) {
+              const requestHash = createHash("sha256")
+                .update(JSON.stringify({ tool: tool.name, args: parsedArgs }))
+                .digest("hex");
+              const status = await reserveWriteRequest(
+                token.id,
+                key,
+                requestHash,
+              );
+              if (status === "completed") {
+                const receipt = { success: true, duplicate: true };
+                return {
+                  content: [
+                    { type: "text" as const, text: JSON.stringify(receipt) },
+                  ],
+                  structuredContent: receipt,
+                };
+              }
+              if (status === "conflict")
+                throw new McpAuthError(
+                  "Idempotency key was used with different input",
+                  409,
+                );
+              if (status === "pending")
+                throw new McpAuthError(
+                  "A write with this key is pending or requires reconciliation",
+                  409,
+                );
+            }
+            const rawResult = await tool.handler(
+              parsedArgs,
+              token.allowedScopes,
+            );
+            if (key) await completeWriteRequest(token.id, key);
             const safe = redact(rawResult);
             const durationMs = Date.now() - startTime;
 
@@ -107,10 +153,7 @@ export function buildMcpServer(token: McpTokenRecord) {
               tokenId: token.id,
               toolName: tool.name,
               requestId,
-              requestHash,
               status: "completed",
-              input: args,
-              result: safe,
               durationMs,
             });
 
@@ -131,16 +174,15 @@ export function buildMcpServer(token: McpTokenRecord) {
           } catch (err: any) {
             const durationMs = Date.now() - startTime;
             const errorMessage =
-              err?.message || "Operation failed or parameters rejected";
+              err instanceof McpAuthError || err instanceof z.ZodError
+                ? err.message
+                : "Operation failed. Verify the record before retrying a write.";
 
             await mcpTokenService.recordRun({
               tokenId: token.id,
               toolName: tool.name,
               requestId,
-              requestHash,
               status: "failed",
-              input: args,
-              error: errorMessage,
               durationMs,
             });
 
@@ -177,10 +219,13 @@ export async function handleMcp(req: Request) {
 
     const contentLength = Number(req.headers.get("content-length") ?? 0);
     if (contentLength > MAX_MCP_REQUEST_BYTES) {
-      return new Response(JSON.stringify({ error: "Request payload too large" }), {
-        status: 413,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Request payload too large" }),
+        {
+          status: 413,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
 
     const reader = req.body?.getReader();
@@ -193,10 +238,13 @@ export async function handleMcp(req: Request) {
         length += chunk.value.byteLength;
         if (length > MAX_MCP_REQUEST_BYTES) {
           await reader.cancel();
-          return new Response(JSON.stringify({ error: "Request payload too large" }), {
-            status: 413,
-            headers: { "Content-Type": "application/json" },
-          });
+          return new Response(
+            JSON.stringify({ error: "Request payload too large" }),
+            {
+              status: 413,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         chunks.push(chunk.value);
       }
@@ -228,14 +276,23 @@ export async function handleMcp(req: Request) {
       },
     });
   } catch (error: any) {
-    const status = error instanceof McpAuthError ? error.statusCode : 400;
+    const status =
+      error instanceof McpAuthError
+        ? error.statusCode
+        : error instanceof SyntaxError
+          ? 400
+          : 500;
+    const message =
+      error instanceof McpAuthError ? error.message : "MCP request rejected";
     return Response.json(
-      { error: error?.message || "MCP request rejected" },
+      { error: message },
       {
         status,
         headers: {
           "Cache-Control": "no-store",
-          "WWW-Authenticate": "Bearer realm=themefisher-finance-mcp",
+          ...(status === 401 && {
+            "WWW-Authenticate": "Bearer realm=themefisher-finance-mcp",
+          }),
         },
       },
     );

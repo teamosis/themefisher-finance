@@ -1,6 +1,16 @@
 export const AUTH_COOKIE_NAME = "tf_auth_session";
 export const AUTH_COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
+export function getSafeRedirectPath(target: string | null | undefined): string {
+  if (!target?.startsWith("/") || target.startsWith("//") || target.includes("\\")) {
+    return "/";
+  }
+
+  const origin = "https://finance.invalid";
+  const url = new URL(target, origin);
+  return url.origin === origin ? target : "/";
+}
+
 /**
  * Checks whether both AUTH_PASSWORD and AUTH_SECRET are configured.
  */

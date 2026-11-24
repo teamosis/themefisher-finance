@@ -1,11 +1,11 @@
-import { getVendors, getDebitAccounts } from "@/actions";
+import { getDebitAccounts, getPayoutVendors } from "@/actions";
 import ScbToolsClient from "./ScbToolsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
   const [vendors, debitAccounts] = await Promise.all([
-    getVendors(),
+    getPayoutVendors(),
     getDebitAccounts(),
   ]);
 

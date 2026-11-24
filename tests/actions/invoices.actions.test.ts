@@ -5,7 +5,16 @@ import {
   updateInvoice,
 } from "@/actions/invoices";
 import { db } from "@/db";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  describe,
+  beforeEach as establishBeforeEach,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { establishBrowserSession } from "../browser-session-fixture";
+import { cookieStore } from "../setup";
 
 vi.mock("@/db", () => {
   const mockDb = {
@@ -17,9 +26,19 @@ vi.mock("@/db", () => {
   return { db: mockDb };
 });
 
+establishBeforeEach(establishBrowserSession);
+
 describe("Invoices Server Actions Suite", () => {
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it("blocks reads and writes before calling the database without a session", async () => {
+    cookieStore.clear();
+    await expect(getInvoices()).rejects.toThrow("Authentication required");
+    await expect(createInvoice({})).rejects.toThrow("Authentication required");
+    expect(db.select).not.toHaveBeenCalled();
+    expect(db.insert).not.toHaveBeenCalled();
   });
 
   describe("getInvoices", () => {
@@ -62,6 +81,33 @@ describe("Invoices Server Actions Suite", () => {
       expect(valuesMock).toHaveBeenCalledWith(newInvoice);
       expect(result).toEqual(createdRow);
     });
+  });
+
+  it("retries automatic invoice numbering when another insert takes the candidate", async () => {
+    const where = vi
+      .fn()
+      .mockResolvedValueOnce([{ last: 1 }])
+      .mockResolvedValueOnce([{ last: 2 }]);
+    vi.mocked(db.select).mockReturnValue({ from: () => ({ where }) } as any);
+    const invoice = { invoice_number: "TF-2026-11-24-03" };
+    const returning = vi
+      .fn()
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([invoice]);
+    const onConflictDoNothing = vi.fn().mockReturnValue({ returning });
+    const values = vi.fn().mockReturnValue({ onConflictDoNothing });
+    vi.mocked(db.insert).mockReturnValue({ values } as any);
+
+    await expect(
+      createInvoice({ invoice_date: "2026-11-24" }),
+    ).resolves.toEqual(invoice);
+    expect(values).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        invoice_number: "TF-2026-11-24-02",
+      }),
+    );
+    expect(values).toHaveBeenNthCalledWith(2, expect.objectContaining(invoice));
   });
 
   describe("updateInvoice", () => {

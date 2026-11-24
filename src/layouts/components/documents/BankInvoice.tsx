@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element -- Standard img tags required for react-to-print rasterization reliability */
-import React from "react";
+import type { Client, Invoice, PaymentAccount } from "@/types";
 import { format } from "date-fns";
-import type { Invoice, Client, PaymentAccount } from "@/types";
+import React from "react";
 
 interface BankInvoiceProps {
   invoice: Invoice;
@@ -80,9 +80,7 @@ export const BankInvoice = React.forwardRef<HTMLDivElement, BankInvoiceProps>(
                   "67 Gulshan Avenue, Gulshan, Dhaka\n1212, Bangladesh",
                 name_on_account: "Themefisher",
                 bic_swift: "SCBLBDDXXXX",
-                account_number:
-                  process.env.NEXT_PUBLIC_SCB_DEBIT_ACCOUNT ||
-                  "YOUR_ACCOUNT_NUMBER",
+                account_number: "",
               },
             ];
 

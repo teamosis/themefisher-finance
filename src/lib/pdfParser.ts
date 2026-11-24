@@ -1,36 +1,68 @@
-export async function parseMT103(file: File) {
-  const pdfjsLib = (window as any).pdfjsLib;
-  if (!pdfjsLib) throw new Error("PDF library not loaded yet");
+export function getInvoiceDateFromValueDate(
+  valueDate: string,
+): string | undefined {
+  const parts = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(valueDate);
+  if (!parts) return undefined;
 
-  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const [, day, month, year] = parts;
+  const isoDate = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  const date = new Date(isoDate);
+  if (
+    !Number.isFinite(date.getTime()) ||
+    !date.toISOString().startsWith(isoDate)
+  ) {
+    return undefined;
   }
+
+  date.setUTCDate(date.getUTCDate() - 7);
+  return date.toISOString().slice(0, 10);
+}
+
+export async function parseMT103(file: File) {
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("The PDF exceeds the 10 MB upload limit.");
+  }
+
+  const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
+  GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url,
+  ).href;
 
   const arrayBuffer = await file.arrayBuffer();
   const data = new Uint8Array(arrayBuffer);
 
-  const loadingTask = pdfjsLib.getDocument({
-    data,
-    password: "T137101",
-  });
+  const loadingTask = getDocument({ data });
+  loadingTask.onPassword = (
+    updatePassword: (password: string | Error) => void,
+    reason: number,
+  ) => {
+    const password = window.prompt(
+      reason === 2
+        ? "Incorrect password. Enter the PDF password again."
+        : "Enter the PDF password.",
+    );
+    updatePassword(password || new Error("PDF password entry was cancelled."));
+  };
 
-  const pdfDocument = await loadingTask.promise;
-  const numPages = pdfDocument.numPages;
-
-  let allItems: any[] = [];
-
-  for (let i = 1; i <= numPages; i++) {
-    const page = await pdfDocument.getPage(i);
-    const textContent = await page.getTextContent();
-    const items = textContent.items
-      .filter((item: any) => item.str.trim().length > 0)
-      .map((item: any) => ({
-        str: item.str.trim(),
-        x: item.transform[4],
-        y: item.transform[5],
-      }));
-    allItems = allItems.concat(items);
+  const allItems: { str: string; x: number; y: number }[] = [];
+  try {
+    const pdfDocument = await loadingTask.promise;
+    if (pdfDocument.numPages > 50) {
+      throw new Error("The PDF exceeds the 50-page limit.");
+    }
+    for (let i = 1; i <= pdfDocument.numPages; i++) {
+      const page = await pdfDocument.getPage(i);
+      const textContent = await page.getTextContent();
+      for (const item of textContent.items) {
+        const str = "str" in item ? item.str.trim() : "";
+        if (str && "transform" in item) {
+          allItems.push({ str, x: item.transform[4], y: item.transform[5] });
+        }
+      }
+    }
+  } finally {
+    await loadingTask.destroy();
   }
 
   // Sort by Y descending (top to bottom in PDF space), then X ascending
@@ -41,7 +73,11 @@ export async function parseMT103(file: File) {
     return b.y - a.y;
   });
 
-  let colAmountX = -1, colValueDateX = -1, colReceivedFromX = -1, colOrderingCustomerX = -1, colDetailsX = -1;
+  let colAmountX = -1,
+    colValueDateX = -1,
+    colReceivedFromX = -1,
+    colOrderingCustomerX = -1,
+    colDetailsX = -1;
   let headerY = -1;
 
   for (const item of allItems) {
@@ -60,7 +96,8 @@ export async function parseMT103(file: File) {
   if (colOrderingCustomerX === -1) colOrderingCustomerX = 400; // approximate
   if (colDetailsX === -1) colDetailsX = 600;
 
-  const dataItems = headerY !== -1 ? allItems.filter((i) => i.y < headerY - 10) : allItems;
+  const dataItems =
+    headerY !== -1 ? allItems.filter((i) => i.y < headerY - 10) : allItems;
 
   let currency = "";
   let amount = "";
@@ -69,7 +106,7 @@ export async function parseMT103(file: File) {
   let swift_code = "";
   const orderingCustomerLines: string[] = [];
   const detailsLines: string[] = [];
-  const fullTextLines = allItems.map((i) => i.str); // For fallback SWIFT regex if needed
+  const fullText = allItems.map((i) => i.str).join(" ");
 
   for (const item of dataItems) {
     const str = item.str;
@@ -85,9 +122,8 @@ export async function parseMT103(file: File) {
     }
 
     if (item.x >= colValueDateX - 20 && item.x < colReceivedFromX - 20) {
-      if (/\d{1,2}\/\d{1,2}\/\d{4}/.test(str)) {
-        value_date = str;
-      }
+      const dateMatch = str.match(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/);
+      if (dateMatch) value_date = dateMatch[0];
     }
 
     if (item.x >= colReceivedFromX - 20 && item.x < colOrderingCustomerX - 20) {
@@ -111,7 +147,6 @@ export async function parseMT103(file: File) {
 
   // Fallback: search entire PDF text for invoice number if spatial detection missed it
   if (!invoice_number) {
-    const fullText = fullTextLines.join(" ");
     const tfMatch = fullText.match(/TF-[\w\-]+/i);
     if (tfMatch) {
       invoice_number = tfMatch[0].toUpperCase();
@@ -123,23 +158,20 @@ export async function parseMT103(file: File) {
 
   // If SWIFT wasn't caught spatially, try regex on full text
   if (!swift_code) {
-    const fullText = fullTextLines.join(" ");
     const swiftMatches = fullText.match(/[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?/g);
     if (swiftMatches) {
       swift_code = swiftMatches[0];
     }
   }
 
-  let client_name = orderingCustomerLines.join(" ");
-
   return {
     currency,
     amount,
     value_date,
     invoice_number,
-    client_name,
+    client_name: orderingCustomerLines.join(" "),
     swift_code,
-    full_text: fullTextLines.join(" "),
+    full_text: fullText,
     details_text: detailsLines.join(" "),
   };
 }

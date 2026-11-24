@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { getBankNames, getBranchesByBank } from "@/actions";
+import { useCallback, useEffect, useState } from "react";
 import CreatableSelect from "react-select/creatable";
-import { getBankNames, getBranchesByBank, getRoutingNumber } from "@/actions";
 
 interface OptionType {
   label: string;
   value: string;
+}
+
+interface BranchOption extends OptionType {
+  branchName: string;
+  routingNumber?: string;
 }
 
 interface BankBranchSelectProps {
@@ -38,7 +43,7 @@ const selectStyles = {
   }),
   option: (
     base: Record<string, unknown>,
-    state: { isFocused: boolean; isSelected: boolean }
+    state: { isFocused: boolean; isSelected: boolean },
   ) => ({
     ...base,
     fontSize: "0.875rem",
@@ -74,9 +79,11 @@ export default function BankBranchSelect({
   onRoutingChange,
 }: BankBranchSelectProps) {
   const [bankOptions, setBankOptions] = useState<OptionType[]>([]);
-  const [branchOptions, setBranchOptions] = useState<OptionType[]>([]);
+  const [loadedBranches, setLoadedBranches] = useState<{
+    bankName: string;
+    options: BranchOption[];
+  }>();
   const [loadingBanks, setLoadingBanks] = useState(false);
-  const [loadingBranches, setLoadingBranches] = useState(false);
 
   // Fetch distinct bank names on mount
   useEffect(() => {
@@ -91,7 +98,7 @@ export default function BankBranchSelect({
       } catch (err) {
         console.error("Error fetching banks:", err);
       }
-      setLoadingBanks(false);
+      if (!cancelled) setLoadingBanks(false);
     }
     void fetchBanks();
     return () => {
@@ -99,67 +106,60 @@ export default function BankBranchSelect({
     };
   }, []);
 
-  // Fetch branches when bank changes
-  const fetchBranches = useCallback(async (selectedBank: string) => {
-    if (!selectedBank) {
-      setBranchOptions([]);
-      return;
-    }
-    setLoadingBranches(true);
-    try {
-      const data = await getBranchesByBank(selectedBank);
-      if (data) {
-        const options = data.map((d: any) => ({
-          label: `${d.branchName} (${d.districtName})`,
-          value: d.branchName,
-        }));
-        setBranchOptions(options);
-      }
-    } catch (err) {
-      console.error("Error fetching branches:", err);
-    }
-    setLoadingBranches(false);
-  }, []);
+  useEffect(() => {
+    if (!bankName) return;
+    let cancelled = false;
 
-  // Handle bank selection
+    async function fetchBranches() {
+      try {
+        const branches = await getBranchesByBank(bankName);
+        if (cancelled) return;
+        setLoadedBranches({
+          bankName,
+          options: branches.map(
+            ({ branchName, districtName, routingNumber }) => ({
+              label: `${branchName} (${districtName}) · ${routingNumber}`,
+              value: routingNumber,
+              branchName,
+              routingNumber,
+            }),
+          ),
+        });
+      } catch (err) {
+        if (!cancelled) setLoadedBranches({ bankName, options: [] });
+        console.error("Error fetching branches:", err);
+      }
+    }
+
+    void fetchBranches();
+    return () => {
+      cancelled = true;
+    };
+  }, [bankName]);
+
   const handleBankSelect = useCallback(
     (option: OptionType | null) => {
-      const val = option?.value ?? "";
-      onBankChange(val);
+      onBankChange(option?.value ?? "");
       onBranchChange("");
       onRoutingChange("");
-      if (val) {
-        void fetchBranches(val);
-      } else {
-        setBranchOptions([]);
-      }
     },
-    [onBankChange, onBranchChange, onRoutingChange, fetchBranches]
+    [onBankChange, onBranchChange, onRoutingChange],
   );
 
-  // Handle branch selection — auto-fill routing number
-  const handleBranchSelect = useCallback(
-    async (option: OptionType | null) => {
-      const val = option?.value ?? "";
-      onBranchChange(val);
+  const handleBranchSelect = (option: BranchOption | null) => {
+    onBranchChange(option?.branchName ?? "");
+    onRoutingChange(option?.routingNumber ?? "");
+  };
 
-      if (val && bankName) {
-        try {
-          const routingNum = await getRoutingNumber(bankName, val);
-          if (routingNum) {
-            onRoutingChange(routingNum);
-          }
-        } catch (err) {
-          console.error("Error fetching routing number:", err);
-        }
-      }
-    },
-    [bankName, onBranchChange, onRoutingChange]
-  );
-
+  const branchOptions =
+    loadedBranches?.bankName === bankName ? loadedBranches.options : [];
   const bankValue = bankName ? { label: bankName, value: bankName } : null;
   const branchValue = branchName
-    ? { label: branchName, value: branchName }
+    ? (branchOptions.find(
+        (option) =>
+          option.routingNumber === routingNumber &&
+          option.branchName === branchName,
+      ) ?? { label: branchName, value: branchName, branchName })
     : null;
 
   return (
@@ -174,12 +174,7 @@ export default function BankBranchSelect({
           options={bankOptions}
           value={bankValue}
           onChange={handleBankSelect}
-          onCreateOption={(inputValue) => {
-            onBankChange(inputValue);
-            onBranchChange("");
-            onRoutingChange("");
-            setBranchOptions([]);
-          }}
+          onCreateOption={(value) => handleBankSelect({ label: value, value })}
           placeholder="Type to search or add bank..."
           formatCreateLabel={(input) => `Use custom: "${input}"`}
           styles={selectStyles}
@@ -190,19 +185,17 @@ export default function BankBranchSelect({
         <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
           Branch Name
         </label>
-        <CreatableSelect
+        <CreatableSelect<BranchOption>
           isClearable
-          isLoading={loadingBranches}
+          isLoading={Boolean(bankName && loadedBranches?.bankName !== bankName)}
           options={branchOptions}
           value={branchValue}
           onChange={handleBranchSelect}
-          onCreateOption={(inputValue) => {
-            onBranchChange(inputValue);
-          }}
+          onCreateOption={(value) =>
+            handleBranchSelect({ label: value, value, branchName: value })
+          }
           placeholder={
-            bankName
-              ? "Type to search or add branch..."
-              : "Select a bank first"
+            bankName ? "Type to search or add branch..." : "Select a bank first"
           }
           formatCreateLabel={(input) => `Use custom: "${input}"`}
           styles={selectStyles}

@@ -3,11 +3,17 @@ import {
   deleteDebitAccount,
   getDebitAccounts,
   setDefaultDebitAccount,
-  unsetAllDefaultDebitAccounts,
-  updateDebitAccount,
 } from "@/actions/debit-accounts";
 import { db } from "@/db";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  describe,
+  beforeEach as establishBeforeEach,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import { establishBrowserSession } from "../browser-session-fixture";
 
 vi.mock("@/db", () => {
   const mockDb = {
@@ -15,9 +21,13 @@ vi.mock("@/db", () => {
     insert: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    execute: vi.fn(),
+    batch: vi.fn(),
   };
   return { db: mockDb };
 });
+
+establishBeforeEach(establishBrowserSession);
 
 describe("Debit Accounts Server Actions Suite", () => {
   afterEach(() => {
@@ -56,9 +66,9 @@ describe("Debit Accounts Server Actions Suite", () => {
       };
 
       const createdRow = { id: "da_new_1", ...newAccount };
-      const returningMock = vi.fn().mockResolvedValue([createdRow]);
-      const valuesMock = vi.fn().mockReturnValue({ returning: returningMock });
+      const valuesMock = vi.fn().mockReturnValue({ returning: vi.fn() });
       vi.mocked(db.insert).mockReturnValue({ values: valuesMock } as any);
+      vi.mocked(db.batch).mockResolvedValueOnce([{}, [createdRow]] as any);
 
       const result = await createDebitAccount(newAccount);
 
@@ -68,31 +78,32 @@ describe("Debit Accounts Server Actions Suite", () => {
   });
 
   describe("setDefaultDebitAccount", () => {
-    it("atomically unsets all existing defaults before setting chosen account as default", async () => {
-      // 1. unsetAll call: db.update(debitAccounts).set({ is_default: false })
-      const setMock1 = vi.fn().mockResolvedValue(undefined);
-      // 2. set target call: db.update(debitAccounts).set({ is_default: true }).where(eq(...)).returning()
-      const returningMock = vi.fn().mockResolvedValue([
-        { id: "da_2", is_default: true },
-      ]);
-      const whereMock = vi.fn().mockReturnValue({ returning: returningMock });
-      const setMock2 = vi.fn().mockReturnValue({ where: whereMock });
+    it("locks the account table and switches both defaults in one transaction", async () => {
+      vi.mocked(db.select).mockReturnValue({
+        from: () => ({ where: vi.fn() }),
+      } as any);
+      const set = vi
+        .fn()
+        .mockReturnValue({ where: () => ({ returning: vi.fn() }) });
+      vi.mocked(db.update).mockReturnValue({ set } as any);
+      vi.mocked(db.batch).mockResolvedValueOnce([
+        {},
+        {},
+        [{ id: "da_1" }],
+      ] as any);
 
-      vi.mocked(db.update)
-        .mockReturnValueOnce({ set: setMock1 } as any)
-        .mockReturnValueOnce({ set: setMock2 } as any);
-
-      await setDefaultDebitAccount("da_2");
-
-      expect(db.update).toHaveBeenCalledTimes(2);
-      expect(setMock1).toHaveBeenCalledWith({ is_default: false });
-      expect(setMock2).toHaveBeenCalledWith({ is_default: true });
+      await setDefaultDebitAccount("da_1");
+      expect(db.execute).toHaveBeenCalledOnce();
+      expect(db.batch).toHaveBeenCalledOnce();
+      expect(set).toHaveBeenNthCalledWith(1, { is_default: false });
+      expect(set).toHaveBeenNthCalledWith(2, { is_default: true });
     });
   });
 
   describe("deleteDebitAccount", () => {
     it("deletes debit account by UUID", async () => {
-      const whereMock = vi.fn().mockResolvedValue(undefined);
+      const whereMock = vi.fn().mockReturnValue({ returning: vi.fn() });
+      vi.mocked(db.batch).mockResolvedValueOnce([{}, [{ id: "da_1" }]] as any);
       vi.mocked(db.delete).mockReturnValue({ where: whereMock } as any);
 
       await deleteDebitAccount("da_1");

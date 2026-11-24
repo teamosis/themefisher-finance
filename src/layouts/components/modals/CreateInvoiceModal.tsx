@@ -77,10 +77,6 @@ export function CreateInvoiceModal({
     }
 
     const cleanInvoiceNumber = data.invoice_number?.trim();
-    if (!cleanInvoiceNumber) {
-      setError("Invoice number is required.");
-      return;
-    }
 
     const parsedAmount =
       typeof data.amount === "string"
@@ -165,10 +161,11 @@ export function CreateInvoiceModal({
 
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-normal text-text-strong">
-              Invoice Number *
+              Invoice Number
             </label>
             <input
-              {...register("invoice_number", { required: true })}
+              {...register("invoice_number")}
+              placeholder="Assigned automatically if blank"
               className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
             />
           </div>

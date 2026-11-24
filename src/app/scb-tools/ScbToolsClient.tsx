@@ -1,12 +1,11 @@
 "use client";
 
-import { getVendors } from "@/actions";
 import SearchableVendorSelect from "@/components/forms/SearchableVendorSelect";
 import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
 import { Modal } from "@/components/modals/Modal";
 import { Button } from "@/components/ui/button";
 import type { DebitAccount, Vendor } from "@/types";
-import { format } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 import {
   ArrowRight,
   Briefcase,
@@ -23,8 +22,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import { useMemo, useState } from "react";
 
 type TransferRow = {
   id: string;
@@ -48,6 +46,45 @@ type AdditionalSalaryRow = {
   description: string;
 };
 
+function isPaymentAmount(value: string) {
+  return (
+    /^\d+(?:\.\d{1,2})?$/.test(value) &&
+    Number.isFinite(Number(value)) &&
+    Number(value) > 0
+  );
+}
+
+function formatTransferDate(value: string) {
+  const date = parseISO(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && isValid(date)
+    ? format(date, "dd/MM/yyyy")
+    : undefined;
+}
+
+function isPayableVendor(vendor: Vendor | undefined): vendor is Vendor {
+  return Boolean(
+    vendor &&
+    !vendor.is_hidden &&
+    vendor.account_number.trim() &&
+    /^\d{9}$/.test(vendor.routing_number),
+  );
+}
+
+async function downloadScbWorkbook(
+  rows: Record<string, string>[],
+  sheetName: string,
+  filePrefix: string,
+) {
+  const { utils, writeFile } = await import("xlsx");
+  const worksheet = utils.json_to_sheet(rows);
+  const workbook = utils.book_new();
+  utils.book_append_sheet(workbook, worksheet, sheetName);
+  writeFile(
+    workbook,
+    `${filePrefix}_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`,
+  );
+}
+
 export default function ScbToolsClient({
   initialVendors,
   initialDebitAccounts,
@@ -55,7 +92,7 @@ export default function ScbToolsClient({
   initialVendors: Vendor[];
   initialDebitAccounts: DebitAccount[];
 }) {
-  const [vendors, setVendors] = useState<Vendor[]>(initialVendors);
+  const vendors = initialVendors;
   const [rows, setRows] = useState<TransferRow[]>([
     {
       id: "1",
@@ -65,9 +102,10 @@ export default function ScbToolsClient({
       transferDate: format(new Date(), "yyyy-MM-dd"),
     },
   ]);
-  const [debitAccount, setDebitAccount] = useState<string>("");
-  const [debitAccounts, setDebitAccounts] =
-    useState<DebitAccount[]>(initialDebitAccounts);
+  const debitAccounts = initialDebitAccounts;
+  const initialDebit =
+    debitAccounts.find((account) => account.is_default)?.account_number ?? "";
+  const [debitAccount, setDebitAccount] = useState(initialDebit);
 
   // Salary Sheet Modal State
   const [showSalaryModal, setShowSalaryModal] = useState(false);
@@ -89,110 +127,19 @@ export default function ScbToolsClient({
   // SCB Popup State
   const [showScbPopup, setShowScbPopup] = useState(false);
 
-  // Automatically set default debit accounts from props on load
-  useEffect(() => {
-    const loadDebitAccount = () => {
-      try {
-        const data = initialDebitAccounts;
-        if (data && data.length > 0) {
-          setDebitAccounts(data);
-          const defaultAcc = data.find((a) => a.is_default) || data[0];
-          if (defaultAcc?.account_number) {
-            setDebitAccount(defaultAcc.account_number);
-            setSalaryDebitAccount(defaultAcc.account_number);
-            localStorage.setItem(
-              "scb_debit_account",
-              defaultAcc.account_number,
-            );
-            return;
-          }
-        }
-      } catch (e) {
-        console.error("Error loading debit account from DB:", e);
-      }
-
-      // Fallback to localStorage or environment variable
-      const saved = localStorage.getItem("scb_debit_account");
-      if (saved) {
-        setDebitAccount(saved);
-        setSalaryDebitAccount(saved);
-      } else if (process.env.NEXT_PUBLIC_SCB_DEBIT_ACCOUNT) {
-        setDebitAccount(process.env.NEXT_PUBLIC_SCB_DEBIT_ACCOUNT);
-        setSalaryDebitAccount(process.env.NEXT_PUBLIC_SCB_DEBIT_ACCOUNT);
-      }
-    };
-
-    loadDebitAccount();
-  }, [initialDebitAccounts]);
-
-  const handleDebitAccountChange = (val: string) => {
-    setDebitAccount(val);
-    setSalaryDebitAccount(val);
-    localStorage.setItem("scb_debit_account", val);
+  const handleDebitAccountChange = (value: string) => {
+    setDebitAccount(value);
+    setSalaryDebitAccount(value);
   };
-
-  const fetchVendors = async () => {
-    try {
-      const data = await getVendors();
-      if (data) {
-        let localCache: Record<
-          string,
-          { is_employee: boolean; salary?: number }
-        > = {};
-        try {
-          const saved = localStorage.getItem("scb_employee_vendors");
-          if (saved) localCache = JSON.parse(saved);
-        } catch {}
-
-        const merged: Vendor[] = data.map((v: Vendor) => {
-          const local = localCache[v.id];
-          return {
-            ...v,
-            is_employee:
-              v.is_employee !== undefined
-                ? Boolean(v.is_employee)
-                : Boolean(local?.is_employee),
-            salary: v.salary !== undefined ? v.salary : (local?.salary ?? ""),
-          };
-        });
-        setVendors(merged);
-      }
-    } catch (e) {
-      console.error("Error fetching vendors:", e);
-    }
-  };
-
-  useEffect(() => {
-    let localCache: Record<string, { is_employee: boolean; salary?: number }> =
-      {};
-    try {
-      const saved = localStorage.getItem("scb_employee_vendors");
-      if (saved) localCache = JSON.parse(saved);
-    } catch {}
-
-    const merged: Vendor[] = initialVendors.map((v: Vendor) => {
-      const local = localCache[v.id];
-      return {
-        ...v,
-        is_employee:
-          v.is_employee !== undefined
-            ? Boolean(v.is_employee)
-            : Boolean(local?.is_employee),
-        salary: v.salary !== undefined ? v.salary : (local?.salary ?? ""),
-      };
-    });
-    setVendors(merged);
-  }, [initialVendors]);
 
   // Filter employees
   const employeeVendors = useMemo(
-    () => vendors.filter((v) => v.is_employee),
+    () => vendors.filter((v) => v.is_employee && !v.is_hidden),
     [vendors],
   );
 
   // Initialize employee rows when opening Salary Modal
   const handleOpenSalaryModal = () => {
-    fetchVendors();
     setSalaryDebitAccount(debitAccount);
     setSalaryDate(format(new Date(), "yyyy-MM-dd"));
     setSalaryReason(`Salary for ${format(new Date(), "MMMM yyyy")}`);
@@ -264,15 +211,12 @@ export default function ScbToolsClient({
   };
 
   // Standard Excel Generation for manual rows
-  const handleGenerateExcel = () => {
-    const validRows = rows.filter(
-      (r) => r.vendorId && r.amount && r.transferDate,
+  const handleGenerateExcel = async () => {
+    const filledRows = rows.filter(
+      (row) => row.vendorId || row.amount || row.description,
     );
-
-    if (validRows.length === 0) {
-      alert(
-        "Please fill in all required fields (Vendor, Amount, Date) for at least one row.",
-      );
+    if (!filledRows.length) {
+      alert("Add at least one transfer before exporting.");
       return;
     }
 
@@ -283,38 +227,39 @@ export default function ScbToolsClient({
       return;
     }
 
-    const excelData = validRows
-      .map((row) => {
-        const vendor = vendors.find((v) => v.id === row.vendorId);
-        if (!vendor) return null;
+    const excelData: Record<string, string>[] = [];
+    for (const [index, row] of filledRows.entries()) {
+      const vendor = vendors.find((item) => item.id === row.vendorId);
+      const formattedDate = formatTransferDate(row.transferDate);
+      if (
+        !isPayableVendor(vendor) ||
+        !formattedDate ||
+        !isPaymentAmount(row.amount)
+      ) {
+        alert(
+          `Check the receiver, routing number, date, and amount for transfer #${index + 1}.`,
+        );
+        return;
+      }
+      excelData.push({
+        "Customer Reference": "",
+        "Beneficiary Name(120)": vendor.receiver_name,
+        "Beneficiary Account Number": vendor.account_number,
+        "Routing Number": vendor.routing_number,
+        "Payment Amount": row.amount,
+        "Reason(140)": row.description,
+        "Date(DD/MM/YYYY)": formattedDate,
+        "Debit Account Number(Prefix- 00 BDT)": debitAccount.trim(),
+        "Beneficiary Email ID(Optional)": "",
+      });
+    }
 
-        let formattedDate = "";
-        try {
-          formattedDate = format(new Date(row.transferDate), "dd/MM/yyyy");
-        } catch (e) {
-          console.error("Invalid date", e);
-        }
-
-        return {
-          "Customer Reference": "",
-          "Beneficiary Name(120)": vendor.receiver_name,
-          "Beneficiary Account Number": vendor.account_number,
-          "Routing Number": vendor.routing_number,
-          "Payment Amount": row.amount,
-          "Reason(140)": row.description,
-          "Date(DD/MM/YYYY)": formattedDate,
-          "Debit Account Number(Prefix- 00 BDT)": debitAccount.trim(),
-          "Beneficiary Email ID(Optional)": "",
-        };
-      })
-      .filter(Boolean);
-
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Transfers");
-
-    const fileName = `SCB_Transfers_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    try {
+      await downloadScbWorkbook(excelData, "Transfers", "SCB_Transfers");
+    } catch {
+      alert("Could not generate the Excel file. Please try again.");
+      return;
+    }
 
     setShowScbPopup(true);
   };
@@ -389,7 +334,7 @@ export default function ScbToolsClient({
   const grandTotalPayout = employeeSubtotal + additionalSubtotal;
 
   // Export Salary Sheet directly to Excel
-  const handleDownloadSalaryExcel = () => {
+  const handleDownloadSalaryExcel = async () => {
     const totalSelected =
       selectedSalaryRows.length + additionalSalaryRows.length;
     if (totalSelected === 0) {
@@ -400,22 +345,25 @@ export default function ScbToolsClient({
     }
 
     const missingAmount = selectedSalaryRows.some(
-      (r) => !r.amount || Number(r.amount) <= 0,
+      (row) => !isPaymentAmount(row.amount) || !isPayableVendor(row.vendor),
     );
     if (missingAmount) {
-      alert("Please enter a valid salary amount for all selected employees.");
+      alert(
+        "Check the salary amount and banking details for all selected employees.",
+      );
       return;
     }
 
     for (let i = 0; i < additionalSalaryRows.length; i++) {
       const row = additionalSalaryRows[i];
-      if (!row.vendorId) {
+      const vendor = vendors.find((item) => item.id === row.vendorId);
+      if (!isPayableVendor(vendor)) {
         alert(
-          `Please choose a receiver for additional transaction #${i + 1}, or remove it.`,
+          `Check the receiver and routing number for additional transaction #${i + 1}.`,
         );
         return;
       }
-      if (!row.amount || Number(row.amount) <= 0) {
+      if (!isPaymentAmount(row.amount)) {
         alert(
           `Please enter a valid payment amount for additional transaction #${i + 1}.`,
         );
@@ -429,11 +377,10 @@ export default function ScbToolsClient({
       return;
     }
 
-    let formattedDate = "";
-    try {
-      formattedDate = format(new Date(salaryDate), "dd/MM/yyyy");
-    } catch {
-      formattedDate = format(new Date(), "dd/MM/yyyy");
+    const formattedDate = formatTransferDate(salaryDate);
+    if (!formattedDate) {
+      alert("Enter a valid salary payment date.");
+      return;
     }
 
     const employeeExcelData = selectedSalaryRows.map((row) => ({
@@ -466,12 +413,16 @@ export default function ScbToolsClient({
 
     const combinedExcelData = [...employeeExcelData, ...additionalExcelData];
 
-    const worksheet = XLSX.utils.json_to_sheet(combinedExcelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Salary Sheet");
-
-    const fileName = `SCB_Salary_Sheet_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    try {
+      await downloadScbWorkbook(
+        combinedExcelData,
+        "Salary Sheet",
+        "SCB_Salary_Sheet",
+      );
+    } catch {
+      alert("Could not generate the Excel file. Please try again.");
+      return;
+    }
 
     setShowSalaryModal(false);
     setShowScbPopup(true);

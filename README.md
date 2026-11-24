@@ -7,12 +7,14 @@ A unified Next.js application that brings together international inward remittan
 ## 🎯 Key Capabilities
 
 ### 1. Central Tools Dashboard (`/`)
+
 - Interactive cards/tiles for each specialized financial tool.
 - Real-time live status metrics (Clients, Invoices, Payment Accounts, Vendors, Debit Accounts).
 - Quick-action shortcuts directly into tool sub-features.
 - One-click instant navigation with dedicated **"← Dashboard Hub"** home buttons in every tool.
 
 ### 2. Invoice & Form-C Generator (`/invoice-tools`)
+
 - **Official Form-C (ICT)**: Bangladesh Bank declaration format for inward remittance exceeding USD 10,000.
 - **Bank Invoice**: Clean invoice layout with remitter/beneficiary details and client details.
 - **Pixel-Perfect A4 Printing**: Embedded `@media print` engine with one-click print and PDF export.
@@ -20,6 +22,7 @@ A unified Next.js application that brings together international inward remittan
 - **Client & Payment Directory**: Manage international clients with overseas bank details and tax IDs.
 
 ### 3. SCB Bulk Transection Generator (`/scb-tools`)
+
 - **Bulk Excel (.xlsx) Export**: Produces bank transfer sheets compliant with SCB format specifications.
 - **Beneficiary Vendor Pool**: Full CRUD directory for vendor bank accounts, branches, and 9-digit routing codes.
 - **Multi-Account Debit Sources**: Maintain funding accounts with default account auto-selection.
@@ -30,25 +33,38 @@ A unified Next.js application that brings together international inward remittan
 ## 🚀 Quick Start
 
 ### 1. Configure Environment Variables
+
 Create `.env.local` based on `.env.example`:
+
 ```bash
 cp .env.example .env.local
 ```
 
-Fill in your NeonDB and SCB configuration:
+Fill in your NeonDB configuration:
+
 ```env
 DATABASE_URL=postgresql://user:password@host.tld/dbname?sslmode=require
-NEXT_PUBLIC_SCB_DEBIT_ACCOUNT=0001914137101
 ```
 
 ### 2. Setup Database & Seed
-Push the Drizzle schema to your Neon PostgreSQL database and seed initial data:
+
+Push the Drizzle schema to your Neon PostgreSQL database and seed the public bank routing directory:
+
 ```bash
 pnpm db:push
 pnpm db:seed
 ```
 
+Configure clients, vendors, receiving accounts, and debit accounts through their authenticated screens. Seed only imports the public routing directory. Protected PDFs prompt for their password during upload.
+
+### Existing database upgrades
+
+Back up the database and apply the SQL files in `db-migrations/` to a staging copy before deploying this version. These incremental files assume the original Drizzle schema already exists. Apply the finance constraints first, then the MCP write-request table. Coordinate the deployment with a maintenance window so the older application cannot continue using its former debit account update flow. If a migration fails, its transaction rolls back. If application rollback is necessary after migration, restore the pre-deployment backup to a new database and verify it before switching the application.
+
+Client deletion is blocked while invoices reference the client. The debit account migration keeps the earliest existing default, or chooses the earliest account if there is no default. MCP clients may send an `idempotencyKey` on writes and should reuse that key after transport failures. A completed retry returns a duplicate acknowledgement. A pending key requires checking the underlying record before any further attempt. New MCP log entries store execution metadata without request or response bodies.
+
 ### 3. Run Locally
+
 ```bash
 pnpm install
 pnpm dev
@@ -100,4 +116,5 @@ finance-tools-suite/
 ---
 
 ## 📄 License
+
 MIT

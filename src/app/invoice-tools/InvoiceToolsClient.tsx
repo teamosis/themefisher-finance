@@ -8,7 +8,7 @@ import { CreateInvoiceModal } from "@/components/modals/CreateInvoiceModal";
 import { Modal } from "@/components/modals/Modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { parseMT103 } from "@/lib/pdfParser";
+import { getInvoiceDateFromValueDate, parseMT103 } from "@/lib/pdfParser";
 import type { Client, Invoice, PaymentAccount } from "@/types";
 import {
   AlertCircle,
@@ -22,7 +22,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import Script from "next/script";
 import { useRef, useState } from "react";
 import { useReactToPrint } from "react-to-print";
 
@@ -77,17 +76,8 @@ export default function InvoiceToolsClient({
 
     setIsUploadingPdf(true);
     try {
-      const pdfjsLib = (window as any).pdfjsLib;
-      if (!pdfjsLib) throw new Error("PDF library not loaded yet");
-
-      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-          "//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      }
-
-      // Removed unused pdfDocument loading
       const parsedData = await parseMT103(file);
-      if (!parsedData) {
+      if (!parsedData.full_text) {
         triggerError("Could not extract any text from the PDF.");
         return;
       }
@@ -98,14 +88,8 @@ export default function InvoiceToolsClient({
       const extractedClientName = parsedData.client_name || "";
       const completeTextBlob = parsedData.full_text || "";
 
-      let formattedDate = "";
-      if (parsedData.value_date) {
-        let parsedDate = new Date(parsedData.value_date);
-        if (!isNaN(parsedDate.getTime())) {
-          parsedDate.setDate(parsedDate.getDate() - 7);
-          formattedDate = parsedDate.toISOString().split("T")[0];
-        }
-      }
+      const formattedDate =
+        getInvoiceDateFromValueDate(parsedData.value_date) ?? "";
 
       // SWIFT code lookup for bank data
       let bankData: any = null;
@@ -305,10 +289,6 @@ export default function InvoiceToolsClient({
 
   return (
     <div className="max-w-7xl mx-auto flex flex-col gap-8 pb-16">
-      <Script
-        src="//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
-        strategy="lazyOnload"
-      />
       {matchPopupData && (
         <Modal
           isOpen={!!matchPopupData}

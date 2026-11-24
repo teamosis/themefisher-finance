@@ -1,5 +1,6 @@
 import {
   AUTH_COOKIE_NAME,
+  getSafeRedirectPath,
   isAuthConfigured,
   verifyAuthToken,
 } from "@/lib/auth";
@@ -32,12 +33,7 @@ export async function proxy(request: NextRequest) {
   if (isLoginPage) {
     if (isAuthenticated) {
       const redirectParam = request.nextUrl.searchParams.get("redirect");
-      const target =
-        redirectParam &&
-        redirectParam.startsWith("/") &&
-        !redirectParam.startsWith("//")
-          ? redirectParam
-          : "/";
+      const target = getSafeRedirectPath(redirectParam);
       return NextResponse.redirect(new URL(target, request.url));
     }
     return NextResponse.next();

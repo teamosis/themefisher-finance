@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { BankInvoice } from "@/layouts/components/documents/BankInvoice";
-import { CForm } from "@/layouts/components/documents/CForm";
-import SearchableClientSelect from "@/layouts/components/forms/SearchableClientSelect";
-import SearchableVendorSelect from "@/layouts/components/forms/SearchableVendorSelect";
-import { ConfirmDeleteModal } from "@/layouts/components/modals/ConfirmDeleteModal";
+import { BankInvoice } from "@/layouts/components/documents/bank-invoice";
+import { CForm } from "@/layouts/components/documents/c-form";
+import SearchableClientSelect from "@/layouts/components/forms/searchable-client-select";
+import SearchableVendorSelect from "@/layouts/components/forms/searchable-vendor-select";
+import { ConfirmDeleteModal } from "@/layouts/components/modals/confirm-delete-modal";
 import type { Client, Invoice, PaymentAccount, Vendor } from "@/types";
 import { fireEvent, render, screen } from "@testing-library/react";
 import React from "react";

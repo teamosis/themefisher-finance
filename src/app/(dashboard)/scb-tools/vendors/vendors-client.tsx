@@ -5,16 +5,16 @@ import {
   deleteVendor as deleteVendorAction,
   updateVendor,
 } from "@/actions";
-import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
-import { Modal } from "@/components/modals/Modal";
+import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
+import { Modal } from "@/components/modals/modal";
 import { TableRowsSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import type { Vendor } from "@/types";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 const BankBranchSelect = dynamic(
-  () => import("@/components/forms/BankBranchSelect"),
+  () => import("@/components/forms/bank-branch-select"),
   {
     ssr: false,
     loading: () => <div className="animate-pulse bg-muted rounded-xl h-9.5" />,

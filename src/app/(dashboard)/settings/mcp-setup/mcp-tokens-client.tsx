@@ -7,7 +7,7 @@ import {
   revokeMcpTokenAction,
   rotateMcpTokenAction,
 } from "@/actions/mcp";
-import { Modal } from "@/components/modals/Modal";
+import { Modal } from "@/components/modals/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {

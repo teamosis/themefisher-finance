@@ -3,7 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, Trash2 } from "lucide-react";
-import { Modal } from "./Modal";
+import { Modal } from "./modal";
 
 interface ConfirmDeleteModalProps {
   isOpen: boolean;

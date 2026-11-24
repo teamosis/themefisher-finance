@@ -5,7 +5,7 @@ import {
   deletePaymentAccount,
   getPaymentAccounts,
 } from "@/actions";
-import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
+import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PaymentAccount, PaymentAccountFormData } from "@/types";

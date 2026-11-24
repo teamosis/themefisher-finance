@@ -1,7 +1,7 @@
 import config from "@/config/config.json";
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import TrackPaymentClient from "./TrackPaymentClient";
+import TrackPaymentClient from "./track-payment-client";
 
 export const metadata: Metadata = {
   title: `Track Payment Request | ${config.site.title}`,

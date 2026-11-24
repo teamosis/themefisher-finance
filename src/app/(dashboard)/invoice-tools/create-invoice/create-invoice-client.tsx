@@ -6,9 +6,9 @@ import {
   getInvoiceHistory,
   getPdfPassword,
 } from "@/actions";
-import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
-import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
-import { EditInvoiceModal } from "@/components/modals/EditInvoiceModal";
+import SearchableClientSelect from "@/components/forms/searchable-client-select";
+import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
+import { EditInvoiceModal } from "@/components/modals/edit-invoice-modal";
 import { Button } from "@/components/ui/button";
 import { getInvoiceDateFromValueDate, parseMT103 } from "@/lib/pdfParser";
 import type { Client, Invoice, InvoiceFormData, PaymentAccount } from "@/types";

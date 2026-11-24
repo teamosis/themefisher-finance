@@ -23,7 +23,7 @@ Themefisher Admin Tools (Finance Tools Suite) is a Next.js App Router applicatio
 │   │   ├── (dashboard)/                  # Persistent AppSidebar Layout Group
 │   │   │   ├── layout.tsx                # AppSidebar persistent shell
 │   │   │   ├── page.tsx                  # Server component: financial operations dashboard
-│   │   │   ├── DashboardClient.tsx       # Client component: metrics, link share, recent feeds
+│   │   │   ├── dashboard-client.tsx      # Client component: metrics, link share, recent feeds
 │   │   │   ├── invoice-tools/            # Inward docs, Form-C, invoice creator, clients
 │   │   │   ├── scb-tools/                # Bulk transaction generator, payment requests, vendors
 │   │   │   └── settings/                 # Activity logs, MCP tokens, MCP logs, receiving accounts
@@ -33,22 +33,22 @@ Themefisher Admin Tools (Finance Tools Suite) is a Next.js App Router applicatio
 │   ├── components/                       # Modular UI Components
 │   │   ├── index.ts                      # Central barrel export
 │   │   ├── modals/                       # Standard modal dialogs
-│   │   │   ├── Modal.tsx                 # Base standardized modal wrapper
-│   │   │   ├── ConfirmDeleteModal.tsx    # Standard deletion & archive confirmation
-│   │   │   ├── CreateClientModal.tsx     # Client creation modal
-│   │   │   ├── CreateInvoiceModal.tsx    # Pre-filled invoice creation modal
-│   │   │   ├── EditClientModal.tsx       # Client edit modal
-│   │   │   └── EditInvoiceModal.tsx      # Invoice edit modal
+│   │   │   ├── modal.tsx                 # Base standardized modal wrapper
+│   │   │   ├── confirm-delete-modal.tsx  # Standard deletion & archive confirmation
+│   │   │   ├── create-client-modal.tsx   # Client creation modal
+│   │   │   ├── create-invoice-modal.tsx  # Pre-filled invoice creation modal
+│   │   │   ├── edit-client-modal.tsx     # Client edit modal
+│   │   │   └── edit-invoice-modal.tsx    # Invoice edit modal
 │   │   ├── forms/                        # Form inputs & dropdowns
-│   │   │   ├── BankBranchSelect.tsx      # Searchable Bangladesh bank/branch select
-│   │   │   ├── SearchableClientSelect.tsx# Client searchable select
-│   │   │   └── SearchableVendorSelect.tsx# Vendor searchable select
+│   │   │   ├── bank-branch-select.tsx    # Searchable Bangladesh bank/branch select
+│   │   │   ├── searchable-client-select.tsx# Client searchable select
+│   │   │   └── searchable-vendor-select.tsx# Vendor searchable select
 │   │   ├── layout/                       # Layout and navigation components
-│   │   │   ├── InvoiceSidebar.tsx        # Invoice tools sidebar
-│   │   │   └── SCBSidebar.tsx            # SCB tools sidebar
+│   │   │   ├── invoice-sidebar.tsx       # Invoice tools sidebar
+│   │   │   └── scb-sidebar.tsx           # SCB tools sidebar
 │   │   └── documents/                    # Printable A4 templates
-│   │       ├── BankInvoice.tsx           # Printable bank invoice template
-│   │       └── CForm.tsx                 # Bangladesh Bank Form-C template
+│   │       ├── bank-invoice.tsx          # Printable bank invoice template
+│   │       └── c-form.tsx                # Bangladesh Bank Form-C template
 │   ├── db/                               # Database client, schema, seed
 │   │   ├── index.ts                      # NeonDB + Drizzle client instance
 │   │   ├── schema.ts                     # PostgreSQL Drizzle schema
@@ -81,7 +81,7 @@ All database mutations and queries run strictly server-side using Next.js Server
 
 Components are organized into strict functional subdirectories under `src/components/`:
 
-- **`modals/`**: Accessible, animated popups built on a unified base `Modal.tsx`.
+- **`modals/`**: Accessible, animated popups built on a unified base `modal.tsx`.
 - **`forms/`**: Input components using `react-select/creatable` for fuzzy search and dynamic branch auto-complete.
 - **`layout/`**: Sidebars with sticky navigation and hub redirection.
 - **`documents/`**: Pixel-perfect A4 printing components using `react-to-print` and `@media print` CSS.

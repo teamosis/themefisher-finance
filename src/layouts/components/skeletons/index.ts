@@ -1,9 +1,9 @@
-export { default as InvoiceToolsSkeleton } from "./InvoiceToolsSkeleton";
-export { default as CreateInvoiceSkeleton } from "./CreateInvoiceSkeleton";
-export { default as ClientsSkeleton } from "./ClientsSkeleton";
-export { default as SettingsSkeleton } from "./SettingsSkeleton";
-export { default as ScbToolsSkeleton } from "./ScbToolsSkeleton";
-export { default as DebitAccountsSkeleton } from "./DebitAccountsSkeleton";
-export { default as VendorsSkeleton } from "./VendorsSkeleton";
-export { default as ActivityLogsSkeleton } from "./ActivityLogsSkeleton";
-export * from "./TableRowsSkeleton";
+export { default as InvoiceToolsSkeleton } from "./invoice-tools-skeleton";
+export { default as CreateInvoiceSkeleton } from "./create-invoice-skeleton";
+export { default as ClientsSkeleton } from "./clients-skeleton";
+export { default as SettingsSkeleton } from "./settings-skeleton";
+export { default as ScbToolsSkeleton } from "./scb-tools-skeleton";
+export { default as DebitAccountsSkeleton } from "./debit-accounts-skeleton";
+export { default as VendorsSkeleton } from "./vendors-skeleton";
+export { default as ActivityLogsSkeleton } from "./activity-logs-skeleton";
+export * from "./table-rows-skeleton";

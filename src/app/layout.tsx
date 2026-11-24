@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toast";
 import config from "@/config/config.json";
-import TwSizeIndicator from "@/helpers/TwSizeIndicator";
-import Providers from "@/partials/Providers";
+import TwSizeIndicator from "@/helpers/tw-size-indicator";
+import Providers from "@/partials/providers";
 import "@/styles/main.css";
 import type { Metadata } from "next";
 import { Heebo, Signika } from "next/font/google";

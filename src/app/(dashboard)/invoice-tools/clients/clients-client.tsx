@@ -5,8 +5,8 @@ import {
   deleteClient as deleteClientAction,
   getClients,
 } from "@/actions";
-import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
-import { EditClientModal } from "@/components/modals/EditClientModal";
+import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
+import { EditClientModal } from "@/components/modals/edit-client-modal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Client, ClientFormData } from "@/types";

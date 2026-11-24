@@ -1,5 +1,5 @@
 import { getClients, getInvoiceHistory, getPaymentAccounts } from "@/actions";
-import CreateInvoiceClient from "./CreateInvoiceClient";
+import CreateInvoiceClient from "./create-invoice-client";
 
 export const dynamic = "force-dynamic";
 

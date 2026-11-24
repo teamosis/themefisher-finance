@@ -1,11 +1,11 @@
 "use client";
 import { getClients, getPdfPassword, lookupSwiftCode } from "@/actions";
-import { BankInvoice } from "@/components/documents/BankInvoice";
-import { CForm } from "@/components/documents/CForm";
-import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
-import { CreateClientModal } from "@/components/modals/CreateClientModal";
-import { CreateInvoiceModal } from "@/components/modals/CreateInvoiceModal";
-import { Modal } from "@/components/modals/Modal";
+import { BankInvoice } from "@/components/documents/bank-invoice";
+import { CForm } from "@/components/documents/c-form";
+import SearchableClientSelect from "@/components/forms/searchable-client-select";
+import { CreateClientModal } from "@/components/modals/create-client-modal";
+import { CreateInvoiceModal } from "@/components/modals/create-invoice-modal";
+import { Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { getInvoiceDateFromValueDate, parseMT103 } from "@/lib/pdfParser";

@@ -1,9 +1,9 @@
 "use client";
 
 import { logExcelExport } from "@/actions";
-import SearchableVendorSelect from "@/components/forms/SearchableVendorSelect";
-import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
-import { Modal } from "@/components/modals/Modal";
+import SearchableVendorSelect from "@/components/forms/searchable-vendor-select";
+import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
+import { Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button";
 import type { ActivityExcelItem, DebitAccount, Vendor } from "@/types";
 import { format, isValid, parseISO } from "date-fns";

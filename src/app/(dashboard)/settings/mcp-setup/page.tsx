@@ -1,5 +1,5 @@
 import { getMcpTokensAction } from "@/actions/mcp";
-import McpTokensClient from "./McpTokensClient";
+import McpTokensClient from "./mcp-tokens-client";
 
 export const metadata = {
   title: "MCP Tools | Settings | Themefisher Finance",

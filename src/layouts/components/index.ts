@@ -1,6 +1,6 @@
 // UI Primitives (Shadcn Base UI)
-export { default as ThemeSwitcher } from "./ThemeSwitcher";
-export { default as LogoutButton } from "./LogoutButton";
+export { default as ThemeSwitcher } from "./theme-switcher";
+export { default as LogoutButton } from "./logout-button";
 export * from "./ui/alert-dialog";
 
 export * from "./ui/button";
@@ -17,22 +17,22 @@ export * from "./ui/toast";
 export * from "./skeletons";
 
 // Modals
-export * from "./modals/ConfirmDeleteModal";
-export * from "./modals/CreateClientModal";
-export * from "./modals/CreateInvoiceModal";
-export * from "./modals/EditClientModal";
-export * from "./modals/EditInvoiceModal";
-export * from "./modals/Modal";
+export * from "./modals/confirm-delete-modal";
+export * from "./modals/create-client-modal";
+export * from "./modals/create-invoice-modal";
+export * from "./modals/edit-client-modal";
+export * from "./modals/edit-invoice-modal";
+export * from "./modals/modal";
 
 // Forms & Inputs
-export { default as BankBranchSelect } from "./forms/BankBranchSelect";
-export { default as SearchableClientSelect } from "./forms/SearchableClientSelect";
-export { default as SearchableVendorSelect } from "./forms/SearchableVendorSelect";
+export { default as BankBranchSelect } from "./forms/bank-branch-select";
+export { default as SearchableClientSelect } from "./forms/searchable-client-select";
+export { default as SearchableVendorSelect } from "./forms/searchable-vendor-select";
 
 // Layout & Navigation (Partials)
-export { default as AppSidebar } from "../partials/AppSidebar";
-export * from "../partials/AppSidebar";
+export { default as AppSidebar } from "../partials/app-sidebar";
+export * from "../partials/app-sidebar";
 
 // Printable Documents
-export * from "./documents/BankInvoice";
-export * from "./documents/CForm";
+export * from "./documents/bank-invoice";
+export * from "./documents/c-form";

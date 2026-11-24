@@ -1,5 +1,5 @@
 import { getMcpRecentRunsAction } from "@/actions/mcp";
-import McpLogsClient from "./McpLogsClient";
+import McpLogsClient from "./mcp-logs-client";
 
 export const metadata = {
   title: "MCP Execution Logs | Settings | Themefisher Finance",

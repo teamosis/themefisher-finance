@@ -1,6 +1,6 @@
 import config from "@/config/config.json";
 import type { Metadata } from "next";
-import PaymentRequestFormClient from "./PaymentRequestFormClient";
+import PaymentRequestFormClient from "./payment-request-form-client";
 
 export const metadata: Metadata = {
   title: `Submit Payment Request | ${config.site.title}`,

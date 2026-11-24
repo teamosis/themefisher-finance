@@ -46,10 +46,10 @@ The project follows standard Next.js App Router conventions with domain-separate
 
 - **Server Actions (`src/actions/`):** All database reads and mutations are server-side actions in domain modules (`clients.ts`, `invoices.ts`, `payment-accounts.ts`, `vendors.ts`, `debit-accounts.ts`, `banks.ts`). Callers import directly from `@/actions`.
 - **Components (`src/components/`):** Organized into domain subdirectories:
-  - `modals/` — Accessible popups (`Modal.tsx`, `ConfirmDeleteModal.tsx`, `CreateClientModal.tsx`, etc.)
-  - `forms/` — Input controls and searchable dropdowns (`BankBranchSelect.tsx`, `SearchableClientSelect.tsx`, etc.)
-  - `layout/` — Sidebars (`InvoiceSidebar.tsx`, `SCBSidebar.tsx`)
-  - `documents/` — Printable A4 templates (`BankInvoice.tsx`, `CForm.tsx`)
+  - `modals/` — Accessible popups (`modal.tsx`, `confirm-delete-modal.tsx`, `create-client-modal.tsx`, etc.)
+  - `forms/` — Input controls and searchable dropdowns (`bank-branch-select.tsx`, `searchable-client-select.tsx`, etc.)
+  - `layout/` — Sidebars (`invoice-sidebar.tsx`, `scb-sidebar.tsx`)
+  - `documents/` — Printable A4 templates (`bank-invoice.tsx`, `c-form.tsx`)
 - **App Routes (`src/app/`):**
   - `(dashboard)/` — Unified AppSidebar shell
     - `/` — Financial operations dashboard with instant payment link sharing

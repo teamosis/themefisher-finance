@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import type { Client } from "@/types";
 import { Check, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { Modal } from "./Modal";
+import { Modal } from "./modal";
 
 interface EditClientModalProps {
   client: Client | null;

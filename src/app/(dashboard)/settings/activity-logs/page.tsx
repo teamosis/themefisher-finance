@@ -1,5 +1,5 @@
 import { getActivityLogs } from "@/actions/activity-logs";
-import ActivityLogsClient from "./ActivityLogsClient";
+import ActivityLogsClient from "./activity-logs-client";
 
 export const metadata = {
   title: "App Activity Logs | Settings | Themefisher Finance",

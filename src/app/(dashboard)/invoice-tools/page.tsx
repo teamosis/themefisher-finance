@@ -1,7 +1,7 @@
 import { getClients, getInvoices, getPaymentAccounts } from "@/actions";
 import { InvoiceToolsSkeleton } from "@/components";
 import { Suspense } from "react";
-import InvoiceToolsClient from "./InvoiceToolsClient";
+import InvoiceToolsClient from "./invoice-tools-client";
 
 export const dynamic = "force-dynamic";
 

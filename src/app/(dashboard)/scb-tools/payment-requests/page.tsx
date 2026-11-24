@@ -4,7 +4,7 @@ import {
   getPaymentRequestsStats,
 } from "@/actions";
 import type { Metadata } from "next";
-import PaymentRequestsClient from "./PaymentRequestsClient";
+import PaymentRequestsClient from "./payment-requests-client";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
 import { getPaymentAccounts } from "@/actions";
-import SettingsClient from "./SettingsClient";
+import SettingsClient from "./settings-client";
 
 export const metadata = {
   title: "Receiving Payment Accounts | Settings | Themefisher Finance",

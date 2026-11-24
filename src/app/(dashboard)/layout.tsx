@@ -1,4 +1,4 @@
-import AppSidebar from "@/partials/AppSidebar";
+import AppSidebar from "@/partials/app-sidebar";
 import { isAuthConfigured } from "@/lib/auth";
 
 export default function DashboardLayout({

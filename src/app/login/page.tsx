@@ -1,5 +1,5 @@
-import { LoginForm } from "@/components/forms/LoginForm";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
+import { LoginForm } from "@/components/forms/login-form";
+import ThemeSwitcher from "@/components/theme-switcher";
 import config from "@/config/config.json";
 import type { Metadata } from "next";
 import Image from "next/image";

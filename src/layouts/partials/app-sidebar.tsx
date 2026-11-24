@@ -1,7 +1,7 @@
 "use client";
 
-import LogoutButton from "@/components/LogoutButton";
-import ThemeSwitcher from "@/components/ThemeSwitcher";
+import LogoutButton from "@/components/logout-button";
+import ThemeSwitcher from "@/components/theme-switcher";
 import { toast } from "@/components/ui/toast";
 import config from "@/config/config.json";
 import {

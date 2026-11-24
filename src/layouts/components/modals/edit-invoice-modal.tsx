@@ -1,12 +1,12 @@
 "use client";
 
 import { updateInvoice } from "@/actions";
-import SearchableClientSelect from "@/components/forms/SearchableClientSelect";
+import SearchableClientSelect from "@/components/forms/searchable-client-select";
 import { Button } from "@/components/ui/button";
 import type { Client, Invoice, PaymentAccount } from "@/types";
 import { Check, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { Modal } from "./Modal";
+import { Modal } from "./modal";
 
 interface EditInvoiceModalProps {
   invoice: Invoice | null;

@@ -7,8 +7,8 @@ import {
   setDefaultDebitAccount as setDefaultDebitAccountAction,
   updateDebitAccount,
 } from "@/actions";
-import { ConfirmDeleteModal } from "@/components/modals/ConfirmDeleteModal";
-import { Modal } from "@/components/modals/Modal";
+import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
+import { Modal } from "@/components/modals/modal";
 import { TableRowsSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import type { DebitAccount } from "@/types";

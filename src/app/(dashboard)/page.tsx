@@ -16,7 +16,7 @@ import {
 import config from "@/config/config.json";
 import { isAuthConfigured } from "@/lib/auth";
 import { AlertTriangle, KeyRound } from "lucide-react";
-import DashboardClient from "./DashboardClient";
+import DashboardClient from "./dashboard-client";
 
 export const dynamic = "force-dynamic";
 

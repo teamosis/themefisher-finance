@@ -1,5 +1,5 @@
 import { getDebitAccounts, getPayoutVendors } from "@/actions";
-import ScbToolsClient from "./ScbToolsClient";
+import ScbToolsClient from "./scb-tools-client";
 
 export const dynamic = "force-dynamic";
 

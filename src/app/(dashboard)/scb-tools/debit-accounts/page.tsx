@@ -1,5 +1,5 @@
 import { getDebitAccounts } from "@/actions";
-import DebitAccountsClient from "./DebitAccountsClient";
+import DebitAccountsClient from "./debit-accounts-client";
 
 export const dynamic = "force-dynamic";
 

@@ -6,7 +6,7 @@ import type { Client, InvoiceFormData, PaymentAccount } from "@/types";
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { Modal } from "./Modal";
+import { Modal } from "./modal";
 
 interface CreateInvoiceModalProps {
   isOpen: boolean;

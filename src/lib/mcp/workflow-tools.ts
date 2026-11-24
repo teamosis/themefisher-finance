@@ -8,6 +8,8 @@ import {
 import { activityLogs, mcpRuns, paymentAccounts, paymentRequests, vendors } from "@/db/schema";
 import {
   approvePaymentRequest,
+  PaymentRequestReviewError,
+  paymentRequestReviewSchema,
   exportApprovedPaymentRequests,
   paymentRequestFields,
   rejectPaymentRequest,
@@ -18,6 +20,8 @@ import type { ActivityLogDetails } from "@/types";
 import { format } from "date-fns";
 import { and, desc, eq, inArray, like, or, sql } from "drizzle-orm";
 import { z } from "zod";
+import { beforePage, finishPage, pageCursor, pageTimestamp } from "./pagination";
+import { parseRemittancePdf, remittancePdfFields } from "./remittance-pdf";
 import { defineTool, McpToolError } from "./tool-definition";
 
 const accountFields = z.object({
@@ -39,6 +43,14 @@ async function encodeWorkbook(rows: Record<string, string>[], sheetName: string,
 }
 
 export const workflowTools = [
+  defineTool({
+    name: "finance_invoices_parse_remittance",
+    scope: "invoices",
+    description: "Extract invoice fields from a Base64-encoded MT103 PDF of up to 180 KiB and 10 pages. Provide a per-file password if needed. Returns a draft for review before creating an invoice.",
+    write: false,
+    schema: remittancePdfFields,
+    handler: parseRemittancePdf,
+  }),
   defineTool({
     name: "finance_accounts_create_debit",
     scope: "accounts",
@@ -90,7 +102,7 @@ export const workflowTools = [
   defineTool({
     name: "finance_payouts_submit",
     scope: "payment_operations",
-    description: "Submit a beneficiary payment request. Use the returned tracking code to find the request and verify it before approval.",
+    description: "Submit a beneficiary payment request and return its UUID, tracking code, status, initial verification, and operator review fields.",
     write: true,
     requireIdempotency: true,
     schema: paymentRequestFields.omit({ website_hp: true }).refine(
@@ -106,16 +118,26 @@ export const workflowTools = [
   defineTool({
     name: "finance_payouts_approve",
     scope: "payment_operations",
-    description: "Approve a request awaiting review after the operator verifies the beneficiary, amount, and duplicate flags. Saving the beneficiary requires the vendors scope.",
+    description: "Approve a payment request after operator review. Pass the exact review object from submit, list, get, or verify. Saving the beneficiary requires the vendors scope.",
     write: true,
     requireIdempotency: true,
-    schema: z.object({ id, saveAsVendor: z.boolean().optional(), operatorConfirmed }),
-    handler: async ({ id, saveAsVendor }, scopes = []) => {
+    schema: z.object({
+      id,
+      saveAsVendor: z.boolean().optional(),
+      operatorConfirmed,
+      review: paymentRequestReviewSchema,
+    }).refine(({ id, review }) => id === review.requestId, "The reviewed request ID must match the selected request"),
+    handler: async ({ id, saveAsVendor, review }, scopes = []) => {
       if (saveAsVendor && !scopes.includes("vendors") && !scopes.includes("*")) {
-        throw new McpToolError("The vendors scope is required to save the beneficiary.");
+        throw new McpToolError("The vendors scope is required to save the beneficiary.", undefined, true);
       }
-      const request = await approvePaymentRequest(id, { saveAsVendor });
-      return { id: request.id, status: request.status, approvedAt: request.approvedAt };
+      try {
+        const request = await approvePaymentRequest(id, { saveAsVendor, review });
+        return { id: request.id, status: request.status, approvedAt: request.approvedAt };
+      } catch (err) {
+        if (err instanceof PaymentRequestReviewError) throw new McpToolError(err.message, undefined, true);
+        throw err;
+      }
     },
   }),
   defineTool({
@@ -186,24 +208,39 @@ export const workflowTools = [
   defineTool({
     name: "finance_scb_prepare_workbook",
     scope: "vendors",
-    description: "Create a draft SCB transfer or payroll XLSX from saved beneficiaries and an SCB funding account. Returns a Base64 workbook. Requires vendors and accounts scopes, and payroll scope when using saved salaries or preparing payroll.",
+    description: "Create a draft SCB transfer or payroll XLSX. For whole payroll, set allActiveEmployees and add optional item overrides, exclusions, and additional payouts. Requires vendors and accounts scopes, plus payroll for payroll workbooks.",
     write: false,
     schema: z.object({
       type: z.enum(["transfers", "payroll"]).default("transfers"),
       debitAccountId: z.uuid().optional(),
       paymentDate,
+      allActiveEmployees: z.boolean().default(false),
+      excludeVendorIds: z.array(z.uuid()).max(100).default([]),
       items: z.array(z.object({
         vendorId: z.uuid(),
         amount: z.string().max(15).refine(isPaymentAmount, "Use a positive amount with up to two decimal places").optional(),
         reason: z.string().trim().max(140).optional(),
-      })).min(1).max(100),
-    }),
-    handler: async ({ type, debitAccountId, paymentDate, items }, scopes = []) => {
+      })).max(100).default([]),
+      additionalItems: z.array(z.object({
+        vendorId: z.uuid(),
+        amount: z.string().max(15).refine(isPaymentAmount, "Use a positive amount with up to two decimal places"),
+        reason: z.string().trim().max(140).optional(),
+      })).max(100).default([]),
+    }).refine((input) => {
+      if (input.allActiveEmployees) return input.type === "payroll";
+      return input.items.length > 0 && input.excludeVendorIds.length === 0 && input.additionalItems.length === 0;
+    }, "Provide items, or set allActiveEmployees for payroll. Exclusions and additionalItems apply only to whole payroll."),
+    handler: async ({
+      type, debitAccountId, paymentDate, items, allActiveEmployees = false, excludeVendorIds = [], additionalItems = [],
+    }, scopes = []) => {
       if (type === "payroll" && !scopes.includes("payroll") && !scopes.includes("*")) {
         throw new McpToolError("The payroll scope is required to prepare a payroll workbook.");
       }
 
-      const ids = [...new Set(items.map((item) => item.vendorId))];
+      const ids = [...new Set([...items, ...additionalItems].map((item) => item.vendorId))];
+      const filter = allActiveEmployees
+        ? or(eq(vendors.is_employee, true), ids.length ? inArray(vendors.id, ids) : undefined)
+        : inArray(vendors.id, ids);
       const [debit, records] = await Promise.all([
         getScbDebitAccountNumber(debitAccountId),
         db.select({
@@ -213,22 +250,42 @@ export const workflowTools = [
           routingNumber: vendors.routing_number,
           isEmployee: vendors.is_employee,
           salary: type === "payroll" ? vendors.salary : sql<null>`null`,
-        }).from(vendors).where(and(inArray(vendors.id, ids), sql`${vendors.is_hidden} IS NOT TRUE`)),
+        }).from(vendors).where(and(filter, sql`${vendors.is_hidden} IS NOT TRUE`)),
       ]);
       const byId = new Map(records.map((vendor) => [vendor.id, vendor]));
-      const date = formatTransferDate(paymentDate)!;
-      const rows = items.map(({ vendorId, amount, reason }, index) => {
-        const vendor = byId.get(vendorId);
-        if (!vendor?.accountNumber.trim() || !/^\d{9}$/.test(vendor.routingNumber)) {
-          throw new McpToolError(`Row ${index + 1} needs an active beneficiary with an account and a nine-digit routing number.`);
+      let payees = items;
+      if (allActiveEmployees) {
+        const excluded = new Set(excludeVendorIds);
+        const overrides = new Map(items.map((item) => [item.vendorId, item]));
+        if (overrides.size !== items.length || items.some(({ vendorId }) => !byId.get(vendorId)?.isEmployee || excluded.has(vendorId))) {
+          throw new McpToolError("Pass one override per included active employee. Use additionalItems for separate payouts.");
         }
-        const value = amount ?? (type === "payroll" && vendor.isEmployee ? vendor.salary : null);
-        if (!value || !isPaymentAmount(value)) throw new McpToolError(`Row ${index + 1} needs a valid positive amount.`);
-        return scbWorkbookRow({
+        const employees = records.filter((vendor) => vendor.isEmployee && !excluded.has(vendor.id))
+          .sort((first, second) => first.name.localeCompare(second.name) || first.id.localeCompare(second.id));
+        payees = [...employees.map(({ id }) => overrides.get(id) ?? { vendorId: id }), ...additionalItems];
+      }
+      if (payees.length < 1 || payees.length > 100) {
+        throw new McpToolError("A workbook must contain between 1 and 100 payouts. Select employees or use exclusions to split larger payrolls.");
+      }
+
+      const date = formatTransferDate(paymentDate)!;
+      const problems: { row: number; vendorId: string; message: string }[] = [];
+      const rows = payees.flatMap(({ vendorId, amount, reason }, index) => {
+        const vendor = byId.get(vendorId);
+        const value = amount ?? (type === "payroll" && vendor?.isEmployee ? vendor.salary : null);
+        const message = !vendor?.accountNumber.trim() || !/^\d{9}$/.test(vendor.routingNumber)
+          ? "An active beneficiary with an account and a nine-digit routing number is required."
+          : !value || !isPaymentAmount(value) ? "A positive payment amount with up to two decimal places is required." : null;
+        if (message || !vendor || !value) {
+          problems.push({ row: index + 1, vendorId, message: message ?? "Invalid payout." });
+          return [];
+        }
+        return [scbWorkbookRow({
           beneficiaryName: vendor.name, accountNumber: vendor.accountNumber, routingNumber: vendor.routingNumber,
           amount: value, reason: reason ?? (type === "payroll" ? "Salary payment" : ""),
-        }, date, debit);
+        }, date, debit)];
       });
+      if (problems.length) throw new McpToolError("Correct the listed payout rows before preparing a workbook.", { rows: problems });
 
       const sheetName = type === "payroll" ? "Salary Sheet" : "Transfers";
       return {
@@ -242,15 +299,22 @@ export const workflowTools = [
     scope: "logs",
     description: "List MCP tool execution metadata and status for troubleshooting.",
     write: false,
-    schema: z.object({ limit: z.number().int().min(1).max(100).optional() }),
-    handler: async ({ limit = 30 }) => ({
-      runs: await db.select({
+    schema: z.object({
+      limit: z.number().int().min(1).max(100).default(30),
+      cursor: pageCursor.describe("Use nextCursor from the previous page"),
+    }),
+    handler: async ({ limit, cursor }) => {
+      const rows = await db.select({
         id: mcpRuns.id,
         toolName: mcpRuns.toolName,
         status: mcpRuns.status,
         durationMs: mcpRuns.durationMs,
         createdAt: mcpRuns.createdAt,
-      }).from(mcpRuns).orderBy(desc(mcpRuns.createdAt), desc(mcpRuns.id)).limit(limit),
-    }),
+        cursorTimestamp: pageTimestamp(mcpRuns.createdAt),
+      }).from(mcpRuns).where(beforePage(cursor, mcpRuns.createdAt, mcpRuns.id))
+        .orderBy(desc(mcpRuns.createdAt), desc(mcpRuns.id)).limit(limit + 1);
+      const page = finishPage(rows, limit);
+      return { runs: page.items, nextCursor: page.nextCursor };
+    },
   }),
 ];

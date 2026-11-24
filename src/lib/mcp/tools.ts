@@ -17,12 +17,15 @@ import {
   invoiceDate,
   invoicePaymentMethods,
 } from "@/lib/invoice-validation";
+import { insertInvoice } from "@/lib/create-invoice";
+import { paymentRequestReview } from "@/lib/payment-request-operations";
 import { verifyPaymentRequest } from "@/lib/payment-request-verification";
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { McpScopeKey } from "./scopes";
 
-import { defineTool, type McpToolDefinition } from "./tool-definition";
+import { beforePage, finishPage, pageCursor, pageTimestamp } from "./pagination";
+import { defineTool, McpToolError, type McpToolDefinition } from "./tool-definition";
 import { workflowTools } from "./workflow-tools";
 import { getMcpOrigin } from "./token-service";
 
@@ -37,6 +40,24 @@ function vendorForScopes<T extends { salary: unknown }>(
   if (allowsScope(scopes, "payroll")) return vendor;
   const { salary: _salary, ...publicFields } = vendor;
   return publicFields;
+}
+
+async function matchingClients(name: string) {
+  const lowerName = name.toLowerCase();
+  const rows = await db.select().from(clients)
+    .where(sql`strpos(lower(${clients.name}), ${lowerName}) > 0`)
+    .orderBy(sql`(lower(${clients.name}) = ${lowerName}) DESC`, asc(clients.name), asc(clients.id))
+    .limit(21);
+  const exact = rows.filter((row) => row.name.toLowerCase() === lowerName);
+  return exact.length ? exact : rows;
+}
+
+function ambiguousClients(rows: (typeof clients.$inferSelect)[]) {
+  return {
+    status: "ambiguous",
+    candidates: rows.slice(0, 20).map(({ id, name, address }) => ({ id, name, address })),
+    hasMore: rows.length > 20,
+  };
 }
 
 export const tools: McpToolDefinition[] = [
@@ -290,13 +311,17 @@ export const tools: McpToolDefinition[] = [
     name: "finance_invoices_create",
     scope: "invoices",
     description:
-      "Create a new inward remittance invoice. Invoice number should follow 'TF-YYYY-MM-DD-XX'.",
+      "Create an inward remittance invoice by client UUID or name. Omit invoiceNumber and provide an idempotencyKey to allocate the next number for the date. Client name lookup requires clients scope.",
     write: true,
+    requireIdempotency: ({ invoiceNumber }) => !invoiceNumber,
     schema: z.object({
-      clientId: z.string().uuid().describe("Client UUID receiving the invoice"),
+      clientId: z.uuid().optional().describe("Client UUID receiving the invoice"),
+      clientName: z.string().trim().min(1).max(200).optional().describe("Client name if the UUID is unknown"),
       invoiceNumber: z
         .string()
+        .trim()
         .min(5)
+        .optional()
         .describe("Unique invoice number, e.g. 'TF-2026-11-24-01'"),
       invoiceDate: invoiceDate.describe(
         "Invoice date formatted as 'YYYY-MM-DD'",
@@ -316,26 +341,29 @@ export const tools: McpToolDefinition[] = [
       paymentMethods: invoicePaymentMethods
         .default(["Wire Transfer", "Bank Remittance"])
         .describe("Allowed payment methods list"),
-    }),
-    handler: async (input) => {
-      const [created] = await db
-        .insert(invoices)
-        .values({
-          client_id: input.clientId,
-          invoice_number: input.invoiceNumber.trim(),
-          invoice_date: input.invoiceDate,
-          currency: input.currency,
-          amount: input.amount.toString(),
-          received_amount: (input.receivedAmount ?? input.amount).toString(),
-          description: input.description,
-          payment_methods: input.paymentMethods,
-        })
-        .returning();
-
-      return {
-        success: true,
-        invoice: created,
-      };
+    }).refine(({ clientId, clientName }) => Boolean(clientId) !== Boolean(clientName), "Provide exactly one of clientId or clientName"),
+    handler: async (input, scopes = []) => {
+      let clientId = input.clientId;
+      if (!clientId && input.clientName) {
+        if (!allowsScope(scopes, "clients")) {
+          throw new McpToolError("Client name lookup requires clients scope. Provide a client UUID or use a token with clients scope.", undefined, true);
+        }
+        const matches = await matchingClients(input.clientName);
+        if (!matches.length) throw new McpToolError("No matching client. Use finance_clients_list or create a client first.", undefined, true);
+        if (matches.length > 1) throw new McpToolError("Multiple clients match. Choose a candidate and pass its UUID.", ambiguousClients(matches), true);
+        clientId = matches[0].id;
+      }
+      const invoice = await insertInvoice({
+        client_id: clientId,
+        invoice_number: input.invoiceNumber,
+        invoice_date: input.invoiceDate,
+        currency: input.currency,
+        amount: input.amount,
+        received_amount: input.receivedAmount ?? input.amount,
+        description: input.description,
+        payment_methods: input.paymentMethods,
+      });
+      return { success: true, invoice };
     },
   }),
   defineTool({
@@ -426,24 +454,22 @@ export const tools: McpToolDefinition[] = [
     name: "finance_clients_get",
     scope: "clients",
     description:
-      "Get client profile and international remittance banking details by ID or name.",
+      "Get a client profile by ID or name. Multiple matching names return candidates.",
     write: false,
     schema: z.object({
       id: z.string().uuid().optional().describe("Client UUID"),
-      name: z.string().optional().describe("Exact or partial client name"),
+      name: z.string().trim().min(1).max(200).optional().describe("Exact or partial client name"),
     }),
     handler: async ({ id, name }) => {
-      if (!id && !name) throw new Error("Must provide either 'id' or 'name'");
-      const condition = id
-        ? eq(clients.id, id)
-        : ilike(clients.name, `%${name!.trim()}%`);
-      const [client] = await db
-        .select()
-        .from(clients)
-        .where(condition)
-        .limit(1);
-      if (!client) throw new Error("Client not found");
-      return client;
+      if (id) {
+        const [client] = await db.select().from(clients).where(eq(clients.id, id)).limit(1);
+        if (!client) throw new McpToolError("Client not found.");
+        return client;
+      }
+      if (!name) throw new McpToolError("Provide either id or name.");
+      const matches = await matchingClients(name);
+      if (!matches.length) throw new McpToolError("Client not found.");
+      return matches.length === 1 ? matches[0] : ambiguousClients(matches);
     },
   }),
   defineTool({
@@ -836,41 +862,40 @@ export const tools: McpToolDefinition[] = [
   defineTool({
     name: "finance_banks_lookup_routing",
     scope: "banking",
-    description:
-      "Look up a 9-digit Bangladesh Bank routing number by bank and branch name. Use finance_banks_get_branches for ambiguous names.",
+    description: "Resolve a Bangladesh Bank routing number by code or by bank and branch name. Matches ignore case and return branch candidates when ambiguous. District can narrow the search.",
     write: false,
     schema: z.object({
-      bankName: z.string().trim().min(1).max(150).describe("Bank name"),
-      branchName: z.string().min(1).describe("Branch name"),
-    }),
-    handler: async ({ bankName, branchName }) => {
-      const [branch, duplicate] = await db
-        .select({
-          bankName: bankBranches.bank_name,
-          branchName: bankBranches.branch_name,
-          districtName: bankBranches.district_name,
-          routingNumber: bankBranches.routing_number,
-        })
-        .from(bankBranches)
-        .where(
-          and(
-            eq(bankBranches.bank_name, bankName.trim()),
-            eq(bankBranches.branch_name, branchName.trim()),
-          ),
-        )
-        .limit(2);
-
-      if (!branch) {
-        throw new Error(
-          `Routing number not found for bank '${bankName}' and branch '${branchName}'`,
-        );
-      }
-      if (duplicate) {
-        throw new Error(
-          "Multiple routing numbers match this bank and branch name. Use finance_banks_get_branches to identify the correct record.",
-        );
-      }
-      return branch;
+      routingNumber: z.string().trim().regex(/^\d{9}$/).optional(),
+      bankName: z.string().trim().min(1).max(150).optional(),
+      branchName: z.string().trim().min(1).max(150).optional(),
+      districtName: z.string().trim().min(1).max(150).optional(),
+    }).refine(({ routingNumber, bankName, branchName }) => Boolean(routingNumber || (bankName && branchName)), "Provide a routing number or both bank and branch names"),
+    handler: async ({ bankName, branchName, districtName, routingNumber }) => {
+      const bank = bankName?.toLowerCase();
+      const branch = branchName?.toLowerCase();
+      const district = districtName?.toLowerCase();
+      const rows = await db.select({
+        bankName: bankBranches.bank_name,
+        branchName: bankBranches.branch_name,
+        districtName: bankBranches.district_name,
+        routingNumber: bankBranches.routing_number,
+      }).from(bankBranches).where(and(
+        routingNumber ? eq(bankBranches.routing_number, routingNumber) : undefined,
+        bank ? sql`strpos(lower(${bankBranches.bank_name}), ${bank}) > 0` : undefined,
+        branch ? sql`strpos(lower(${bankBranches.branch_name}), ${branch}) > 0` : undefined,
+        district ? sql`strpos(lower(${bankBranches.district_name}), ${district}) > 0` : undefined,
+      )).orderBy(
+        sql`(lower(${bankBranches.bank_name}) = ${bank ?? ""} AND lower(${bankBranches.branch_name}) = ${branch ?? ""}) DESC`,
+        asc(bankBranches.bank_name), asc(bankBranches.branch_name), asc(bankBranches.routing_number),
+      ).limit(21);
+      const exact = rows.filter((row) => row.bankName.toLowerCase() === bank && row.branchName.toLowerCase() === branch);
+      const matches = exact.length ? exact : rows;
+      if (matches.length === 1) return { status: "matched", ...matches[0] };
+      return {
+        status: matches.length ? "ambiguous" : "not_found",
+        candidates: matches.slice(0, 20),
+        hasMore: matches.length > 20,
+      };
     },
   }),
   defineTool({
@@ -976,6 +1001,7 @@ export const tools: McpToolDefinition[] = [
       "Query application activity logs including generated SCB bulk transfer Excels, salary sheets, invoice changes, and bank operations.",
     write: false,
     schema: z.object({
+      cursor: pageCursor.describe("Use nextCursor from the previous page with the same filters"),
       domain: z
         .enum(["all", "scb_tools", "invoice_tools", "settings", "auth"])
         .optional()
@@ -999,7 +1025,7 @@ export const tools: McpToolDefinition[] = [
         .optional()
         .describe("Max number of records to return (default 20, max 100)"),
     }),
-    handler: async ({ domain, action, search, limit = 20 }) => {
+    handler: async ({ domain, action, search, cursor, limit = 20 }) => {
       const conditions = [];
       if (domain && domain !== "all") {
         conditions.push(eq(activityLogs.domain, domain));
@@ -1019,8 +1045,7 @@ export const tools: McpToolDefinition[] = [
           ),
         );
       }
-      const whereClause =
-        conditions.length > 0 ? and(...conditions) : undefined;
+      const whereClause = and(...conditions, beforePage(cursor, activityLogs.createdAt, activityLogs.id));
       const rows = await db
         .select({
           id: activityLogs.id,
@@ -1037,13 +1062,15 @@ export const tools: McpToolDefinition[] = [
           debitAccount: sql<string>`${activityLogs.details}->>'debitAccount'`,
           reason: sql<string>`${activityLogs.details}->>'reason'`,
           createdAt: activityLogs.createdAt,
+          cursorTimestamp: pageTimestamp(activityLogs.createdAt),
         })
         .from(activityLogs)
         .where(whereClause)
         .orderBy(desc(activityLogs.createdAt), desc(activityLogs.id))
-        .limit(limit);
+        .limit(limit + 1);
+      const page = finishPage(rows, limit);
 
-      return { total: rows.length, logs: rows };
+      return { total: page.items.length, logs: page.items, nextCursor: page.nextCursor };
     },
   }),
   defineTool({
@@ -1113,6 +1140,7 @@ export const tools: McpToolDefinition[] = [
       "List incoming public payment requests with filters by status (pending, verified, approved, exported, rejected, or all) and search terms.",
     write: false,
     schema: z.object({
+      cursor: pageCursor.describe("Use nextCursor from the previous page with the same filters"),
       status: z
         .enum(["pending", "verified", "approved", "exported", "rejected", "all"])
         .optional()
@@ -1123,7 +1151,7 @@ export const tools: McpToolDefinition[] = [
         .describe("Search term for payee, bank, account number, or tracking code"),
       limit: z.number().int().min(1).max(100).default(50).optional(),
     }),
-    handler: async ({ status, search, limit = 50 }) => {
+    handler: async ({ status, search, cursor, limit = 50 }) => {
       const conditions = [];
       if (status && status !== "all") {
         conditions.push(eq(paymentRequests.status, status));
@@ -1140,17 +1168,19 @@ export const tools: McpToolDefinition[] = [
           ),
         );
       }
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const whereClause = and(...conditions, beforePage(cursor, paymentRequests.createdAt, paymentRequests.id));
       const rows = await db
-        .select()
+        .select({ ...getTableColumns(paymentRequests), cursorTimestamp: pageTimestamp(paymentRequests.createdAt) })
         .from(paymentRequests)
         .where(whereClause)
-        .orderBy(desc(paymentRequests.createdAt))
-        .limit(limit);
+        .orderBy(desc(paymentRequests.createdAt), desc(paymentRequests.id))
+        .limit(limit + 1);
+      const page = finishPage(rows, limit);
 
       return {
-        total: rows.length,
-        requests: rows,
+        total: page.items.length,
+        requests: page.items.map((row) => ({ ...row, review: paymentRequestReview(row) })),
+        nextCursor: page.nextCursor,
       };
     },
   }),
@@ -1189,7 +1219,7 @@ export const tools: McpToolDefinition[] = [
       if (!row) {
         return { error: "Payment request not found" };
       }
-      return { request: row };
+      return { request: row, review: paymentRequestReview(row) };
     },
   }),
   defineTool({
@@ -1206,6 +1236,7 @@ export const tools: McpToolDefinition[] = [
           ? "Routing and duplicate checks passed. The request is ready for human review."
           : "Verification checks completed. Review the flagged items before approval.",
         request: updated,
+        review: paymentRequestReview(updated),
         verification,
       };
     },

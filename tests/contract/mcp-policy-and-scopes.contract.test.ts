@@ -155,7 +155,7 @@ describe("MCP Policy & Scopes Contract Suite", () => {
       const prompt = setupPrompt("http://localhost:3000", "tff_test_token");
       expect(prompt).toContain("http://localhost:3000/api/mcp");
       expect(prompt).toContain("Bearer tff_test_token");
-      expect(prompt).toContain("First call finance_get_overview");
+      expect(prompt).toContain("call finance_get_overview");
     });
   });
 });

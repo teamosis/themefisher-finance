@@ -11,7 +11,7 @@ import {
 } from "./token-service";
 import { tools } from "./tools";
 import { McpToolError } from "./tool-definition";
-import { completeWriteRequest, reserveWriteRequest } from "./write-requests";
+import { compactWriteReceipt, completeWriteRequest, releaseWriteRequest, reserveWriteRequest } from "./write-requests";
 
 const writeRequestKey = z
   .string()
@@ -110,7 +110,7 @@ export function buildMcpServer(token: McpTokenRecord) {
           description: tool.description,
           inputSchema:
             tool.write && tool.schema instanceof z.ZodObject
-              ? tool.schema.safeExtend({ idempotencyKey: tool.requireIdempotency ? writeRequestKey.unwrap() : writeRequestKey })
+              ? tool.schema.safeExtend({ idempotencyKey: tool.requireIdempotency === true ? writeRequestKey.unwrap() : writeRequestKey })
               : (tool.schema as any),
           annotations: {
             readOnlyHint: !tool.write,
@@ -120,6 +120,7 @@ export function buildMcpServer(token: McpTokenRecord) {
         async (args: any) => {
           const startTime = Date.now();
           const requestId = crypto.randomUUID();
+          let reservedKey: string | undefined;
 
           try {
             if (tool.write && token.readOnly) {
@@ -139,7 +140,10 @@ export function buildMcpServer(token: McpTokenRecord) {
             const key = tool.write
               ? writeRequestKey.parse(args?.idempotencyKey)
               : undefined;
-            if (tool.requireIdempotency && !key) {
+            const requiresKey = typeof tool.requireIdempotency === "function"
+              ? tool.requireIdempotency(parsedArgs)
+              : tool.requireIdempotency;
+            if (requiresKey && !key) {
               throw new McpToolError("Provide an idempotencyKey and reuse it only when retrying this write.");
             }
             if (key) {
@@ -151,8 +155,8 @@ export function buildMcpServer(token: McpTokenRecord) {
                 key,
                 requestHash,
               );
-              if (status === "completed") {
-                const receipt = { success: true, duplicate: true };
+              if (typeof status === "object") {
+                const receipt = { ...status.receipt, success: true, duplicate: true };
                 return {
                   content: [
                     { type: "text" as const, text: JSON.stringify(receipt) },
@@ -170,13 +174,14 @@ export function buildMcpServer(token: McpTokenRecord) {
                   "A write with this key is pending or requires reconciliation",
                   409,
                 );
+              reservedKey = key;
             }
             const rawResult = await tool.handler(
               parsedArgs,
               token.allowedScopes,
             );
-            if (key) await completeWriteRequest(token.id, key);
             const safe = redact(rawResult);
+            if (reservedKey) await completeWriteRequest(token.id, reservedKey, compactWriteReceipt(safe));
             const durationMs = Date.now() - startTime;
 
             await mcpTokenService.recordRun({
@@ -201,7 +206,10 @@ export function buildMcpServer(token: McpTokenRecord) {
               ],
               ...(structuredContent ? { structuredContent } : {}),
             };
-          } catch (err: any) {
+          } catch (err: unknown) {
+            if (reservedKey && err instanceof McpToolError && err.noMutation) {
+              await releaseWriteRequest(token.id, reservedKey).catch(() => {});
+            }
             const durationMs = Date.now() - startTime;
             const errorMessage =
               err instanceof McpAuthError || err instanceof McpToolError || err instanceof z.ZodError
@@ -220,7 +228,10 @@ export function buildMcpServer(token: McpTokenRecord) {
               content: [
                 {
                   type: "text" as const,
-                  text: JSON.stringify({ error: errorMessage }),
+                  text: JSON.stringify({
+                    error: errorMessage,
+                    ...(err instanceof McpToolError && err.details ? { details: err.details } : {}),
+                  }),
                 },
               ],
               isError: true,

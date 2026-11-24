@@ -63,7 +63,7 @@ Back up the database and use a staging copy to compare its schema with `src/db/s
 
 The schema defines a cascade from clients to invoices. Confirm whether a client has invoice history before deleting it. Existing browser sessions require a fresh sign-in after the signed session update.
 
-MCP clients may send an `idempotencyKey` on writes and should reuse that key after transport failures. A completed retry returns a duplicate acknowledgement. A pending key requires checking the underlying record before any further attempt. New MCP log entries store execution metadata without request or response bodies.
+MCP clients may send an `idempotencyKey` on writes and should reuse that key after transport failures. A completed retry replays a compact receipt with the available recovery references. A pending key requires checking the underlying record before any further attempt. New MCP log entries store execution metadata without request or response bodies. Other database environments need the nullable `mcp_write_requests.receipt` JSONB column from the current Drizzle schema before deploying the receipt update.
 
 ### 3. Run Locally
 
@@ -78,14 +78,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## MCP access
 
-Open **Settings → MCP Setup**, generate a scoped token, and copy the JSON config into a client that supports Streamable HTTP and bearer headers. The endpoint is `/api/mcp` on the app origin. For a custom deployment, set `NEXT_PUBLIC_APP_URL` to its origin so the workflow links point to the right site.
+Open **MCP Setup** (`/mcp-setup`), generate a scoped token, and copy the JSON config into a client that supports Streamable HTTP and bearer headers. The endpoint is `/api/mcp` on the app origin. For a custom deployment, set `NEXT_PUBLIC_APP_URL` to its origin so the workflow links point to the right site.
 
-Start with `finance_get_overview`, then read `finance://workflows` or use `tools/list`. The catalog lists the tools your token can use and links to Form-C and invoice printing, MT103 PDF import, and the public payment pages.
+Call the relevant tool directly when your client shows its schema. For discovery, read `finance://workflows` or use `tools/list`. Use `finance_get_overview` for a connection check or account summary. The catalog lists the tools your token can use and links to Form-C and invoice printing, MT103 PDF import, and the public payment pages.
 
-- Use the invoice, client, vendor, accounts, banking, payroll, and logs tools to find or manage records according to the token's scopes.
-- Use `finance_scb_prepare_workbook` with the vendors and accounts scopes to prepare a transfer workbook. Payroll preparation also requires payroll scope. Save `xlsxBase64` as a decoded binary file using the returned filename.
-- Use the **Payment Request Decisions & Exports** scope on a write-enabled token for submission, approval, rejection, and export. Confirm the exact decision with the operator and send an `idempotencyKey`. Final export and workbook recovery also require accounts scope. Use `finance_payouts_get_workbook` with a request ID to recover an export after a lost response.
-- Use the browser to create or rotate tokens, import a protected MT103 PDF, or print the official invoice and Form-C layouts.
+- Omit the invoice number and provide an `idempotencyKey` to allocate the number on the server. A token with clients scope can supply a client name and receives candidates when the name is ambiguous. Bank routing lookup accepts routing codes and returns branch candidates for ambiguous names.
+- For payment requests and logs, pass the returned `nextCursor` as `cursor` with the same filters to continue listing records.
+- Use `finance_scb_prepare_workbook` with the vendors and accounts scopes to prepare a transfer workbook. Payroll preparation also requires payroll scope. Use `allActiveEmployees: true` for payroll with optional exclusions, overrides in `items`, and `additionalItems`. Save `xlsxBase64` as a decoded binary file using the returned filename.
+- Use the **Payment Request Decisions & Exports** scope on a write-enabled token for submission, approval, rejection, and export. Submission returns the request UUID and verification summary. For approval, show the operator the returned `review` fields and verification, then pass the same `review` with `operatorConfirmed: true`. Use an `idempotencyKey` for each decision. Final export and workbook recovery also require accounts scope. Use `finance_payouts_get_workbook` with a request ID to recover an export after a lost response.
+- Use `finance_invoices_parse_remittance` to extract an invoice draft from an MT103 PDF up to 180 KiB and 10 pages. Review the extracted fields before creating the invoice. Use the browser import for larger files.
+- The workflow catalog and invoice lookup link to browser printing for the official invoice and Form-C layouts. Create and rotate MCP tokens from MCP Setup.
 
 ## 📁 Architecture & Structure
 

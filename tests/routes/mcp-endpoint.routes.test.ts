@@ -1,5 +1,6 @@
 import { DELETE, GET, POST } from "@/app/api/mcp/route";
 import { mcpTokenService } from "@/lib/mcp/token-service";
+import { completeWriteRequest, reserveWriteRequest } from "@/lib/mcp/write-requests";
 import assert from "node:assert";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -20,6 +21,12 @@ vi.mock("@/lib/mcp/token-service", () => {
     getMcpOrigin: () => "http://localhost:3000",
   };
 });
+
+vi.mock("@/lib/mcp/write-requests", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/mcp/write-requests")>(),
+  completeWriteRequest: vi.fn(),
+  reserveWriteRequest: vi.fn(),
+}));
 
 describe("MCP API Route Handler (/api/mcp) Suite", () => {
   afterEach(() => {
@@ -61,10 +68,40 @@ describe("MCP API Route Handler (/api/mcp) Suite", () => {
     const payoutExport = write.tools.find(({ name }: { name: string }) => name === "finance_payouts_export");
     expect(payoutExport.inputSchema.required).toEqual(expect.arrayContaining(["idempotencyKey", "operatorConfirmed"]));
 
+    const payoutApprove = write.tools.find(({ name }: { name: string }) => name === "finance_payouts_approve");
+    expect(payoutApprove.inputSchema.required).toEqual(expect.arrayContaining(["id", "review", "operatorConfirmed"]));
+
     const read = await rpc("resources/read", { uri: "finance://workflows" }, scopes, true);
     const catalog = JSON.parse(read.contents[0].text);
     expect(catalog.tools.map(({ name }: { name: string }) => name)).toContain("finance_payouts_get_workbook");
     expect(catalog.tools.map(({ name }: { name: string }) => name)).not.toContain("finance_payouts_export");
+  });
+
+  it("replays the saved invoice reference without creating another invoice", async () => {
+    const invoice = { id: "0bfce681-c13d-4b89-b6d8-47e425c35ad6", invoice_number: "TF-2026-11-24-01" };
+    vi.mocked(reserveWriteRequest).mockResolvedValueOnce({ status: "completed", receipt: { invoice } });
+    const result = await rpc("tools/call", {
+      name: "finance_invoices_create",
+      arguments: {
+        clientId: "bbde12ea-6467-4e0b-bef6-e2ac87f92c63",
+        invoiceDate: "2026-11-24", amount: 50, description: "Test service", idempotencyKey: "invoice-2026-11-24",
+      },
+    }, ["invoices"], false);
+    expect(result.structuredContent).toEqual({ success: true, duplicate: true, invoice });
+    expect(completeWriteRequest).not.toHaveBeenCalled();
+  });
+
+  it("requires a key before automatically allocating an invoice number", async () => {
+    const result = await rpc("tools/call", {
+      name: "finance_invoices_create",
+      arguments: {
+        clientId: "bbde12ea-6467-4e0b-bef6-e2ac87f92c63",
+        invoiceDate: "2026-11-24", amount: 50, description: "Test service",
+      },
+    }, ["invoices"], false);
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain("Provide an idempotencyKey");
+    expect(reserveWriteRequest).not.toHaveBeenCalled();
   });
 
   describe("HTTP Method Enforcement", () => {

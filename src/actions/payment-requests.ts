@@ -17,7 +17,10 @@ import type {
 import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 
 export async function submitPaymentRequest(formData: PaymentRequestFormData) {
-  return submitRequest(formData);
+  const result = await submitRequest(formData);
+  return result.success
+    ? { success: true, trackingCode: result.trackingCode }
+    : { success: false, error: result.error };
 }
 
 /**

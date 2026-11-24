@@ -1,8 +1,10 @@
 import { getActivityLogs } from "@/actions/activity-logs";
 import ActivityLogsClient from "./activity-logs-client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
-  title: "App Activity Logs | Settings | Themefisher Finance",
+  title: "App Activity Logs | Themefisher Finance",
   description:
     "Complete audit trail of SCB bulk transfer Excels, salary sheets, invoices, and bank operations.",
 };

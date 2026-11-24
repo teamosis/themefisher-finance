@@ -5,7 +5,6 @@ import ThemeSwitcher from "@/components/theme-switcher";
 import { toast } from "@/components/ui/toast";
 import config from "@/config/config.json";
 import {
-  Activity,
   Check,
   Clock,
   Copy,
@@ -103,22 +102,17 @@ const navSections: NavSection[] = [
     items: [
       {
         name: "Activity Logs",
-        href: "/settings/activity-logs",
+        href: "/activity-logs",
         icon: Clock,
       },
       {
         name: "MCP AI Tools",
-        href: "/settings/mcp-setup",
+        href: "/mcp-setup",
         icon: Wrench,
       },
       {
-        name: "MCP Execution Logs",
-        href: "/settings/mcp-logs",
-        icon: Activity,
-      },
-      {
         name: "Receiving Accounts",
-        href: "/settings/payment-accounts",
+        href: "/payment-accounts",
         icon: Landmark,
       },
     ],

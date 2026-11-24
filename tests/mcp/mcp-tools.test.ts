@@ -34,18 +34,18 @@ describe("MCP Tools Registry & Handlers Suite", () => {
   };
 
   it("reports ambiguous branch names instead of choosing a routing number", async () => {
-    const limit = vi.fn().mockResolvedValue([
-      { branchName: "Sadar", routingNumber: "012345678" },
-      { branchName: "Sadar", routingNumber: "098765432" },
-    ]);
-    const from = vi.fn().mockReturnValue({ where: () => ({ limit }) });
+    const candidates = [
+      { bankName: "Test Bank", branchName: "Sadar", districtName: "Dhaka", routingNumber: "012345678" },
+      { bankName: "Test Bank", branchName: "Sadar", districtName: "Rajshahi", routingNumber: "098765432" },
+    ];
+    const limit = vi.fn().mockResolvedValue(candidates);
+    const from = vi.fn().mockReturnValue({ where: () => ({ orderBy: () => ({ limit }) }) });
     vi.mocked(db.select).mockReturnValueOnce({ from } as any);
 
     const tool = getTool("finance_banks_lookup_routing");
-    await expect(
-      tool.handler({ bankName: "Test Bank", branchName: "Sadar" }),
-    ).rejects.toThrow("Multiple routing numbers");
-    expect(limit).toHaveBeenCalledWith(2);
+    await expect(tool.handler({ bankName: "test bank", branchName: "sadar" }))
+      .resolves.toEqual({ status: "ambiguous", candidates, hasMore: false });
+    expect(limit).toHaveBeenCalledWith(21);
   });
 
   it("registers all financial domain tools across expected scopes", () => {
@@ -55,6 +55,7 @@ describe("MCP Tools Registry & Handlers Suite", () => {
     expect(names).toContain("finance_invoices_list");
     expect(names).toContain("finance_invoices_get");
     expect(names).toContain("finance_invoices_create");
+    expect(names).toContain("finance_invoices_parse_remittance");
     expect(names).toContain("finance_invoices_update");
     expect(names).toContain("finance_invoices_delete");
 
@@ -133,6 +134,46 @@ describe("MCP Tools Registry & Handlers Suite", () => {
         "Date(DD/MM/YYYY)": "24/11/2026",
         "Debit Account Number(Prefix- 00 BDT)": "000010203",
       }),
+    ]);
+  });
+
+  it("continues payment request listing from the last row and keeps microseconds", async () => {
+    const firstId = "0bfce681-c13d-4b89-b6d8-47e425c35ad6";
+    const secondId = "bbde12ea-6467-4e0b-bef6-e2ac87f92c63";
+    const first = { id: firstId, status: "exported", cursorTimestamp: "2026-11-24T05:10:00.100002Z" };
+    const second = { id: secondId, status: "exported", cursorTimestamp: "2026-11-24T05:10:00.100001Z" };
+    const limit = vi.fn().mockResolvedValueOnce([first, second]).mockResolvedValueOnce([second]);
+    const where = vi.fn().mockReturnValue({ orderBy: () => ({ limit }) });
+    vi.mocked(db.select).mockReturnValue({ from: () => ({ where }) } as any);
+
+    const tool = getTool("finance_payment_requests_list");
+    const page = await tool.handler({ limit: 1 }) as { nextCursor: string; requests: object[] };
+    expect(page.requests).toEqual([{ id: firstId, status: "exported", review: null }]);
+    expect(JSON.parse(Buffer.from(page.nextCursor, "base64url").toString())).toEqual([first.cursorTimestamp, firstId]);
+    expect(tool.schema.safeParse({ cursor: page.nextCursor }).success).toBe(true);
+    await expect(tool.handler({ limit: 1, cursor: page.nextCursor })).resolves.toMatchObject({
+      requests: [{ id: secondId }], nextCursor: null,
+    });
+    expect(where.mock.calls[1][0]).toBeDefined();
+    expect(limit).toHaveBeenCalledWith(2);
+  });
+
+  it("can prepare a salary workbook without first requesting employee IDs", async () => {
+    const debitAccountId = "bbde12ea-6467-4e0b-bef6-e2ac87f92c63";
+    const vendorId = "0bfce681-c13d-4b89-b6d8-47e425c35ad6";
+    vi.mocked(db.select)
+      .mockReturnValueOnce({ from: () => ({ where: () => ({ limit: async () => [{ accountNumber: "000010203" }] }) }) } as any)
+      .mockReturnValueOnce({ from: () => ({ where: async () => [
+        { id: vendorId, name: "Example Employee", accountNumber: "123456", routingNumber: "012345678", isEmployee: true, salary: "550.25" },
+      ] }) } as any);
+    const tool = getTool("finance_scb_prepare_workbook");
+    const args = tool.schema.parse({ type: "payroll", allActiveEmployees: true, debitAccountId, paymentDate: "2026-11-24" });
+    const result = await tool.handler(args, ["vendors", "accounts", "payroll"]) as { xlsxBase64: string; count: number };
+    const xlsx = await import("xlsx");
+    const workbook = xlsx.read(result.xlsxBase64, { type: "base64" });
+    expect(result.count).toBe(1);
+    expect(xlsx.utils.sheet_to_json(workbook.Sheets["Salary Sheet"])).toEqual([
+      expect.objectContaining({ "Payment Amount": "550.25" }),
     ]);
   });
 
@@ -229,14 +270,14 @@ describe("MCP Tools Registry & Handlers Suite", () => {
       const valuesMock = vi.fn().mockReturnValue({ returning: returningMock });
       vi.mocked(db.insert).mockReturnValue({ values: valuesMock } as any);
 
-      const result = (await tool.handler({
+      const result = (await tool.handler(tool.schema.parse({
         clientId: "123e4567-e89b-12d3-a456-426614174000",
         invoiceNumber: "TF-2026-11-24-99",
         invoiceDate: "2026-11-24",
         amount: 5000,
         description: "Custom Web Application",
         paymentMethods: ["Wire Transfer"],
-      })) as any;
+      }))) as any;
 
       expect(result.success).toBe(true);
       expect(result.invoice).toEqual(createdRow);

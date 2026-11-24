@@ -5,7 +5,7 @@ import { logActivity } from "@/lib/activity-log";
 import { actionableRequest, inspectPaymentRequest } from "@/lib/payment-request-verification";
 import { scbWorkbookRow } from "@/lib/scb-workbook";
 import { format } from "date-fns";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { randomBytes } from "node:crypto";
 import { z } from "zod";
@@ -124,9 +124,49 @@ export async function submitPaymentRequest(formData: unknown) {
 
   return {
     success: true,
+    id: created.id,
     trackingCode: created.trackingCode,
+    status,
+    verification: {
+      routingValid: verification.routingValid,
+      bankMatch: verification.bankMatch,
+      branchMatch: verification.branchMatch,
+      duplicateDetected: verification.duplicateDetected,
+      matchedVendorId: verification.matchedVendorId,
+    },
+    review: paymentRequestReview(created),
   };
 }
+
+export const paymentRequestReviewSchema = z.object({
+  requestId: z.uuid(),
+  payeeName: z.string(),
+  accountNumber: z.string(),
+  routingNumber: z.string(),
+  amount: z.string().regex(/^\d+(?:\.\d+)?$/),
+  currency: z.string(),
+  status: z.enum(["pending", "verified"]),
+  verificationAt: z.iso.datetime().nullable(),
+});
+
+type PaymentRequestReview = z.infer<typeof paymentRequestReviewSchema>;
+
+export function paymentRequestReview(request: typeof paymentRequests.$inferSelect) {
+  if (request.status !== "pending" && request.status !== "verified") return null;
+  const verification = request.verificationDetails as { verifiedAt?: string } | null;
+  return {
+    requestId: request.id,
+    payeeName: request.payeeName,
+    accountNumber: request.accountNumber,
+    routingNumber: request.routingNumber,
+    amount: request.amount,
+    currency: request.currency,
+    status: request.status,
+    verificationAt: verification?.verifiedAt ?? null,
+  };
+}
+
+export class PaymentRequestReviewError extends Error {}
 
 /**
  * Protected action: Approve payment request.
@@ -134,9 +174,23 @@ export async function submitPaymentRequest(formData: unknown) {
  */
 export async function approvePaymentRequest(
   id: string,
-  options?: { saveAsVendor?: boolean },
+  options?: { saveAsVendor?: boolean; review?: PaymentRequestReview },
 ) {
   const approvedAt = new Date();
+  const review = options?.review;
+  const eligible = and(
+    actionableRequest(id),
+    review ? and(
+      eq(paymentRequests.id, review.requestId),
+      eq(paymentRequests.payeeName, review.payeeName),
+      eq(paymentRequests.accountNumber, review.accountNumber),
+      eq(paymentRequests.routingNumber, review.routingNumber),
+      eq(paymentRequests.amount, review.amount),
+      eq(paymentRequests.currency, review.currency),
+      eq(paymentRequests.status, review.status),
+      sql`(${paymentRequests.verificationDetails}->>'verifiedAt') IS NOT DISTINCT FROM ${review.verificationAt}::text`,
+    ) : undefined,
+  );
   let updated: typeof paymentRequests.$inferSelect | undefined;
 
   if (options?.saveAsVendor === true) {
@@ -145,7 +199,7 @@ export async function approvePaymentRequest(
     const approved = await db.execute<{ id: string }>(sql`
       WITH eligible AS MATERIALIZED (
         SELECT * FROM ${paymentRequests}
-        WHERE id = ${id} AND status IN ('pending', 'verified')
+        WHERE ${eligible}
         FOR UPDATE
       ), linked AS (
         SELECT eligible.*, (
@@ -180,12 +234,14 @@ export async function approvePaymentRequest(
     [updated] = await db
       .update(paymentRequests)
       .set({ status: "approved", approvedAt, updatedAt: approvedAt })
-      .where(actionableRequest(id))
+      .where(eligible)
       .returning();
   }
 
-  if (!updated)
+  if (!updated) {
+    if (review) throw new PaymentRequestReviewError("The review no longer matches an actionable request. Fetch the latest request and have the operator review it again.");
     throw new Error("Only requests awaiting review can be approved.");
+  }
 
   await logActivity({
     domain: "scb_tools",

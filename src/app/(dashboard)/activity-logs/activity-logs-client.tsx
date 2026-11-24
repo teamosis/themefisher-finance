@@ -215,7 +215,7 @@ export default function ActivityLogsClient({
         </div>
 
         <div className="flex items-center gap-2">
-          <Link href="/settings/mcp-logs">
+          <Link href="/mcp-setup?tab=logs">
             <Button variant="outline" className="gap-2 text-xs h-9">
               <KeyRound className="size-3.5" />
               <span>MCP Agent Logs</span>

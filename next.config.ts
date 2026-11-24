@@ -1,34 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async redirects() {
-    return [
-      {
-        source: "/invoice-tools/create-invoice",
-        destination: "/create-invoice",
-        permanent: true,
-      },
-      {
-        source: "/invoice-tools/clients",
-        destination: "/clients",
-        permanent: true,
-      },
-      {
-        source: "/scb-tools/payment-requests",
-        destination: "/payment-requests",
-        permanent: true,
-      },
-      {
-        source: "/scb-tools/vendors",
-        destination: "/vendors",
-        permanent: true,
-      },
-      {
-        source: "/scb-tools/debit-accounts",
-        destination: "/debit-accounts",
-        permanent: true,
-      },
-    ];
+  serverExternalPackages: ["pdfjs-dist"],
+  outputFileTracingIncludes: {
+    "/api/mcp": [
+      "./node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs",
+      "./node_modules/.pnpm/pdfjs-dist*/node_modules/@napi-rs/canvas",
+      "./node_modules/.pnpm/@napi-rs+canvas*/node_modules/@napi-rs/canvas",
+      "./node_modules/.pnpm/@napi-rs+canvas*/node_modules/@napi-rs/canvas*/**/*",
+    ],
   },
   async headers() {
     return [

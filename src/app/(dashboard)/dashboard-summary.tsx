@@ -324,7 +324,7 @@ export default function DashboardSummary({
           </Link>
 
           <Link
-            href="/settings/activity-logs"
+            href="/activity-logs"
             className="group block p-4 rounded-xl bg-card border border-border hover:border-foreground/30 transition-all duration-150 shadow-2xs hover:shadow-xs"
           >
             <div className="flex items-center gap-3">
@@ -502,7 +502,7 @@ export default function DashboardSummary({
               </CardTitle>
             </div>
             <Link
-              href="/settings/activity-logs"
+              href="/activity-logs"
               className="text-xs font-medium text-primary hover:underline flex items-center gap-1"
             >
               <span>Full audit log</span>

@@ -184,6 +184,7 @@ export const mcpWriteRequests = pgTable(
     key: text("key").notNull(),
     requestHash: text("request_hash").notNull(),
     completed: boolean("completed").notNull().default(false),
+    receipt: jsonb("receipt").$type<Record<string, unknown>>(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

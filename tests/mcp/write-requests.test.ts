@@ -1,5 +1,5 @@
 import { db } from "@/db";
-import { reserveWriteRequest } from "@/lib/mcp/write-requests";
+import { compactWriteReceipt, reserveWriteRequest } from "@/lib/mcp/write-requests";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/db", () => ({ db: { insert: vi.fn(), select: vi.fn() } }));
@@ -27,7 +27,8 @@ describe("MCP write reservations", () => {
   });
 
   it.each([
-    [{ requestHash: "hash", completed: true }, "completed"],
+    [{ requestHash: "hash", completed: true }, { status: "completed", receipt: null }],
+    [{ requestHash: "hash", completed: true, receipt: { id: "request-id" } }, { status: "completed", receipt: { id: "request-id" } }],
     [{ requestHash: "hash", completed: false }, "pending"],
     [{ requestHash: "different", completed: true }, "conflict"],
   ])(
@@ -37,7 +38,19 @@ describe("MCP write reservations", () => {
       limit.mockResolvedValue([row]);
       await expect(
         reserveWriteRequest("token", "retry-key", "hash"),
-      ).resolves.toBe(status);
+      ).resolves.toEqual(status);
     },
   );
+
+  it("keeps references and omits workbook bytes and bank data", () => {
+    const receipt = compactWriteReceipt({
+      fileName: "export.xlsx",
+      exportedIds: ["request-id"],
+      xlsxBase64: "workbook",
+      vendor: { id: "vendor-id", account_number: "dummy-account" },
+    });
+    expect(receipt).toEqual({
+      fileName: "export.xlsx", exportedIds: ["request-id"], vendor: { id: "vendor-id" },
+    });
+  });
 });

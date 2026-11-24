@@ -6,7 +6,9 @@ import {
   submitPaymentRequest,
 } from "@/actions/payment-requests";
 import { db } from "@/db";
+import { approvePaymentRequest as approveReviewedRequest } from "@/lib/payment-request-operations";
 import { verifyPaymentRequest } from "@/lib/payment-request-verification";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { establishBrowserSession } from "../browser-session-fixture";
 import { cookieStore } from "../setup";
@@ -90,6 +92,38 @@ describe("Payment request transitions", () => {
     );
     expect(db.update).not.toHaveBeenCalled();
     expect(db.execute).not.toHaveBeenCalled();
+  });
+
+  it("checks the reviewed payment fields in the approval statement", async () => {
+    const where = vi.fn().mockReturnValue({ returning: async () => [] });
+    vi.mocked(db.update).mockReturnValue({ set: () => ({ where }) } as any);
+    const review = {
+      requestId,
+      payeeName: "Example Beneficiary",
+      accountNumber: "00123456",
+      routingNumber: "123456789",
+      amount: "1250.50",
+      currency: "BDT",
+      status: "verified" as const,
+      verificationAt: "2026-11-24T05:00:00.000Z",
+    };
+    await expect(approveReviewedRequest(requestId, { review })).rejects.toThrow(
+      "review no longer matches",
+    );
+    const statement = new PgDialect().sqlToQuery(where.mock.calls[0][0]);
+    expect(statement.params).toEqual(
+      expect.arrayContaining([
+        requestId,
+        review.payeeName,
+        review.accountNumber,
+        review.routingNumber,
+        review.amount,
+        review.currency,
+        review.status,
+        review.verificationAt,
+      ]),
+    );
+    expect(db.insert).not.toHaveBeenCalled();
   });
 
   it("stops verification when the request is outside the review queue", async () => {

@@ -79,7 +79,11 @@ describe("Invoices Server Actions Suite", () => {
       const result = await createInvoice(newInvoice);
 
       expect(db.insert).toHaveBeenCalled();
-      expect(valuesMock).toHaveBeenCalledWith(newInvoice);
+      expect(valuesMock).toHaveBeenCalledWith({
+        ...newInvoice,
+        amount: newInvoice.amount?.toString(),
+        received_amount: undefined,
+      });
       expect(result).toEqual(createdRow);
     });
   });

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
 import { loginAction } from "@/actions";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff, Loader2, Lock, AlertCircle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { AlertCircle, Eye, EyeOff, Loader2, Lock } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
@@ -27,10 +27,12 @@ export function LoginForm() {
     startTransition(async () => {
       const result = await loginAction(password, redirectUrl);
       if (result.success) {
-        // Full navigation ensures middleware picks up the fresh auth cookie immediately
+        // Full navigation ensures proxy picks up the fresh auth cookie immediately
         window.location.href = result.redirectTo || "/";
       } else {
-        setError(result.error || "Authentication failed. Please check your password.");
+        setError(
+          result.error || "Authentication failed. Please check your password.",
+        );
       }
     });
   };

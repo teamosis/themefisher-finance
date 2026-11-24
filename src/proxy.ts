@@ -1,7 +1,11 @@
+import {
+  AUTH_COOKIE_NAME,
+  isAuthConfigured,
+  verifyAuthToken,
+} from "@/lib/auth";
 import { NextResponse, type NextRequest } from "next/server";
-import { AUTH_COOKIE_NAME, isAuthConfigured, verifyAuthToken } from "@/lib/auth";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // If AUTH_PASSWORD or AUTH_SECRET is missing or empty on the env

@@ -4,6 +4,15 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Next.js 16 Proxy Migration & Global Typography Refinement
+
+- Migrated deprecated Next.js `src/middleware.ts` to `src/proxy.ts` exporting `proxy()` to adhere to Next.js 16 conventions and eliminate deprecation warnings.
+- Increased base font size `--font-base` from 16px to 18px in `src/styles/theme.css` to improve overall readability across all tools.
+- Included font weight `500` for primary font (Heebo) in `src/app/layout.tsx`.
+- Updated base heading and inline text rules in `src/styles/base.css`: restricted bold font weights (`font-secondary font-bold`) exclusively to primary headers (`h1`, `h2`), while setting subheadings (`h3`-`h6`), `b`, and `strong` to normal font weight.
+- Replaced bold/semibold weights on non-header UI elements across all pages and modals (client/vendor list rows, form labels, table cells, buttons, tabs, badges, and sidebar navigation links) with normal or medium font weights.
+- Replaced fixed tiny font classes (`text-[11px]`, `text-[10px]`) with responsive rem-based classes (`text-xs`, `text-sm`) to properly scale with the new root font size.
+
 ### 2026-11-24 — Site-Wide Password Protection & Setup Safeguards
 
 - Added Next.js Edge Middleware (`src/middleware.ts`) to intercept all incoming requests and lock down the entire application.

@@ -14,6 +14,14 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow public payment request form and tracking to pass through without authentication
+  if (
+    pathname.startsWith("/request-payment") ||
+    pathname.startsWith("/track-payment")
+  ) {
+    return NextResponse.next();
+  }
+
   // If AUTH_PASSWORD or AUTH_SECRET is missing or empty on the env
   if (!isAuthConfigured()) {
     // Only the homepage is allowed to display the configuration error notice

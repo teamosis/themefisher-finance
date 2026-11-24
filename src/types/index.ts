@@ -118,7 +118,82 @@ export type ActivityAction =
   | "payment_account_delete"
   | "pdf_parsed"
   | "login"
-  | "logout";
+  | "logout"
+  | "payment_request_submit"
+  | "payment_request_verify"
+  | "payment_request_approve"
+  | "payment_request_reject"
+  | "payment_request_export";
+
+// ==========================================
+// Payment Requests Types
+// ==========================================
+export type PaymentRequestStatus =
+  | "pending"
+  | "verified"
+  | "approved"
+  | "rejected"
+  | "exported";
+
+export interface PaymentRequestVerification {
+  routingValid: boolean;
+  bankMatch: boolean;
+  branchMatch: boolean;
+  duplicateDetected: boolean;
+  duplicateRequests?: {
+    id: string;
+    trackingCode: string;
+    amount: string;
+    createdAt: string;
+    status: string;
+  }[];
+  matchedVendorId?: string;
+  matchedVendorName?: string;
+  verifiedAt?: string;
+  verifiedBy?: "system" | "agent";
+  notes?: string[];
+}
+
+export interface PaymentRequest {
+  id: string;
+  trackingCode: string;
+  payeeName: string;
+  payeeEmail?: string | null;
+  payeePhone?: string | null;
+  bankName: string;
+  branchName: string;
+  routingNumber: string;
+  accountNumber: string;
+  amount: string;
+  currency: string;
+  purpose: string;
+  status: PaymentRequestStatus;
+  verificationDetails?: PaymentRequestVerification | null;
+  rejectionReason?: string | null;
+  reviewNotes?: string | null;
+  approvedAt?: string | null;
+  exportedAt?: string | null;
+  scbFileName?: string | null;
+  vendorId?: string | null;
+  ipAddress?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PaymentRequestFormData {
+  payeeName: string;
+  payeeEmail?: string;
+  payeePhone?: string;
+  bankName: string;
+  branchName: string;
+  routingNumber: string;
+  accountNumber: string;
+  confirmAccountNumber?: string;
+  amount: string;
+  purpose: string;
+  website_hp?: string;
+}
+
 
 export interface ActivityExcelItem {
   beneficiaryName: string;

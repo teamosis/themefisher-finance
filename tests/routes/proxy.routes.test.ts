@@ -45,6 +45,16 @@ describe("Proxy & Route Protection Integration Suite", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
+  it("allows /request-payment and /track-payment to pass through without session cookie", async () => {
+    const req1 = createReq("http://localhost:3000/request-payment");
+    const res1 = await proxy(req1);
+    expect(res1.headers.get("location")).toBeNull();
+
+    const req2 = createReq("http://localhost:3000/track-payment");
+    const res2 = await proxy(req2);
+    expect(res2.headers.get("location")).toBeNull();
+  });
+
   describe("when auth is unconfigured in environment", () => {
     beforeEach(() => {
       delete process.env.AUTH_PASSWORD;

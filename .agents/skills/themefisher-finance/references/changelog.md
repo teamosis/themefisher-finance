@@ -4,6 +4,18 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 ---
 
+### 2026-11-24 — Public Payment Request Form & Automated SCB Generation
+
+- Added public payment claim workflow enabling external beneficiaries/contractors to submit banking details and claim amounts via unauthenticated public route `/request-payment`.
+- Created `payment_requests` table in NeonDB with schema indexes for tracking code, status (`pending`, `verified`, `approved`, `rejected`, `exported`), routing details, duplicate flags, and SCB export metadata (`exported_at`, `scb_file_name`).
+- Configured Edge proxy in `src/proxy.ts` to allow public traffic to `/request-payment` without authentication while keeping all other tools protected.
+- Integrated automated verification engine: validates 9-digit BEFTN routing numbers against the 11,426 Bangladesh Bank branch records, detects duplicate claims in the last 30 days, and checks existing registered vendors.
+- Built dedicated admin management interface at `/scb-tools/payment-requests` with live status tabs (`Actionable`, `Approved`, `Exported`, `Rejected`), 1-click approvals with optional beneficiary auto-registration into `vendors`, and instant single or bulk SCB Straight2Bank Excel exports.
+- Added `payment_requests` scope and three native MCP tools (`finance_payment_requests_list`, `finance_payment_requests_get`, `finance_payment_requests_verify`) allowing AI agents to audit claims, append verification notes, and queue requests for 1-click human approval.
+- Added "Payment Requests" navigation link with badge indicator in `SCBSidebar.tsx`.
+
+---
+
 ### 2026-11-24 — Settings & Logs Reorganization & MCP Log Tools
 
 - Created unified `/settings` architecture with dedicated `SettingsSidebar` matching the design system of `SCBSidebar` and `InvoiceSidebar`.

@@ -37,11 +37,9 @@ export interface LogExcelExportInput {
 }
 
 /**
- * Log a general activity event to the audit trail.
+ * Log an activity event to the audit trail (bypasses browser session check for system / public events).
  */
-export async function logActivity(input: CreateActivityLogInput): Promise<ActivityLog> {
-  await requireBrowserSession();
-
+export async function logSystemActivity(input: CreateActivityLogInput): Promise<ActivityLog> {
   let ipAddress: string | null = null;
   let userAgent: string | null = null;
 
@@ -72,7 +70,7 @@ export async function logActivity(input: CreateActivityLogInput): Promise<Activi
 
     const created = Array.isArray(insertResult) ? insertResult[0] : insertResult;
     return created as unknown as ActivityLog;
-  } catch (err) {
+  } catch {
     return {
       id: "mock-id",
       domain: input.domain,
@@ -87,6 +85,14 @@ export async function logActivity(input: CreateActivityLogInput): Promise<Activi
       createdAt: new Date(),
     } as unknown as ActivityLog;
   }
+}
+
+/**
+ * Log a general activity event to the audit trail (requires active browser session).
+ */
+export async function logActivity(input: CreateActivityLogInput): Promise<ActivityLog> {
+  await requireBrowserSession();
+  return logSystemActivity(input);
 }
 
 /**

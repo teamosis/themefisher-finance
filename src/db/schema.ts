@@ -215,3 +215,46 @@ export const activityLogs = pgTable(
     entityTypeIdx: index("idx_activity_logs_entity_type").on(table.entityType),
   }),
 );
+
+export const paymentRequests = pgTable(
+  "payment_requests",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    trackingCode: text("tracking_code").notNull().unique(),
+    payeeName: text("payee_name").notNull(),
+    payeeEmail: text("payee_email"),
+    payeePhone: text("payee_phone"),
+    bankName: text("bank_name").notNull(),
+    branchName: text("branch_name").notNull(),
+    routingNumber: text("routing_number").notNull(),
+    accountNumber: text("account_number").notNull(),
+    amount: numeric("amount").notNull(),
+    currency: text("currency").default("BDT").notNull(),
+    purpose: text("purpose").notNull(),
+    status: text("status").default("pending").notNull(),
+    verificationDetails: jsonb("verification_details"),
+    rejectionReason: text("rejection_reason"),
+    reviewNotes: text("review_notes"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    exportedAt: timestamp("exported_at", { withTimezone: true }),
+    scbFileName: text("scb_file_name"),
+    vendorId: uuid("vendor_id").references(() => vendors.id, {
+      onDelete: "set null",
+    }),
+    ipAddress: text("ip_address"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    statusIdx: index("idx_payment_requests_status").on(table.status),
+    trackingCodeIdx: index("idx_payment_requests_tracking_code").on(
+      table.trackingCode,
+    ),
+    createdAtIdx: index("idx_payment_requests_created_at").on(table.createdAt),
+  }),
+);
+

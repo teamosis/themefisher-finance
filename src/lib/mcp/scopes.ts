@@ -46,6 +46,13 @@ export const MCP_SCOPES = [
       "Read audit logs for generated SCB Excel sheets, invoices, and bank operations",
     prefixes: ["finance_logs_"],
   },
+  {
+    key: "payment_requests",
+    label: "Payment Requests & Claims",
+    description:
+      "Read, audit, and verify submitted public beneficiary payment requests",
+    prefixes: ["finance_payment_requests_"],
+  },
 ] as const;
 
 export type McpScopeKey = (typeof MCP_SCOPES)[number]["key"];

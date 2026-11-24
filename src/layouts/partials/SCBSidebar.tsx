@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   CreditCard,
   FileSpreadsheet,
+  Inbox,
   Landmark,
   Menu,
   Users,
@@ -20,6 +21,11 @@ const navItems = [
     name: "Batch Generator",
     href: "/scb-tools",
     icon: FileSpreadsheet,
+  },
+  {
+    name: "Payment Requests",
+    href: "/scb-tools/payment-requests",
+    icon: Inbox,
   },
   {
     name: "Receiver Bank AC",

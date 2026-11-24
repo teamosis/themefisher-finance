@@ -8,6 +8,7 @@ import {
   debitAccounts,
   invoices,
   paymentAccounts,
+  paymentRequests,
   vendors,
 } from "@/db/schema";
 import {
@@ -16,7 +17,7 @@ import {
   invoiceDate,
   invoicePaymentMethods,
 } from "@/lib/invoice-validation";
-import { and, asc, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { McpScopeKey } from "./scopes";
 
@@ -1110,6 +1111,239 @@ export const tools: McpToolDefinition[] = [
           reason: details?.reason,
         },
         items: details?.items || [],
+      };
+    },
+  }),
+  defineTool({
+    name: "finance_payment_requests_list",
+    scope: "payment_requests",
+    description:
+      "List incoming public payment requests with filters by status (pending, verified, approved, exported, rejected, or all) and search terms.",
+    write: false,
+    schema: z.object({
+      status: z
+        .enum(["pending", "verified", "approved", "exported", "rejected", "all"])
+        .optional()
+        .describe("Filter by payment request status"),
+      search: z
+        .string()
+        .optional()
+        .describe("Search term for payee, bank, account number, or tracking code"),
+      limit: z.number().int().min(1).max(100).default(50).optional(),
+    }),
+    handler: async ({ status, search, limit = 50 }) => {
+      const conditions = [];
+      if (status && status !== "all") {
+        conditions.push(eq(paymentRequests.status, status));
+      }
+      if (search && search.trim()) {
+        const term = `%${search.trim()}%`;
+        conditions.push(
+          or(
+            ilike(paymentRequests.payeeName, term),
+            ilike(paymentRequests.trackingCode, term),
+            ilike(paymentRequests.accountNumber, term),
+            ilike(paymentRequests.bankName, term),
+            ilike(paymentRequests.purpose, term),
+          ),
+        );
+      }
+      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const rows = await db
+        .select()
+        .from(paymentRequests)
+        .where(whereClause)
+        .orderBy(desc(paymentRequests.createdAt))
+        .limit(limit);
+
+      return {
+        total: rows.length,
+        requests: rows,
+      };
+    },
+  }),
+  defineTool({
+    name: "finance_payment_requests_get",
+    scope: "payment_requests",
+    description:
+      "Get full details, bank details, and verification checklist for a specific payment request by ID or tracking code.",
+    write: false,
+    schema: z.object({
+      id: z.string().uuid().optional().describe("Payment request UUID"),
+      trackingCode: z
+        .string()
+        .optional()
+        .describe("Tracking reference code (e.g. PR-20261124-XXXX)"),
+    }),
+    handler: async ({ id, trackingCode }) => {
+      let condition;
+      if (id) {
+        condition = eq(paymentRequests.id, id);
+      } else if (trackingCode) {
+        condition = eq(
+          paymentRequests.trackingCode,
+          trackingCode.trim().toUpperCase(),
+        );
+      } else {
+        throw new Error("Provide either id or trackingCode");
+      }
+
+      const [row] = await db
+        .select()
+        .from(paymentRequests)
+        .where(condition)
+        .limit(1);
+
+      if (!row) {
+        return { error: "Payment request not found" };
+      }
+      return { request: row };
+    },
+  }),
+  defineTool({
+    name: "finance_payment_requests_verify",
+    scope: "payment_requests",
+    description:
+      "Audit and verify a payment request ('prepare & verify'). Validates the 9-digit routing number against the 11,426 BEFTN database, detects duplicate claims in the last 30 days, checks for matching existing vendors, attaches agent notes, and flags the request as verified and ready for the human admin to 1-click approve.",
+    write: true,
+    schema: z.object({
+      id: z.string().uuid().describe("Payment request UUID to verify"),
+      notes: z
+        .string()
+        .optional()
+        .describe("Audit findings or notes to attach to the request"),
+    }),
+    handler: async ({ id, notes }) => {
+      const [req] = await db
+        .select()
+        .from(paymentRequests)
+        .where(eq(paymentRequests.id, id))
+        .limit(1);
+
+      if (!req) {
+        throw new Error("Payment request not found");
+      }
+
+      const verificationNotes: string[] = [];
+
+      // 1. BEFTN check
+      const [branch] = await db
+        .select()
+        .from(bankBranches)
+        .where(eq(bankBranches.routing_number, req.routingNumber))
+        .limit(1);
+
+      const routingValid = Boolean(branch);
+      if (branch) {
+        verificationNotes.push(
+          `BEFTN routing number ${req.routingNumber} valid for ${branch.bank_name} (${branch.branch_name} Branch).`,
+        );
+      } else {
+        verificationNotes.push(
+          `Warning: Routing number ${req.routingNumber} was not found in Bangladesh Bank directory.`,
+        );
+      }
+
+      // 2. Duplicate check (last 30 days)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const duplicates = await db
+        .select({
+          id: paymentRequests.id,
+          trackingCode: paymentRequests.trackingCode,
+          amount: paymentRequests.amount,
+          createdAt: paymentRequests.createdAt,
+          status: paymentRequests.status,
+        })
+        .from(paymentRequests)
+        .where(
+          and(
+            eq(paymentRequests.accountNumber, req.accountNumber),
+            gte(paymentRequests.createdAt, thirtyDaysAgo),
+            inArray(paymentRequests.status, [
+              "pending",
+              "verified",
+              "approved",
+              "exported",
+            ]),
+            sql`${paymentRequests.id} != ${id}`,
+          ),
+        );
+
+      const duplicateDetected = duplicates.length > 0;
+      if (duplicateDetected) {
+        verificationNotes.push(
+          `Alert: Found ${duplicates.length} other claim(s) for account ${req.accountNumber} in the last 30 days.`,
+        );
+      }
+
+      // 3. Existing vendor check
+      const [matchedVendor] = await db
+        .select()
+        .from(vendors)
+        .where(
+          or(
+            eq(vendors.account_number, req.accountNumber),
+            ilike(vendors.receiver_name, `%${req.payeeName}%`),
+          ),
+        )
+        .limit(1);
+
+      if (matchedVendor) {
+        verificationNotes.push(
+          `Matched existing registered beneficiary: ${matchedVendor.receiver_name}.`,
+        );
+      }
+
+      if (notes) {
+        verificationNotes.push(`Agent Note: ${notes}`);
+      }
+
+      const verificationDetails = {
+        routingValid,
+        bankMatch: Boolean(
+          branch &&
+            branch.bank_name.toLowerCase().includes(req.bankName.toLowerCase()),
+        ),
+        branchMatch: Boolean(
+          branch &&
+            branch.branch_name
+              .toLowerCase()
+              .includes(req.branchName.toLowerCase()),
+        ),
+        duplicateDetected,
+        duplicateRequests: duplicates.map((d) => ({
+          id: d.id,
+          trackingCode: d.trackingCode,
+          amount: d.amount,
+          createdAt: d.createdAt.toISOString(),
+          status: d.status,
+        })),
+        matchedVendorId: matchedVendor?.id,
+        matchedVendorName: matchedVendor?.receiver_name,
+        verifiedAt: new Date().toISOString(),
+        verifiedBy: "agent",
+        notes: verificationNotes,
+      };
+
+      const [updated] = await db
+        .update(paymentRequests)
+        .set({
+          status: "verified",
+          verificationDetails: verificationDetails as any,
+          vendorId: matchedVendor?.id || req.vendorId,
+          reviewNotes: notes || req.reviewNotes,
+          updatedAt: new Date(),
+        })
+        .where(eq(paymentRequests.id, id))
+        .returning();
+
+      return {
+        success: true,
+        message: "Payment request verified and flagged as Ready for approval.",
+        request: updated,
+        verification: verificationDetails,
       };
     },
   }),

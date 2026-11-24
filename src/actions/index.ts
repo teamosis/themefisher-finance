@@ -7,4 +7,5 @@ export * from "./banks";
 export * from "./auth";
 export * from "./mcp";
 export * from "./activity-logs";
+export * from "./payment-requests";
 

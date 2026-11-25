@@ -11,12 +11,14 @@ import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { Modal } from "@/components/modals/modal";
 import { TableRowsSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/toast";
 import type { DebitAccount } from "@/types";
 import {
   AlertCircle,
   Check,
   CreditCard,
-  Loader2,
   Pencil,
   Plus,
   Search,
@@ -108,7 +110,7 @@ export default function DebitAccountsClient({
     } catch (error: any) {
       console.error(error);
       setErrorMessage(error.message);
-      alert(`Failed to save: ${error.message}`);
+      toast.error(`Failed to save: ${error.message}`);
     }
     setSaving(false);
   };
@@ -123,7 +125,7 @@ export default function DebitAccountsClient({
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : "Failed to set default";
-      alert(msg);
+      toast.error(msg);
     }
   };
 
@@ -156,7 +158,7 @@ export default function DebitAccountsClient({
       setEditingAccount(null);
       fetchAccounts();
     } catch (error: any) {
-      alert(`Update failed: ${error.message}`);
+      toast.error(`Update failed: ${error.message}`);
     }
     setEditSaving(false);
   };
@@ -171,7 +173,7 @@ export default function DebitAccountsClient({
       setDeletingAccount(null);
       fetchAccounts();
     } catch (error: any) {
-      alert(`Delete failed: ${error.message}`);
+      toast.error(`Delete failed: ${error.message}`);
     }
     setIsDeleting(false);
   };
@@ -237,10 +239,10 @@ export default function DebitAccountsClient({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 sm:gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Debit Account Number *
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 required
                 value={formData.account_number}
@@ -248,15 +250,14 @@ export default function DebitAccountsClient({
                   setFormData({ ...formData, account_number: e.target.value })
                 }
                 placeholder="e.g. 0001234567890"
-                className="w-full px-3 py-2 border border-input bg-background text-text-strong rounded-xl font-mono text-sm focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Account Label / Alias *
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 required
                 value={formData.account_label}
@@ -264,22 +265,20 @@ export default function DebitAccountsClient({
                   setFormData({ ...formData, account_label: e.target.value })
                 }
                 placeholder="e.g. Main SCB Account"
-                className="w-full px-3 py-2 border border-input bg-background text-text-strong rounded-xl text-sm focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Bank Name
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 value={formData.bank_name}
                 onChange={(e) =>
                   setFormData({ ...formData, bank_name: e.target.value })
                 }
                 placeholder="Standard Chartered Bank"
-                className="w-full px-3 py-2 border border-input bg-background text-text-strong rounded-xl text-sm focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
               />
             </div>
           </div>
@@ -297,16 +296,8 @@ export default function DebitAccountsClient({
               <span className="font-medium">Set as Default Debit Account</span>
             </label>
 
-            <Button
-              type="submit"
-              disabled={saving}
-              className="gap-2 cursor-pointer"
-            >
-              {saving ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Plus className="size-4" />
-              )}
+            <Button type="submit" loading={saving}>
+              {!saving && <Plus />}
               <span>Save to Database</span>
             </Button>
           </div>
@@ -325,12 +316,12 @@ export default function DebitAccountsClient({
 
           <div className="relative w-full sm:w-60">
             <Search className="size-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
+            <Input
               type="text"
               placeholder="Search accounts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3.5 py-1.5 border border-input rounded-xl text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-text-muted"
+              className="pl-9 h-9"
             />
           </div>
         </div>
@@ -385,7 +376,7 @@ export default function DebitAccountsClient({
                     <td className="py-3 px-4 font-normal text-text-strong">
                       {acc.account_label}
                     </td>
-                    <td className="py-3 px-4 font-mono text-text-muted text-xs">
+                    <td className="py-3 px-4 text-text-muted text-xs">
                       {acc.account_number}
                     </td>
                     <td className="py-3 px-4 text-text-default">
@@ -450,10 +441,10 @@ export default function DebitAccountsClient({
         >
           <form onSubmit={handleSaveEdit} className="p-5 flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Debit Account Number *
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 required
                 value={editFormData.account_number}
@@ -463,15 +454,14 @@ export default function DebitAccountsClient({
                     account_number: e.target.value,
                   })
                 }
-                className="w-full border border-input rounded-xl px-3 py-2 font-mono text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Account Label *
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 required
                 value={editFormData.account_label}
@@ -481,15 +471,14 @@ export default function DebitAccountsClient({
                     account_label: e.target.value,
                   })
                 }
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Bank Name
-              </label>
-              <input
+              </Label>
+              <Input
                 type="text"
                 value={editFormData.bank_name}
                 onChange={(e) =>
@@ -498,7 +487,6 @@ export default function DebitAccountsClient({
                     bank_name: e.target.value,
                   })
                 }
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
               />
             </div>
 
@@ -526,11 +514,7 @@ export default function DebitAccountsClient({
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={editSaving}
-                className="cursor-pointer"
-              >
+              <Button type="submit" loading={editSaving}>
                 {editSaving ? "Saving..." : "Save Changes"}
               </Button>
             </div>

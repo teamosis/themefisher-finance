@@ -3,7 +3,7 @@
 import { loginAction } from "@/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AlertCircle, Eye, EyeOff, Loader2, Lock } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Lock } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -86,20 +86,12 @@ export function LoginForm() {
 
       <Button
         type="submit"
-        disabled={isPending || !password}
-        className="w-full mt-2 font-medium cursor-pointer"
+        disabled={!password}
+        loading={isPending}
+        className="w-full mt-2"
       >
-        {isPending ? (
-          <>
-            <Loader2 className="size-4 animate-spin mr-2" />
-            <span>Verifying...</span>
-          </>
-        ) : (
-          <>
-            <Lock className="size-4 mr-2" />
-            <span>Unlock Access</span>
-          </>
-        )}
+        {!isPending && <Lock />}
+        <span>{isPending ? "Verifying..." : "Unlock Access"}</span>
       </Button>
     </form>
   );

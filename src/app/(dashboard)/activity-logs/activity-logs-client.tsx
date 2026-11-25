@@ -1,11 +1,11 @@
 "use client";
 
-import { getActivityLogs } from "@/actions/activity-logs";
 import { Modal } from "@/components/modals/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/toast";
 import type { ActivityAction, ActivityLog, ActivityLogDetails } from "@/types";
 import { format, formatDistanceToNow, isValid, parseISO } from "date-fns";
 import {
@@ -19,7 +19,6 @@ import {
   FileSpreadsheet,
   FileText,
   KeyRound,
-  RefreshCw,
   Search,
   Users,
 } from "lucide-react";
@@ -100,29 +99,13 @@ function getActionBadge(action: ActivityAction) {
 
 export default function ActivityLogsClient({
   initialLogs,
-  initialTotal,
 }: ActivityLogsClientProps) {
-  const [logs, setLogs] = useState<ActivityLog[]>(initialLogs);
-  const [, setTotal] = useState<number>(initialTotal);
-  const [loading, setLoading] = useState(false);
+  const [logs] = useState<ActivityLog[]>(initialLogs);
   const [searchQuery, setSearchQuery] = useState("");
   const [domainFilter, setDomainFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
   const [isExportingExcel, setIsExportingExcel] = useState(false);
-
-  const refreshLogs = async () => {
-    setLoading(true);
-    try {
-      const res = await getActivityLogs({ limit: 100 });
-      setLogs(res.rows);
-      setTotal(res.total);
-    } catch (err) {
-      console.error("Error refreshing activity logs:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredLogs = useMemo(() => {
     return logs.filter((log) => {
@@ -159,7 +142,7 @@ export default function ActivityLogsClient({
     details: ActivityLogDetails | null | undefined,
   ) => {
     if (!details || !details.items || details.items.length === 0) {
-      alert("No row items snapshot available for this export.");
+      toast.warning("No row items snapshot available for this export.");
       return;
     }
 
@@ -194,7 +177,7 @@ export default function ActivityLogsClient({
       writeFile(workbook, fileName);
     } catch (err) {
       console.error("Failed to re-generate Excel:", err);
-      alert("Could not re-generate the Excel file. Please try again.");
+      toast.error("Could not re-generate the Excel file. Please try again.");
     } finally {
       setIsExportingExcel(false);
     }
@@ -214,23 +197,12 @@ export default function ActivityLogsClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href="/mcp-setup?tab=logs">
-            <Button variant="outline" className="gap-2 text-xs h-9">
+        <div className="flex items-center">
+          <Button asChild variant="outline" size="sm" className="gap-2 text-xs">
+            <Link href="/mcp-setup?tab=logs">
               <KeyRound className="size-3.5" />
               <span>MCP Agent Logs</span>
-            </Button>
-          </Link>
-          <Button
-            variant="outline"
-            onClick={refreshLogs}
-            disabled={loading}
-            className="gap-2 text-xs h-9 shrink-0"
-          >
-            <RefreshCw
-              className={`size-3.5 ${loading ? "animate-spin" : ""}`}
-            />
-            <span>Refresh Logs</span>
+            </Link>
           </Button>
         </div>
       </div>
@@ -373,7 +345,7 @@ export default function ActivityLogsClient({
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span title={time.exact}>{time.relative}</span>
                           {log.details?.fileName && (
-                            <span className="truncate font-mono text-[11px] bg-muted px-1.5 py-0.2 rounded text-text-strong">
+                            <span className="truncate text-[11px] bg-muted px-1.5 py-0.2 rounded text-text-strong">
                               {log.details.fileName}
                             </span>
                           )}
@@ -446,7 +418,7 @@ export default function ActivityLogsClient({
               </div>
               <div>
                 <span className="text-muted-foreground block">Action:</span>
-                <span className="font-semibold text-text-strong font-mono">
+                <span className="font-semibold text-text-strong">
                   {selectedLog.action}
                 </span>
               </div>
@@ -459,7 +431,7 @@ export default function ActivityLogsClient({
               </div>
               <div>
                 <span className="text-muted-foreground block">Client IP:</span>
-                <span className="font-mono text-text-strong">
+                <span className="text-text-strong">
                   {selectedLog.ipAddress || "Localhost"}
                 </span>
               </div>
@@ -528,13 +500,13 @@ export default function ActivityLogsClient({
                               </Badge>
                             )}
                           </td>
-                          <td className="p-2.5 font-mono text-muted-foreground">
+                          <td className="p-2.5 text-muted-foreground">
                             {item.accountNumber}
                           </td>
                           <td className="p-2.5 text-muted-foreground">
                             {item.bankName || "Bank"} • {item.routingNumber}
                           </td>
-                          <td className="p-2.5 text-right font-bold text-text-strong font-mono">
+                          <td className="p-2.5 text-right font-bold text-text-strong">
                             ৳{Number(item.amount).toLocaleString()}
                           </td>
                           <td className="p-2.5 text-muted-foreground truncate max-w-xs">
@@ -551,7 +523,7 @@ export default function ActivityLogsClient({
                 <h3 className="text-sm font-bold text-text-strong">
                   Event Data Payload
                 </h3>
-                <pre className="p-4 bg-muted/60 rounded-xl border border-border text-xs font-mono overflow-x-auto text-text-strong">
+                <pre className="p-4 bg-muted/60 rounded-xl border border-border text-xs overflow-x-auto text-text-strong">
                   {JSON.stringify(selectedLog.details.extra, null, 2)}
                 </pre>
               </div>

@@ -7,10 +7,7 @@ export async function parseMT103(file: File, password?: string) {
   }
 
   const { getDocument, GlobalWorkerOptions } = await import("pdfjs-dist");
-  GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url,
-  ).href;
+  GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
   const arrayBuffer = await file.arrayBuffer();
   const data = new Uint8Array(arrayBuffer);
@@ -47,5 +44,8 @@ export async function parseMT103(file: File, password?: string) {
     );
   };
 
-  return extractMT103Text(loadingTask, { pages: 50, characters: Number.POSITIVE_INFINITY });
+  return extractMT103Text(loadingTask, {
+    pages: 50,
+    characters: Number.POSITIVE_INFINITY,
+  });
 }

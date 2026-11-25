@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { Suspense } from "react";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: `Access Protected | ${config.site.title}`,
   description: "Enter site password to access Themefisher Finance tools.",

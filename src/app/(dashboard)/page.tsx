@@ -51,11 +51,11 @@ export default async function DashboardPage() {
               </CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-2 leading-relaxed">
                 To protect this application,{" "}
-                <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted text-text-strong">
+                <code className="text-xs px-1.5 py-0.5 rounded bg-muted text-text-strong">
                   AUTH_PASSWORD
                 </code>{" "}
                 and{" "}
-                <code className="font-mono text-xs px-1.5 py-0.5 rounded bg-muted text-text-strong">
+                <code className="text-xs px-1.5 py-0.5 rounded bg-muted text-text-strong">
                   AUTH_SECRET
                 </code>{" "}
                 must be set on the environment. Without these variables
@@ -64,7 +64,7 @@ export default async function DashboardPage() {
             </CardHeader>
 
             <CardFooter className="p-6 sm:p-8 pt-2 flex flex-col gap-4">
-              <div className="w-full bg-muted/60 border border-border rounded-xl p-4 text-left font-mono text-xs text-text-default overflow-x-auto">
+              <div className="w-full bg-muted/60 border border-border rounded-xl p-4 text-left text-xs text-text-default overflow-x-auto">
                 <p className="text-muted-foreground mb-2">
                   # Add these to your .env.local file:
                 </p>

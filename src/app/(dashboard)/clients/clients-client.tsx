@@ -8,7 +8,10 @@ import {
 import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { EditClientModal } from "@/components/modals/edit-client-modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
 import type { Client, ClientFormData } from "@/types";
 import {
   Building2,
@@ -51,7 +54,7 @@ export default function ClientsClient({
   const onSubmit = async (data: ClientFormData) => {
     const cleanName = data.name?.trim();
     if (!cleanName) {
-      alert("Client name is required.");
+      toast.error("Client name is required.");
       return;
     }
 
@@ -70,7 +73,7 @@ export default function ClientsClient({
       await fetchClients();
     } catch (error: any) {
       console.error("Error creating client:", error.message);
-      alert("Unable to create client. Please try again.");
+      toast.error("Unable to create client. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -101,7 +104,7 @@ export default function ClientsClient({
       setDeletingClient(null);
     } catch (error: any) {
       console.error("Error deleting client:", error.message);
-      alert(
+      toast.error(
         "Unable to delete client. Clients with linked invoices must be kept.",
       );
     } finally {
@@ -141,78 +144,69 @@ export default function ClientsClient({
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+              <Label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
                 <Building2 className="size-4 text-text-muted" />
                 Client Name *
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("name", { required: true })}
                 maxLength={120}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="Client or company name"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+              <Label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
                 <MapPin className="size-4 text-text-muted" />
                 Client Address
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("address")}
                 maxLength={300}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="Full billing address"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+              <Label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
                 <FileText className="size-4 text-text-muted" />
                 VAT / Tax ID
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("tax_id")}
                 maxLength={50}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="e.g. EU123456789"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+              <Label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
                 <Landmark className="size-4 text-text-muted" />
                 Remitting Bank Name
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("bank_name")}
                 maxLength={120}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="e.g. Barclays Bank PLC"
               />
             </div>
 
             <div className="md:col-span-2 flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
+              <Label className="text-sm font-normal text-text-strong flex items-center gap-1.5">
                 <MapPin className="size-4 text-text-muted" />
                 Remitting Bank Address
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("bank_address")}
                 maxLength={250}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="Branch, City & Country"
               />
             </div>
           </div>
 
           <div className="flex justify-end pt-2">
-            <Button
-              type="submit"
-              disabled={submitting}
-              className="gap-2 font-normal cursor-pointer"
-            >
-              <Plus className="size-4" />
+            <Button type="submit" loading={submitting}>
+              {!submitting && <Plus />}
               <span>{submitting ? "Adding..." : "Add Client"}</span>
             </Button>
           </div>
@@ -232,12 +226,12 @@ export default function ClientsClient({
           {/* Search Bar */}
           <div className="relative w-full sm:w-64">
             <Search className="size-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
+            <Input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search clients..."
-              className="w-full pl-9 pr-3 py-1.5 text-sm sm:text-base border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 bg-background text-text-strong placeholder:text-text-muted"
+              className="pl-9 h-9"
             />
           </div>
         </div>
@@ -277,7 +271,7 @@ export default function ClientsClient({
                       {client.name}
                     </h3>
                     {client.tax_id && (
-                      <span className="text-xs sm:text-sm font-mono text-text-muted">
+                      <span className="text-xs sm:text-sm text-text-muted">
                         Tax ID: {client.tax_id}
                       </span>
                     )}
@@ -315,9 +309,8 @@ export default function ClientsClient({
                     variant="outline"
                     size="sm"
                     onClick={() => handleEditClient(client)}
-                    className="gap-1.5 text-xs sm:text-sm font-normal cursor-pointer"
                   >
-                    <Edit2 className="size-3.5" />
+                    <Edit2 />
                     <span>Edit</span>
                   </Button>
 
@@ -326,9 +319,9 @@ export default function ClientsClient({
                     variant="ghost"
                     size="sm"
                     onClick={() => setDeletingClient(client)}
-                    className="gap-1.5 text-xs sm:text-sm font-normal text-text-muted hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                    className="text-text-muted hover:text-destructive hover:bg-destructive/10"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 />
                     <span>Delete</span>
                   </Button>
                 </div>

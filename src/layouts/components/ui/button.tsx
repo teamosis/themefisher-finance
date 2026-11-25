@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils/shadcn";
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2 } from "lucide-react";
 import * as React from "react";
 
 const buttonVariants = cva(
@@ -12,10 +13,9 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border border-input bg-background hover:bg-primary hover:border-primary hover:text-primary-foreground",
-        secondary:
-          "bg-muted text-foreground hover:bg-muted/80",
-        ghost: "hover:bg-primary/10 hover:text-primary",
+          "border border-input bg-background hover:bg-muted hover:text-foreground",
+        secondary: "bg-muted text-foreground hover:bg-muted/80",
+        ghost: "hover:bg-muted hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
@@ -37,6 +37,7 @@ export interface ButtonProps
     React.ComponentPropsWithoutRef<typeof ButtonPrimitive>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
+  loading?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -46,6 +47,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant,
       size,
       asChild = false,
+      loading = false,
+      disabled,
       children,
       render,
       nativeButton,
@@ -61,6 +64,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     return (
       <ButtonPrimitive
         ref={ref}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         className={cn(buttonVariants({ variant, size, className }))}
         render={renderProp}
         nativeButton={
@@ -71,7 +76,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         }
         {...props}
       >
-        {asChild ? undefined : children}
+        {asChild ? undefined : (
+          <>
+            {loading && <Loader2 className="animate-spin" aria-hidden="true" />}
+            {children}
+          </>
+        )}
       </ButtonPrimitive>
     );
   },

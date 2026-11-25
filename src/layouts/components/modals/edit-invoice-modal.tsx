@@ -3,8 +3,11 @@
 import { updateInvoice } from "@/actions";
 import SearchableClientSelect from "@/components/forms/searchable-client-select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import type { Client, Invoice, PaymentAccount } from "@/types";
-import { Check, Loader2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { useState } from "react";
 import { Modal } from "./modal";
 
@@ -156,39 +159,37 @@ function EditInvoiceForm({
           </div>
 
           <div className="relative z-10 flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Invoice Number *
-            </label>
-            <input
+            </Label>
+            <Input
               type="text"
               required
               value={invoiceNumber}
               onChange={(e) => setInvoiceNumber(e.target.value)}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Invoice Date *
-            </label>
-            <input
+            </Label>
+            <Input
               type="date"
               required
               value={invoiceDate}
               onChange={(e) => setInvoiceDate(e.target.value)}
-              className="w-full border border-input rounded-xl px-3.5 py-2.5 pr-10 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-11 cursor-pointer"
+              className="cursor-pointer"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Currency *
-            </label>
-            <select
+            </Label>
+            <Select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="w-full border border-input rounded-xl px-3.5 py-2.5 pr-10 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-11 cursor-pointer"
             >
               <option value="USD">USD</option>
               <option value="BDT">BDT</option>
@@ -197,46 +198,43 @@ function EditInvoiceForm({
               <option value="CAD">CAD</option>
               <option value="AUD">AUD</option>
               <option value="CHF">CHF</option>
-            </select>
+            </Select>
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Amount *
-            </label>
-            <input
+            </Label>
+            <Input
               type="number"
               step="0.01"
               required
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Received Amount
-            </label>
-            <input
+            </Label>
+            <Input
               type="number"
               step="0.01"
               value={receivedAmount}
               onChange={(e) => setReceivedAmount(e.target.value)}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
             />
           </div>
 
           <div className="sm:col-span-2 flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Description *
-            </label>
-            <input
+            </Label>
+            <Input
               type="text"
               required
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full border border-input rounded-xl px-3.5 py-2.5 pr-10 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-11 cursor-pointer"
             />
           </div>
         </div>
@@ -268,7 +266,7 @@ function EditInvoiceForm({
                       {a.bank_name || a.account_name}
                     </span>
                     {a.account_number && (
-                      <span className="text-text-muted font-mono ml-2">
+                      <span className="text-text-muted ml-2">
                         {a.account_number}
                       </span>
                     )}
@@ -283,16 +281,8 @@ function EditInvoiceForm({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={saving}
-            className="gap-2 cursor-pointer"
-          >
-            {saving ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Check className="size-4" />
-            )}
+          <Button type="submit" loading={saving}>
+            {!saving && <Check />}
             <span>Save Changes</span>
           </Button>
         </div>

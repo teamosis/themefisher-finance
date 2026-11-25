@@ -10,6 +10,9 @@ import SearchableClientSelect from "@/components/forms/searchable-client-select"
 import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { EditInvoiceModal } from "@/components/modals/edit-invoice-modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { getInvoiceDateFromValueDate, parseMT103 } from "@/lib/pdfParser";
 import type { Client, Invoice, InvoiceFormData, PaymentAccount } from "@/types";
 import {
@@ -19,7 +22,6 @@ import {
   ChevronRight,
   Edit2,
   ExternalLink,
-  Loader2,
   Search,
   Trash2,
   UploadCloud,
@@ -294,14 +296,9 @@ export default function CreateInvoiceClient({
             variant="outline"
             size="sm"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isUploadingPdf}
-            className="gap-2 cursor-pointer"
+            loading={isUploadingPdf}
           >
-            {isUploadingPdf ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <UploadCloud className="size-4" />
-            )}
+            {!isUploadingPdf && <UploadCloud />}
             <span>{isUploadingPdf ? "Parsing..." : "Autofill from PDF"}</span>
           </Button>
         </div>
@@ -327,37 +324,31 @@ export default function CreateInvoiceClient({
             </div>
 
             <div className="relative z-10 flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Invoice Number
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("invoice_number")}
                 placeholder="Assigned automatically if blank"
                 maxLength={60}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Invoice Date *
-              </label>
-              <input
+              </Label>
+              <Input
                 type="date"
                 {...register("invoice_date", { required: true })}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Currency *
-              </label>
-              <select
-                {...register("currency")}
-                defaultValue="USD"
-                className="w-full border border-input rounded-xl px-3.5 py-2.5 pr-10 text-sm font-medium bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-11 cursor-pointer"
-              >
+              </Label>
+              <Select {...register("currency")} defaultValue="USD">
                 <option value="USD">USD ($ - US Dollar)</option>
                 <option value="BDT">BDT (৳ - Bangladeshi Taka)</option>
                 <option value="GBP">GBP (£ - British Pound)</option>
@@ -365,47 +356,44 @@ export default function CreateInvoiceClient({
                 <option value="CAD">CAD ($ - Canadian Dollar)</option>
                 <option value="AUD">AUD ($ - Australian Dollar)</option>
                 <option value="CHF">CHF (CHF - Swiss Franc)</option>
-              </select>
+              </Select>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Invoice Amount *
-              </label>
-              <input
+              </Label>
+              <Input
                 type="number"
                 step="0.01"
                 min="0.01"
                 max="999999999"
                 {...register("amount", { required: true })}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="0.00"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Remitted / Received Amount
-              </label>
-              <input
+              </Label>
+              <Input
                 type="number"
                 step="0.01"
                 min="0"
                 max="999999999"
                 {...register("received_amount")}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="Optional received amount"
               />
             </div>
 
             <div className="col-span-1 md:col-span-2 flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Description (Service Details) *
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("description", { required: true })}
                 maxLength={300}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="Web development services"
               />
             </div>
@@ -441,7 +429,7 @@ export default function CreateInvoiceClient({
                             {a.bank_name || a.account_name}
                           </span>
                           {a.bic_swift && (
-                            <span className="text-xs font-mono text-text-muted">
+                            <span className="text-xs text-text-muted">
                               SWIFT: {a.bic_swift}
                             </span>
                           )}
@@ -450,7 +438,7 @@ export default function CreateInvoiceClient({
                           {a.account_number && (
                             <span>
                               A/C:{" "}
-                              <span className="font-mono text-text-strong">
+                              <span className="text-text-strong">
                                 {a.account_number}
                               </span>
                             </span>
@@ -474,8 +462,8 @@ export default function CreateInvoiceClient({
 
           <Button
             type="submit"
-            disabled={submitting}
-            className="w-full cursor-pointer h-11 text-sm font-normal"
+            loading={submitting}
+            className="w-full"
           >
             {submitting ? "Generating Invoice..." : "Generate Invoice"}
           </Button>
@@ -496,7 +484,7 @@ export default function CreateInvoiceClient({
             {/* Search Input */}
             <div className="relative flex-1 sm:w-60 min-w-0">
               <Search className="size-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
+              <Input
                 type="text"
                 placeholder="Search invoice, client..."
                 value={searchTerm}
@@ -504,18 +492,18 @@ export default function CreateInvoiceClient({
                   setSearchTerm(e.target.value);
                   setCurrentPage(1);
                 }}
-                className="w-full pl-9 pr-3 py-1.5 text-sm border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 bg-background text-text-strong placeholder:text-text-muted"
+                className="pl-9 h-9"
               />
             </div>
 
             {/* Client Filter */}
-            <select
+            <Select
               value={tableClientFilter}
               onChange={(e) => {
                 setTableClientFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="py-2 px-3.5 pr-10 text-xs sm:text-sm border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 bg-background text-text-strong cursor-pointer"
+              className="w-auto h-9 py-1 text-xs sm:text-sm"
             >
               <option value="">All Clients</option>
               {clients.map((c) => (
@@ -523,7 +511,7 @@ export default function CreateInvoiceClient({
                   {c.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -551,7 +539,7 @@ export default function CreateInvoiceClient({
                     className="hover:bg-muted/30 transition-colors"
                   >
                     <td className="py-3 px-4">
-                      <span className="font-mono font-normal text-text-strong text-xs sm:text-sm">
+                      <span className="font-normal text-text-strong text-xs sm:text-sm">
                         {inv.invoice_number}
                       </span>
                     </td>
@@ -564,10 +552,10 @@ export default function CreateInvoiceClient({
                     <td className="py-3 px-4 text-text-muted max-w-50 truncate text-xs">
                       {inv.description}
                     </td>
-                    <td className="py-3 px-4 text-right font-normal text-text-strong whitespace-nowrap text-xs sm:text-sm font-mono">
+                    <td className="py-3 px-4 text-right font-normal text-text-strong whitespace-nowrap text-xs sm:text-sm">
                       {inv.currency || "USD"} {Number(inv.amount).toFixed(2)}
                     </td>
-                    <td className="py-3 px-4 text-right text-text-muted whitespace-nowrap text-xs sm:text-sm font-mono">
+                    <td className="py-3 px-4 text-right text-text-muted whitespace-nowrap text-xs sm:text-sm">
                       {inv.received_amount
                         ? `${inv.currency || "USD"} ${Number(inv.received_amount).toFixed(2)}`
                         : "—"}

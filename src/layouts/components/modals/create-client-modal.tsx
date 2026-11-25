@@ -2,8 +2,11 @@
 
 import { createClient } from "@/actions";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import type { Client } from "@/types";
-import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Modal } from "./modal";
@@ -98,58 +101,54 @@ export function CreateClientModal({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2 flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Company / Client Name *
-            </label>
-            <input
+            </Label>
+            <Input
               placeholder="e.g. Acme Corp"
               {...register("name", { required: true })}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
             />
           </div>
 
           <div className="md:col-span-2 flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Company Address
-            </label>
-            <textarea
+            </Label>
+            <Textarea
               placeholder="Full address..."
               {...register("address")}
               rows={2}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20"
+              className="min-h-0"
             />
           </div>
 
           <div className="md:col-span-2 flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Tax ID / VAT No
-            </label>
-            <input
+            </Label>
+            <Input
               placeholder="Optional"
               {...register("tax_id")}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Bank Name
-            </label>
-            <input
+            </Label>
+            <Input
               placeholder="Bank Name"
               {...register("bank_name")}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
             />
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Bank Address
-            </label>
-            <input
+            </Label>
+            <Input
               placeholder="Bank Address"
               {...register("bank_address")}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
             />
           </div>
         </div>
@@ -158,16 +157,8 @@ export function CreateClientModal({
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="gap-2 cursor-pointer"
-          >
-            {submitting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="size-4" />
-            )}
+          <Button type="submit" loading={submitting}>
+            {!submitting && <CheckCircle2 />}
             <span>Save &amp; Continue</span>
           </Button>
         </div>

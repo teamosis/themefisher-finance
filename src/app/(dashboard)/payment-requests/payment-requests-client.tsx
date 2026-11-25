@@ -3,7 +3,6 @@
 import {
   approvePaymentRequest,
   exportPaymentRequestsToScb,
-  getPaymentRequests,
   rejectPaymentRequest,
 } from "@/actions";
 import { Modal } from "@/components/modals/modal";
@@ -24,14 +23,10 @@ import {
   Check,
   CheckCircle2,
   Clock,
-  Copy,
   Download,
   ExternalLink,
   Eye,
   FileSpreadsheet,
-  History,
-  Loader2,
-  RefreshCw,
   Search,
   ShieldCheck,
   UserCheck,
@@ -43,22 +38,11 @@ import { useMemo, useState, useTransition } from "react";
 interface PaymentRequestsClientProps {
   initialRequests: PaymentRequest[];
   initialDebitAccounts: DebitAccount[];
-  initialStats: {
-    total: number;
-    pending: number;
-    verified: number;
-    approved: number;
-    rejected: number;
-    exported: number;
-    actionableCount: number;
-    totalPendingAmount: number;
-  };
 }
 
 export default function PaymentRequestsClient({
   initialRequests,
   initialDebitAccounts,
-  initialStats,
 }: PaymentRequestsClientProps) {
   const [requests, setRequests] = useState<PaymentRequest[]>(initialRequests);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -68,8 +52,6 @@ export default function PaymentRequestsClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  // Public link copied state
-  const [copiedLink, setCopiedLink] = useState(false);
   const [selectedDebitAccountId, setSelectedDebitAccountId] = useState<string>(
     initialDebitAccounts.find((a) => a.is_default)?.id ||
       initialDebitAccounts[0]?.id ||
@@ -92,26 +74,6 @@ export default function PaymentRequestsClient({
     count: number;
     totalAmount: number;
   } | null>(null);
-
-  // Quick refresh
-  const handleRefresh = () => {
-    startTransition(async () => {
-      const refreshed = await getPaymentRequests();
-      setRequests(refreshed);
-      setSelectedIds([]);
-    });
-  };
-
-  const handleCopyPublicLink = () => {
-    const origin =
-      typeof window !== "undefined"
-        ? window.location.origin
-        : "https://finance.themefisher.com";
-    const publicUrl = `${origin}/request-payment`;
-    navigator.clipboard.writeText(publicUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
 
   // Filter requests
   const filteredRequests = useMemo(() => {
@@ -369,124 +331,18 @@ export default function PaymentRequestsClient({
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleCopyPublicLink}
-            className="gap-1.5 text-xs h-9 cursor-pointer"
-          >
-            {copiedLink ? (
-              <>
-                <Check className="size-3.5 text-emerald-600" />
-                <span>Link Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="size-3.5" />
-                <span>Copy Public Form Link</span>
-              </>
-            )}
-          </Button>
-
-          <a
-            href="/request-payment"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground text-xs font-semibold rounded-xl hover:opacity-90 transition-opacity"
-          >
-            <ExternalLink className="size-3.5" />
-            <span>Open Public Form</span>
-          </a>
-
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isPending}
-            className="h-9 w-9 p-0 cursor-pointer"
-            title="Refresh requests"
-          >
-            <RefreshCw
-              className={`size-4 ${isPending ? "animate-spin" : ""}`}
-            />
+        <div className="flex items-center shrink-0">
+          <Button asChild>
+            <a
+              href="/request-payment"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <ExternalLink />
+              <span>Open Public Form</span>
+            </a>
           </Button>
         </div>
-      </div>
-
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        <Card className="p-4 bg-card border-border shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">
-              Actionable
-            </span>
-            <div className="size-7 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
-              <Clock className="size-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold text-text-strong">
-              {actionableCount}
-            </span>
-            <span className="text-[11px] text-muted-foreground">claims</span>
-          </div>
-        </Card>
-
-        <Card className="p-4 bg-card border-border shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">
-              Approved (Ready)
-            </span>
-            <div className="size-7 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="size-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold text-text-strong">
-              {approvedCount}
-            </span>
-            <span className="text-[11px] text-muted-foreground">
-              ready for SCB
-            </span>
-          </div>
-        </Card>
-
-        <Card className="p-4 bg-card border-border shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">
-              Exported
-            </span>
-            <div className="size-7 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center">
-              <FileSpreadsheet className="size-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold text-text-strong">
-              {requests.filter((r) => r.status === "exported").length}
-            </span>
-            <span className="text-[11px] text-muted-foreground">to bank</span>
-          </div>
-        </Card>
-
-        <Card className="p-4 bg-card border-border shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground font-medium">
-              Total Submissions
-            </span>
-            <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-              <History className="size-4" />
-            </div>
-          </div>
-          <div className="mt-2 flex items-baseline gap-1.5">
-            <span className="text-2xl font-bold text-text-strong">
-              {requests.length}
-            </span>
-            <span className="text-[11px] text-muted-foreground">all-time</span>
-          </div>
-        </Card>
       </div>
 
       {/* Main Table Card */}
@@ -585,7 +441,7 @@ export default function PaymentRequestsClient({
                   variant="outline"
                   onClick={handleBulkApprove}
                   disabled={isPending}
-                  className="h-7 text-xs font-medium gap-1.5 cursor-pointer bg-card hover:bg-light"
+                  className="h-7 text-xs"
                 >
                   <CheckCircle2 className="size-3 text-emerald-600" />
                   <span>Approve Selected</span>
@@ -686,7 +542,7 @@ export default function PaymentRequestsClient({
                       </td>
 
                       {/* Reference & Date */}
-                      <td className="p-3 font-mono">
+                      <td className="p-3">
                         <div className="font-bold text-text-strong">
                           {req.trackingCode}
                         </div>
@@ -724,7 +580,7 @@ export default function PaymentRequestsClient({
                         <div className="text-[11px] text-muted-foreground">
                           {req.branchName} Branch
                         </div>
-                        <div className="font-mono text-[11px] text-text-muted mt-0.5 flex items-center gap-2">
+                        <div className="text-[11px] text-text-muted mt-0.5 flex items-center gap-2">
                           <span>A/C: {req.accountNumber}</span>
                           <span className="text-muted-foreground/60">•</span>
                           <span
@@ -825,7 +681,7 @@ export default function PaymentRequestsClient({
                               size="sm"
                               onClick={() => handleExportScb([req.id])}
                               disabled={isPending}
-                              className="h-7 px-2.5 text-xs font-semibold gap-1.5 cursor-pointer bg-primary text-primary-foreground"
+                              className="h-7 px-2.5 text-xs"
                               title="Download SCB Straight2Bank Bulk Excel"
                             >
                               <Download className="size-3" />
@@ -836,7 +692,7 @@ export default function PaymentRequestsClient({
                           {/* Exported info */}
                           {req.status === "exported" && (
                             <span
-                              className="text-[10px] text-muted-foreground font-mono truncate max-w-25"
+                              className="text-[10px] text-muted-foreground truncate max-w-25"
                               title={req.scbFileName || "Exported"}
                             >
                               {req.scbFileName ? "Downloaded" : "Exported"}
@@ -893,12 +749,10 @@ export default function PaymentRequestsClient({
                 variant="destructive"
                 size="sm"
                 onClick={handleConfirmReject}
-                disabled={!rejectReason.trim() || isPending}
-                className="text-xs font-semibold gap-1.5 cursor-pointer"
+                disabled={!rejectReason.trim()}
+                loading={isPending}
+                className="text-xs"
               >
-                {isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : null}
                 <span>Confirm Rejection</span>
               </Button>
             </div>
@@ -971,7 +825,7 @@ export default function PaymentRequestsClient({
                   <span className="text-muted-foreground block text-[11px]">
                     Account Number
                   </span>
-                  <span className="font-mono font-semibold text-text-strong">
+                  <span className="font-semibold text-text-strong">
                     {viewingItem.accountNumber}
                   </span>
                 </div>
@@ -979,7 +833,7 @@ export default function PaymentRequestsClient({
                   <span className="text-muted-foreground block text-[11px]">
                     BEFTN Routing Number
                   </span>
-                  <span className="font-mono font-semibold text-text-strong">
+                  <span className="font-semibold text-text-strong">
                     {viewingItem.routingNumber}
                   </span>
                 </div>
@@ -1084,28 +938,29 @@ export default function PaymentRequestsClient({
               </p>
             </div>
 
-            <div className="p-3 bg-muted rounded-xl border border-border w-full text-center font-mono text-xs text-text-strong truncate">
+            <div className="p-3 bg-muted rounded-xl border border-border w-full text-center text-xs text-text-strong truncate">
               {exportedResult.fileName}
             </div>
 
             <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5 w-full">
-              <a
-                href="https://s2b.standardchartered.com/unifiedlogin/login/index.html?language=en_AE#/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setExportedResult(null)}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-semibold rounded-xl hover:opacity-90 transition-opacity w-full text-xs"
-              >
-                <span>Go to SCB Straight2Bank</span>
-                <ExternalLink className="size-3.5" />
-              </a>
+              <Button asChild size="sm" className="w-full text-xs">
+                <a
+                  href="https://s2b.standardchartered.com/unifiedlogin/login/index.html?language=en_AE#/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setExportedResult(null)}
+                >
+                  <span>Go to SCB Straight2Bank</span>
+                  <ExternalLink className="size-3.5" />
+                </a>
+              </Button>
 
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setExportedResult(null)}
-                className="w-full text-xs h-9 cursor-pointer"
+                className="w-full text-xs cursor-pointer"
               >
                 Done
               </Button>

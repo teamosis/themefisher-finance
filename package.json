@@ -17,7 +17,8 @@
     "test:contract": "vitest run tests/contract",
     "test:routes": "vitest run tests/routes",
     "test:actions": "vitest run tests/actions",
-    "test:mcp": "vitest run tests/mcp"
+    "test:mcp": "vitest run tests/mcp",
+    "postinstall": "node -e \"require('fs').copyFileSync('node_modules/pdfjs-dist/build/pdf.worker.min.mjs', 'public/pdf.worker.min.mjs')\""
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

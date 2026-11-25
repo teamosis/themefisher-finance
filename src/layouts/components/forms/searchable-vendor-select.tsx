@@ -148,12 +148,12 @@ export default function SearchableVendorSelect({
         type="button"
         disabled={disabled}
         onClick={() => (isOpen ? closeDropdown() : openDropdown())}
-        className={`w-full px-3 py-2 border rounded-xl text-left text-sm flex items-center justify-between transition-colors bg-background cursor-pointer ${
+        className={`w-full min-h-10 px-3 py-2 border rounded-md text-left text-sm flex items-center justify-between transition-colors bg-background ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 cursor-pointer ${
           disabled
-            ? "bg-muted text-text-muted cursor-not-allowed border-border opacity-60"
+            ? "bg-muted text-text-muted cursor-not-allowed border-border opacity-50"
             : isOpen
-              ? "border-ring ring-2 ring-ring/20"
-              : "border-input hover:border-border focus:border-ring focus:ring-2 focus:ring-ring/20"
+              ? "border-input ring-2 ring-ring ring-offset-2"
+              : "border-input"
         }`}
       >
         <div className="flex items-center min-w-0 flex-1 mr-2">
@@ -193,7 +193,7 @@ export default function SearchableVendorSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 bg-card rounded-xl shadow-lg border border-border z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 right-0 top-full mt-1.5 bg-popover rounded-md shadow-lg border border-border z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
           {/* Search Bar */}
           <div className="p-2 border-b border-border bg-muted/40 flex items-center gap-2">
             <Search className="size-4 text-text-muted shrink-0 ml-1.5" />
@@ -253,7 +253,7 @@ export default function SearchableVendorSelect({
                         {v.receiver_name}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-text-muted mt-0.5 truncate">
-                        <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-xs text-text-strong">
+                        <span className="bg-muted px-1.5 py-0.5 rounded text-xs text-text-strong">
                           {v.account_number}
                         </span>
                         <span>{v.bank_name}</span>

@@ -28,7 +28,7 @@ h1,
 h2,
 .h1,
 .h2 {
-  @apply font-secondary font-bold leading-tight text-text-strong;
+  @apply font-primary font-bold leading-tight text-text-strong;
 }
 
 h3,

@@ -28,7 +28,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 interface NavSection {
-  title: string;
+  title?: string;
   items: {
     name: string;
     href: string;
@@ -40,7 +40,6 @@ interface NavSection {
 
 const navSections: NavSection[] = [
   {
-    title: "Overview",
     items: [
       {
         name: "Dashboard",
@@ -54,20 +53,25 @@ const navSections: NavSection[] = [
     title: "Inward Remittances",
     items: [
       {
-        name: "Inward Docs & Form-C",
-        href: "/invoice-tools",
-        icon: FileText,
-        exact: true,
-      },
-      {
         name: "Create Invoice",
         href: "/create-invoice",
         icon: PlusSquare,
       },
       {
-        name: "Clients Directory",
+        name: "Invoices & Form-C",
+        href: "/invoice-tools",
+        icon: FileText,
+        exact: true,
+      },
+      {
+        name: "Clients",
         href: "/clients",
         icon: Users,
+      },
+      {
+        name: "Receiving Banks",
+        href: "/payment-accounts",
+        icon: Landmark,
       },
     ],
   },
@@ -75,18 +79,18 @@ const navSections: NavSection[] = [
     title: "Outward Payouts",
     items: [
       {
-        name: "SCB Batch Generator",
-        href: "/scb-tools",
-        icon: FileSpreadsheet,
-        exact: true,
-      },
-      {
         name: "Payment Requests",
         href: "/payment-requests",
         icon: Inbox,
       },
       {
-        name: "Receiver Accounts",
+        name: "SCB Batch Export",
+        href: "/scb-tools",
+        icon: FileSpreadsheet,
+        exact: true,
+      },
+      {
+        name: "Beneficiaries",
         href: "/vendors",
         icon: UserCheck,
       },
@@ -98,7 +102,7 @@ const navSections: NavSection[] = [
     ],
   },
   {
-    title: "System & Settings",
+    title: "System",
     items: [
       {
         name: "Activity Logs",
@@ -109,11 +113,6 @@ const navSections: NavSection[] = [
         name: "MCP AI Tools",
         href: "/mcp-setup",
         icon: Wrench,
-      },
-      {
-        name: "Receiving Accounts",
-        href: "/payment-accounts",
-        icon: Landmark,
       },
     ],
   },
@@ -177,11 +176,13 @@ export default function AppSidebar() {
 
       {/* Navigation Sections */}
       <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
-        {navSections.map((section) => (
-          <div key={section.title} className="space-y-1">
-            <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
-              {section.title}
-            </div>
+        {navSections.map((section, idx) => (
+          <div key={section.title ?? `section-${idx}`} className="space-y-1">
+            {section.title && (
+              <div className="px-3 py-1 text-[11px] font-semibold text-muted-foreground/70 uppercase tracking-wider">
+                {section.title}
+              </div>
+            )}
             <div className="space-y-0.5">
               {section.items.map((item) => {
                 const Icon = item.icon;
@@ -195,7 +196,7 @@ export default function AppSidebar() {
                     key={item.href}
                     href={item.href}
                     onClick={closeMobile}
-                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-sm font-normal transition-all duration-150 cursor-pointer ${
+                    className={`flex items-center justify-between px-3 py-2 rounded-md text-sm font-normal transition-all duration-150 cursor-pointer ${
                       isActive
                         ? "bg-primary text-primary-foreground shadow-xs font-medium"
                         : "text-muted-foreground hover:text-text-strong hover:bg-muted"
@@ -244,7 +245,7 @@ export default function AppSidebar() {
             <button
               type="button"
               onClick={handleCopyPaymentLink}
-              className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-background hover:bg-muted border border-border text-xs font-medium text-text-strong transition-colors cursor-pointer shadow-2xs"
+              className="w-full flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md bg-background hover:bg-muted border border-border text-xs font-medium text-text-strong transition-colors cursor-pointer shadow-2xs"
             >
               {copiedLink ? (
                 <>

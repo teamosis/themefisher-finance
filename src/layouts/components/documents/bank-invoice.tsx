@@ -92,7 +92,7 @@ export const BankInvoice = React.forwardRef<HTMLDivElement, BankInvoiceProps>(
         className="print-page bg-white text-black text-[12.5px] max-w-4xl mx-auto print:m-0 print:p-0 print:shadow-none shadow-sm flex flex-col justify-between"
         style={{
           fontFamily:
-            '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+            'var(--font-primary), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
           width: "210mm",
           height: "297mm",
           maxHeight: "297mm",
@@ -253,7 +253,7 @@ export const BankInvoice = React.forwardRef<HTMLDivElement, BankInvoiceProps>(
                         {acc.bic_swift && (
                           <div>
                             <div className="font-bold">BIC/SWIFT:</div>
-                            <div className="mt-0.5 font-mono">
+                            <div className="mt-0.5">
                               {acc.bic_swift}
                             </div>
                           </div>
@@ -263,7 +263,7 @@ export const BankInvoice = React.forwardRef<HTMLDivElement, BankInvoiceProps>(
                             <div className="font-bold">
                               IBAN/Account Number:
                             </div>
-                            <div className="mt-0.5 font-mono">
+                            <div className="mt-0.5">
                               {acc.account_number}
                             </div>
                           </div>
@@ -318,7 +318,7 @@ export const BankInvoice = React.forwardRef<HTMLDivElement, BankInvoiceProps>(
                   {effectiveAccounts[0].bic_swift && (
                     <div>
                       <div className="font-bold">BIC/SWIFT:</div>
-                      <div className="mt-0.5 font-mono">
+                      <div className="mt-0.5">
                         {effectiveAccounts[0].bic_swift}
                       </div>
                     </div>
@@ -326,7 +326,7 @@ export const BankInvoice = React.forwardRef<HTMLDivElement, BankInvoiceProps>(
                   {effectiveAccounts[0].account_number && (
                     <div>
                       <div className="font-bold">IBAN/Account Number:</div>
-                      <div className="mt-0.5 font-mono">
+                      <div className="mt-0.5">
                         {effectiveAccounts[0].account_number}
                       </div>
                     </div>

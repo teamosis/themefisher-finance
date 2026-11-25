@@ -8,6 +8,8 @@ import { CreateInvoiceModal } from "@/components/modals/create-invoice-modal";
 import { Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { getInvoiceDateFromValueDate, parseMT103 } from "@/lib/pdfParser";
 import type { Client, Invoice, PaymentAccount } from "@/types";
 import {
@@ -15,7 +17,6 @@ import {
   ArrowRight,
   CheckCircle2,
   FileText,
-  Loader2,
   Printer,
   UploadCloud,
   X,
@@ -320,7 +321,7 @@ export default function InvoiceToolsClient({
               <Button
                 type="button"
                 onClick={() => setMatchPopupData(null)}
-                className="w-full rounded-xl"
+                className="w-full"
               >
                 View Invoice
               </Button>
@@ -368,23 +369,15 @@ export default function InvoiceToolsClient({
             type="button"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            disabled={isUploadingPdf}
-            className="gap-2 text-xs sm:text-sm font-normal rounded-xl"
+            loading={isUploadingPdf}
           >
-            {isUploadingPdf ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <UploadCloud className="size-4" />
-            )}
+            {!isUploadingPdf && <UploadCloud />}
             <span>{isUploadingPdf ? "Parsing..." : "Autofill from PDF"}</span>
           </Button>
-          <Button
-            asChild
-            className="gap-1.5 text-xs sm:text-sm font-normal rounded-xl"
-          >
+          <Button asChild>
             <Link href="/create-invoice">
               <span>Create New Invoice</span>
-              <ArrowRight className="size-4" />
+              <ArrowRight />
             </Link>
           </Button>
         </div>
@@ -393,9 +386,9 @@ export default function InvoiceToolsClient({
       <Card className="border-border bg-card shadow-xs">
         <CardContent className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           <div className="relative z-20 flex flex-col gap-1.5">
-            <label className="block text-sm font-normal text-text-strong">
+            <Label className="block text-sm font-normal text-text-strong">
               Select Client
-            </label>
+            </Label>
             <SearchableClientSelect
               clients={clients}
               value={selectedClientId}
@@ -407,14 +400,13 @@ export default function InvoiceToolsClient({
             />
           </div>
           <div className="relative z-10 flex flex-col gap-1.5">
-            <label className="block text-sm font-normal text-text-strong">
+            <Label className="block text-sm font-normal text-text-strong">
               Select Invoice
-            </label>
-            <select
+            </Label>
+            <Select
               value={selectedInvoiceId}
               onChange={(e) => setSelectedInvoiceId(e.target.value)}
               disabled={!selectedClientId}
-              className="block w-full px-3.5 py-2.5 pr-10 border rounded-xl border-input text-base sm:text-sm focus:ring-2 focus:ring-ring bg-background text-text-strong disabled:opacity-50 disabled:cursor-not-allowed focus:outline-hidden transition-colors cursor-pointer min-h-11"
             >
               <option value="">-- Choose an Invoice --</option>
               {filteredInvoices.map((i) => (
@@ -423,7 +415,7 @@ export default function InvoiceToolsClient({
                   {i.amount}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -473,9 +465,9 @@ export default function InvoiceToolsClient({
                 <Button
                   type="button"
                   onClick={() => handlePrintBankInvoice()}
-                  className="flex-1 sm:flex-none justify-center gap-2 rounded-xl text-xs sm:text-sm font-normal"
+                  className="flex-1 sm:flex-none"
                 >
-                  <Printer className="size-4" />
+                  <Printer />
                   <span>Print Invoice</span>
                 </Button>
               )}
@@ -484,9 +476,9 @@ export default function InvoiceToolsClient({
                   type="button"
                   variant="outline"
                   onClick={() => handlePrintCForm()}
-                  className="flex-1 sm:flex-none justify-center gap-2 rounded-xl text-xs sm:text-sm font-normal border-border hover:bg-light"
+                  className="flex-1 sm:flex-none"
                 >
-                  <FileText className="size-4" />
+                  <FileText />
                   <span>Print Form-C</span>
                 </Button>
               )}
@@ -505,9 +497,8 @@ export default function InvoiceToolsClient({
                   type="button"
                   size="sm"
                   onClick={() => handlePrintBankInvoice()}
-                  className="gap-1.5 rounded-xl font-normal"
                 >
-                  <Printer className="size-3.5" />
+                  <Printer />
                   <span>Print / Save PDF</span>
                 </Button>
               </div>
@@ -540,9 +531,8 @@ export default function InvoiceToolsClient({
                   size="sm"
                   variant="outline"
                   onClick={() => handlePrintCForm()}
-                  className="gap-1.5 rounded-xl font-normal border-border hover:bg-light"
                 >
-                  <Printer className="size-3.5" />
+                  <Printer />
                   <span>Print / Save PDF</span>
                 </Button>
               </div>

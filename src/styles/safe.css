@@ -17,5 +17,5 @@ input#nav-toggle:checked ~ #nav-menu {
 }
 
 .form-label {
-  @apply mb-4 block font-secondary text-xl font-normal text-text-strong;
+  @apply mb-4 block font-primary text-xl font-normal text-text-strong;
 }

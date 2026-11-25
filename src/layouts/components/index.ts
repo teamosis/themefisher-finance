@@ -8,6 +8,7 @@ export * from "./ui/card";
 export * from "./ui/dropdown-menu";
 export * from "./ui/input";
 export * from "./ui/label";
+export * from "./ui/select";
 export * from "./ui/skeleton";
 export * from "./ui/table";
 export * from "./ui/tabs";

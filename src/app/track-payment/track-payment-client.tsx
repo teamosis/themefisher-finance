@@ -8,11 +8,10 @@ import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import {
   AlertCircle,
-  ArrowLeft,
   Check,
   CheckCircle2,
   Clock,
-  Loader2,
+  Plus,
   Search,
   ShieldCheck,
   XCircle,
@@ -153,7 +152,7 @@ export default function TrackPaymentClient() {
     <div className="max-w-xl mx-auto w-full">
       <Card className="border-border bg-card shadow-xs">
         <CardHeader className="p-4 sm:p-5 pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <div className="size-7 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <Search className="size-4" />
@@ -164,10 +163,10 @@ export default function TrackPaymentClient() {
             </div>
             <Link
               href="/request-payment"
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-text-strong transition-colors"
+              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-text-strong transition-colors shrink-0"
             >
-              <ArrowLeft className="size-3.5" />
-              <span>Back to Form</span>
+              <Plus className="size-3.5" />
+              <span>Request Payment</span>
             </Link>
           </div>
         </CardHeader>
@@ -182,19 +181,16 @@ export default function TrackPaymentClient() {
                 }
                 placeholder="PR-20261124-XXXX"
                 disabled={isTracking}
-                className="font-mono text-xs uppercase h-8.5 bg-background"
+                className="text-xs uppercase h-8.5 bg-background"
                 autoFocus
               />
               <Button
                 type="submit"
-                disabled={isTracking}
-                className="h-8.5 px-3.5 text-xs font-semibold gap-1.5 shrink-0 cursor-pointer"
+                size="sm"
+                loading={isTracking}
+                className="h-8.5 shrink-0"
               >
-                {isTracking ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Search className="size-3.5" />
-                )}
+                {!isTracking && <Search />}
                 <span>Track</span>
               </Button>
             </div>
@@ -213,7 +209,7 @@ export default function TrackPaymentClient() {
                     <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
                       Tracking Reference
                     </span>
-                    <span className="font-mono font-bold text-xs text-text-strong">
+                    <span className="font-bold text-xs text-text-strong">
                       {trackingResult.trackingCode}
                     </span>
                   </div>

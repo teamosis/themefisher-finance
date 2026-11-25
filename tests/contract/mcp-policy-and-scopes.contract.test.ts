@@ -138,13 +138,13 @@ describe("MCP Policy & Scopes Contract Suite", () => {
   describe("mcpClientConfig & setupPrompt", () => {
     it("generates valid JSON client configuration with Bearer token header", () => {
       const jsonStr = mcpClientConfig(
-        "https://finance.themefisher.com",
+        "https://finance.example.com",
         "tff_abc123",
       );
       const config = JSON.parse(jsonStr);
 
       expect(config.mcpServers["themefisher-finance"].url).toBe(
-        "https://finance.themefisher.com/api/mcp",
+        "https://finance.example.com/api/mcp",
       );
       expect(
         config.mcpServers["themefisher-finance"].headers.Authorization,

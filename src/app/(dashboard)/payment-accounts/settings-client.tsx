@@ -7,7 +7,11 @@ import {
 } from "@/actions";
 import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 import type { PaymentAccount, PaymentAccountFormData } from "@/types";
 import { CreditCard, Landmark, MapPin, Plus, Trash2, User } from "lucide-react";
 import { useCallback, useState } from "react";
@@ -81,15 +85,15 @@ export default function SettingsClient({
     const cleanBankAddress = data.bank_address?.trim() || null;
 
     if (!cleanBankName) {
-      alert("Bank Name is required.");
+      toast.error("Bank Name is required.");
       return;
     }
     if (!cleanNameOnAccount) {
-      alert("Name on Account is required.");
+      toast.error("Name on Account is required.");
       return;
     }
     if (!cleanAccountNumber) {
-      alert("Account / IBAN Number is required.");
+      toast.error("Account / IBAN Number is required.");
       return;
     }
 
@@ -120,7 +124,7 @@ export default function SettingsClient({
       await fetchAccounts();
     } catch (error: any) {
       console.error("Error saving account:", error.message);
-      alert(
+      toast.error(
         "Unable to save bank account. Please verify details and try again.",
       );
     } finally {
@@ -142,7 +146,7 @@ export default function SettingsClient({
       setDeletingAccount(null);
     } catch (error: any) {
       console.error("Error deleting account:", error.message);
-      alert("Unable to delete account. Please try again.");
+      toast.error("Unable to delete account. Please try again.");
     } finally {
       setIsDeleting(false);
     }
@@ -174,15 +178,14 @@ export default function SettingsClient({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
             {/* Bank Name */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Bank Name *
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("bank_name", {
                   required: "Bank Name is required",
                 })}
                 maxLength={120}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="e.g. Standard Chartered Bank or Wise"
               />
               {errors.bank_name && (
@@ -194,15 +197,14 @@ export default function SettingsClient({
 
             {/* Name on Account */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Name on Account *
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("name_on_account", {
                   required: "Name on Account is required",
                 })}
                 maxLength={120}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="e.g. Themefisher LLC"
               />
               {errors.name_on_account && (
@@ -214,15 +216,14 @@ export default function SettingsClient({
 
             {/* IBAN / Account Number */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 IBAN / Account Number *
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("account_number", {
                   required: "Account Number is required",
                 })}
                 maxLength={50}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="e.g. 0001234567890"
               />
               {errors.account_number && (
@@ -234,39 +235,34 @@ export default function SettingsClient({
 
             {/* BIC / SWIFT */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 BIC / SWIFT
-              </label>
-              <input
+              </Label>
+              <Input
                 {...register("bic_swift")}
                 maxLength={20}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
                 placeholder="e.g. SCBLBDDX"
               />
             </div>
 
             {/* Bank Address */}
             <div className="md:col-span-2 flex flex-col gap-1.5">
-              <label className="text-sm font-normal text-text-strong">
+              <Label className="text-sm font-normal text-text-strong">
                 Bank Address
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 {...register("bank_address")}
                 rows={2}
                 maxLength={300}
-                className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-text-muted"
+                className="min-h-0"
                 placeholder="e.g. 1 Basinghall Avenue, London, EC2V 5DD"
               />
             </div>
           </div>
 
           <div className="pt-2 flex justify-end">
-            <Button
-              type="submit"
-              disabled={submitting}
-              className="gap-2 cursor-pointer"
-            >
-              <Plus className="size-4" />
+            <Button type="submit" loading={submitting}>
+              {!submitting && <Plus />}
               <span>{submitting ? "Saving..." : "Add Bank Account"}</span>
             </Button>
           </div>
@@ -329,7 +325,7 @@ export default function SettingsClient({
                         {acc.bank_name || acc.account_name || "Unnamed Bank"}
                       </span>
                       {acc.bic_swift && (
-                        <span className="text-xs sm:text-sm font-mono text-text-muted">
+                        <span className="text-xs sm:text-sm text-text-muted">
                           SWIFT: {acc.bic_swift}
                         </span>
                       )}
@@ -353,7 +349,7 @@ export default function SettingsClient({
                           <CreditCard className="size-4 text-text-muted shrink-0" />
                           <span>
                             A/C:{" "}
-                            <span className="font-mono text-text-strong">
+                            <span className="text-text-strong">
                               {acc.account_number}
                             </span>
                           </span>

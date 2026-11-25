@@ -1,7 +1,10 @@
 "use client";
 
 import { getBankNames, getBranchesByBank } from "@/actions";
-import { useCallback, useEffect, useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useCallback, useEffect, useId, useState } from "react";
+import type { StylesConfig } from "react-select";
 import CreatableSelect from "react-select/creatable";
 
 interface OptionType {
@@ -21,54 +24,98 @@ interface BankBranchSelectProps {
   onBankChange: (value: string) => void;
   onBranchChange: (value: string) => void;
   onRoutingChange: (value: string) => void;
+  variant?: "default" | "compact";
+  disabled?: boolean;
 }
 
-const selectStyles = {
-  control: (base: Record<string, unknown>, state: { isFocused: boolean }) => ({
-    ...base,
-    borderRadius: "0.75rem",
-    borderColor: state.isFocused ? "#3b82f6" : "#e2e8f0",
-    boxShadow: state.isFocused ? "0 0 0 2px rgba(59,130,246,0.3)" : "none",
-    fontSize: "0.875rem",
-    minHeight: "38px",
-    "&:hover": { borderColor: "#3b82f6" },
-  }),
-  menu: (base: Record<string, unknown>) => ({
-    ...base,
-    borderRadius: "0.75rem",
-    overflow: "hidden",
-    zIndex: 50,
-    boxShadow:
-      "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
-  }),
-  option: (
-    base: Record<string, unknown>,
-    state: { isFocused: boolean; isSelected: boolean },
-  ) => ({
-    ...base,
-    fontSize: "0.875rem",
-    backgroundColor: state.isSelected
-      ? "#3b82f6"
-      : state.isFocused
-        ? "#eff6ff"
-        : "white",
-    color: state.isSelected ? "white" : "#1e293b",
-    "&:active": { backgroundColor: "#dbeafe" },
-  }),
-  placeholder: (base: Record<string, unknown>) => ({
-    ...base,
-    fontSize: "0.875rem",
-    color: "#94a3b8",
-  }),
-  singleValue: (base: Record<string, unknown>) => ({
-    ...base,
-    fontSize: "0.875rem",
-  }),
-  input: (base: Record<string, unknown>) => ({
-    ...base,
-    fontSize: "0.875rem",
-  }),
-};
+function getSelectStyles<T extends OptionType>(
+  isCompact: boolean,
+): StylesConfig<T, false> {
+  const fontSize = isCompact ? "0.75rem" : "0.875rem";
+  return {
+    control: (base, state) => ({
+      ...base,
+      minHeight: isCompact ? "34px" : "40px",
+      borderRadius: "var(--radius)",
+      borderColor: "var(--input)",
+      backgroundColor: "var(--background)",
+      boxShadow: state.isFocused
+        ? "0 0 0 2px var(--background), 0 0 0 4px var(--ring)"
+        : "none",
+      fontSize,
+      cursor: state.isDisabled ? "not-allowed" : "pointer",
+      opacity: state.isDisabled ? 0.5 : 1,
+      "&:hover": {
+        borderColor: "var(--input)",
+      },
+    }),
+    valueContainer: (base) => ({
+      ...base,
+      padding: "0 12px",
+    }),
+    menu: (base) => ({
+      ...base,
+      borderRadius: "var(--radius)",
+      backgroundColor: "var(--popover)",
+      border: "1px solid var(--border)",
+      overflow: "hidden",
+      zIndex: 50,
+      boxShadow:
+        "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
+    }),
+    option: (base, state) => ({
+      ...base,
+      fontSize,
+      backgroundColor: state.isSelected
+        ? "var(--primary)"
+        : state.isFocused
+          ? "var(--muted)"
+          : "transparent",
+      color: state.isSelected
+        ? "var(--primary-foreground)"
+        : "var(--popover-foreground)",
+      cursor: "pointer",
+      "&:active": {
+        backgroundColor: state.isSelected ? "var(--primary)" : "var(--muted)",
+      },
+    }),
+    placeholder: (base) => ({
+      ...base,
+      fontSize,
+      margin: 0,
+      color: "var(--muted-foreground)",
+    }),
+    singleValue: (base) => ({
+      ...base,
+      fontSize,
+      margin: 0,
+      color: "var(--foreground)",
+    }),
+    input: (base) => ({
+      ...base,
+      fontSize,
+      margin: 0,
+      padding: 0,
+      color: "var(--foreground)",
+    }),
+    indicatorSeparator: (base) => ({
+      ...base,
+      backgroundColor: "var(--border)",
+    }),
+    dropdownIndicator: (base) => ({
+      ...base,
+      padding: isCompact ? "0 6px" : "0 8px",
+      color: "var(--muted-foreground)",
+      "&:hover": { color: "var(--foreground)" },
+    }),
+    clearIndicator: (base) => ({
+      ...base,
+      padding: isCompact ? "0 4px" : "0 6px",
+      color: "var(--muted-foreground)",
+      "&:hover": { color: "var(--foreground)" },
+    }),
+  };
+}
 
 export default function BankBranchSelect({
   bankName,
@@ -77,7 +124,13 @@ export default function BankBranchSelect({
   onBankChange,
   onBranchChange,
   onRoutingChange,
+  variant = "default",
+  disabled = false,
 }: BankBranchSelectProps) {
+  const isCompact = variant === "compact";
+  const selectId = useId();
+  const bankStyles = getSelectStyles<OptionType>(isCompact);
+  const branchStyles = getSelectStyles<BranchOption>(isCompact);
   const [bankOptions, setBankOptions] = useState<OptionType[]>([]);
   const [loadedBranches, setLoadedBranches] = useState<{
     bankName: string;
@@ -162,14 +215,23 @@ export default function BankBranchSelect({
       ) ?? { label: branchName, value: branchName, branchName })
     : null;
 
+  const wrapperClass = isCompact ? "space-y-1" : "flex flex-col gap-1.5";
+  const labelClass = isCompact
+    ? "text-xs font-medium"
+    : "text-sm font-normal text-text-strong";
+  const routingId = `${selectId}-routing`;
+
   return (
     <>
-      <div>
-        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+      <div className={wrapperClass}>
+        <Label htmlFor={`${selectId}-bank-input`} className={labelClass}>
           Bank Name
-        </label>
-        <CreatableSelect
+        </Label>
+        <CreatableSelect<OptionType>
+          instanceId={`${selectId}-bank`}
+          inputId={`${selectId}-bank-input`}
           isClearable
+          isDisabled={disabled}
           isLoading={loadingBanks}
           options={bankOptions}
           value={bankValue}
@@ -177,15 +239,17 @@ export default function BankBranchSelect({
           onCreateOption={(value) => handleBankSelect({ label: value, value })}
           placeholder="Type to search or add bank..."
           formatCreateLabel={(input) => `Use custom: "${input}"`}
-          styles={selectStyles}
+          styles={bankStyles}
           noOptionsMessage={() => "No banks found"}
         />
       </div>
-      <div>
-        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+      <div className={wrapperClass}>
+        <Label htmlFor={`${selectId}-branch-input`} className={labelClass}>
           Branch Name
-        </label>
+        </Label>
         <CreatableSelect<BranchOption>
+          instanceId={`${selectId}-branch`}
+          inputId={`${selectId}-branch-input`}
           isClearable
           isLoading={Boolean(bankName && loadedBranches?.bankName !== bankName)}
           options={branchOptions}
@@ -198,23 +262,25 @@ export default function BankBranchSelect({
             bankName ? "Type to search or add branch..." : "Select a bank first"
           }
           formatCreateLabel={(input) => `Use custom: "${input}"`}
-          styles={selectStyles}
-          isDisabled={!bankName}
+          styles={branchStyles}
+          isDisabled={disabled || !bankName}
           noOptionsMessage={() =>
             bankName ? "No branches found" : "Select a bank first"
           }
         />
       </div>
-      <div>
-        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">
+      <div className={wrapperClass}>
+        <Label htmlFor={routingId} className={labelClass}>
           Routing Number
-        </label>
-        <input
+        </Label>
+        <Input
+          id={routingId}
           required
           type="text"
           value={routingNumber}
           onChange={(e) => onRoutingChange(e.target.value)}
-          className="w-full border border-slate-200 rounded-xl px-3 py-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          disabled={disabled}
+          className={isCompact ? "text-xs h-8.5 bg-background" : "bg-background"}
           placeholder="Auto-fills or enter manually"
         />
       </div>

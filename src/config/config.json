@@ -1,7 +1,6 @@
 {
   "site": {
-    "title": "Themefisher Finance",
-    "base_url": "https://finance.themefisher.com"
+    "title": "Themefisher Finance"
   },
   "settings": {
     "default_theme": "light",

@@ -9,6 +9,9 @@ import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { Modal } from "@/components/modals/modal";
 import { TableRowsSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/toast";
 import type { Vendor } from "@/types";
 import dynamic from "next/dynamic";
 import { useMemo, useState } from "react";
@@ -17,7 +20,7 @@ const BankBranchSelect = dynamic(
   () => import("@/components/forms/bank-branch-select"),
   {
     ssr: false,
-    loading: () => <div className="animate-pulse bg-muted rounded-xl h-9.5" />,
+    loading: () => <div className="animate-pulse bg-muted rounded-md h-10" />,
   },
 );
 
@@ -25,7 +28,6 @@ import {
   AlertCircle,
   AlertTriangle,
   Check,
-  Loader2,
   Pencil,
   Plus,
   Search,
@@ -147,7 +149,7 @@ export default function VendorsClient({
       );
     } catch (error: any) {
       console.error("Failed to toggle employee status:", error);
-      alert(`Could not update employee status: ${error.message}`);
+      toast.error(`Could not update employee status: ${error.message}`);
     }
   };
 
@@ -165,7 +167,7 @@ export default function VendorsClient({
       );
     } catch (error: any) {
       console.error("Failed to toggle hide status:", error);
-      alert(`Could not update hidden status: ${error.message}`);
+      toast.error(`Could not update hidden status: ${error.message}`);
     }
   };
 
@@ -223,7 +225,7 @@ export default function VendorsClient({
       triggerSuccess(`Added "${payload.receiver_name}" successfully!`);
     } catch (error: any) {
       setErrorMessage(error.message);
-      alert(`Failed to save vendor: ${error.message}`);
+      toast.error(`Failed to save vendor: ${error.message}`);
     } finally {
       setSaving(false);
       setDuplicateVendor(null);
@@ -303,7 +305,7 @@ export default function VendorsClient({
       setEditingVendor(null);
     } catch (error: any) {
       console.error(error);
-      alert(`Failed to update vendor: ${error.message}`);
+      toast.error(`Failed to update vendor: ${error.message}`);
     }
     setEditSaving(false);
   };
@@ -323,7 +325,7 @@ export default function VendorsClient({
       setDeletingVendor(null);
     } catch (error: any) {
       console.error(error);
-      alert(`Failed to hide vendor: ${error.message}`);
+      toast.error(`Failed to hide vendor: ${error.message}`);
     }
     setIsHiding(false);
   };
@@ -342,7 +344,7 @@ export default function VendorsClient({
       setDeletingVendor(null);
     } catch (error: any) {
       console.error(error);
-      alert(`Failed to delete vendor: ${error.message}`);
+      toast.error(`Failed to delete vendor: ${error.message}`);
     }
     setIsDeleting(false);
   };
@@ -426,21 +428,21 @@ export default function VendorsClient({
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4"
         >
           <div className="flex flex-col gap-1.5 relative">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Receiver / Employee Name *
-            </label>
-            <input
+            </Label>
+            <Input
               required
               type="text"
               name="receiver_name"
               value={formData.receiver_name}
               onChange={handleChange}
               onBlur={handleNameBlur}
-              className={`w-full border rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted ${
+              className={
                 inlineDuplicateWarning
                   ? "border-warning bg-warning/5"
-                  : "border-input"
-              }`}
+                  : undefined
+              }
               placeholder="e.g. John Doe"
             />
             {inlineDuplicateWarning && (
@@ -452,16 +454,15 @@ export default function VendorsClient({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-normal text-text-strong">
+            <Label className="text-sm font-normal text-text-strong">
               Account Number *
-            </label>
-            <input
+            </Label>
+            <Input
               required
               type="text"
               name="account_number"
               value={formData.account_number}
               onChange={handleChange}
-              className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 placeholder:text-text-muted"
               placeholder="1234567890"
             />
           </div>
@@ -499,16 +500,16 @@ export default function VendorsClient({
 
               {formData.is_employee && (
                 <div className="inline-flex items-center gap-2">
-                  <label className="text-xs sm:text-sm text-text-muted font-medium whitespace-nowrap">
+                  <Label className="text-xs sm:text-sm text-text-muted font-medium whitespace-nowrap">
                     Default Salary (BDT):
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="number"
                     name="salary"
                     value={formData.salary}
                     onChange={handleChange}
                     placeholder="e.g. 50000"
-                    className="w-36 border border-input rounded-xl px-3 py-1.5 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20"
+                    className="w-36 h-9"
                   />
                 </div>
               )}
@@ -516,14 +517,10 @@ export default function VendorsClient({
 
             <Button
               type="submit"
-              disabled={saving}
-              className="gap-2 cursor-pointer self-start sm:self-auto"
+              loading={saving}
+              className="self-start sm:self-auto"
             >
-              {saving ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Plus className="size-4" />
-              )}
+              {!saving && <Plus />}
               <span>Save Receiver</span>
             </Button>
           </div>
@@ -593,12 +590,12 @@ export default function VendorsClient({
             {/* Search Box */}
             <div className="relative w-full sm:w-60">
               <Search className="size-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
+              <Input
                 type="text"
                 placeholder="Search receivers..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-8 py-1.5 text-sm bg-background border border-input rounded-xl focus:border-ring focus:ring-2 focus:ring-ring/20 text-text-strong placeholder:text-text-muted"
+                className="pl-9 pr-8 h-9"
               />
               {searchQuery && (
                 <button
@@ -668,7 +665,7 @@ export default function VendorsClient({
                       <div className="flex items-center gap-2">
                         <span>{v.receiver_name}</span>
                         {v.salary ? (
-                          <span className="text-xs text-text-muted font-mono">
+                          <span className="text-xs text-text-muted">
                             ৳{Number(v.salary).toLocaleString()}
                           </span>
                         ) : null}
@@ -694,7 +691,7 @@ export default function VendorsClient({
                       </Button>
                     </td>
 
-                    <td className="px-5 py-3.5 font-mono text-xs text-text-muted">
+                    <td className="px-5 py-3.5 text-xs text-text-muted">
                       {v.account_number}
                     </td>
                     <td className="px-5 py-3.5 text-text-default">
@@ -703,7 +700,7 @@ export default function VendorsClient({
                     <td className="px-5 py-3.5 text-text-muted">
                       {v.branch_name || "—"}
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-xs text-text-muted">
+                    <td className="px-5 py-3.5 text-xs text-text-muted">
                       {v.routing_number || "—"}
                     </td>
                     <td className="px-5 py-3.5 text-right">
@@ -760,31 +757,29 @@ export default function VendorsClient({
           >
             <div className="p-5 sm:p-6 flex flex-col gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-sm font-normal text-text-strong">
+                <Label className="text-sm font-normal text-text-strong">
                   Receiver / Employee Name *
-                </label>
-                <input
+                </Label>
+                <Input
                   required
                   type="text"
                   name="receiver_name"
                   value={editFormData.receiver_name}
                   onChange={handleEditChange}
-                  className="w-full border border-input rounded-xl px-3 py-2 text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-normal text-text-strong">
+                  <Label className="text-sm font-normal text-text-strong">
                     Account Number *
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     required
                     type="text"
                     name="account_number"
                     value={editFormData.account_number}
                     onChange={handleEditChange}
-                    className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
                   />
                 </div>
                 <BankBranchSelect
@@ -823,16 +818,15 @@ export default function VendorsClient({
 
                 {editFormData.is_employee && (
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-normal text-text-strong">
+                    <Label className="text-sm font-normal text-text-strong">
                       Default Monthly Salary (BDT)
-                    </label>
-                    <input
+                    </Label>
+                    <Input
                       type="number"
                       name="salary"
                       value={editFormData.salary}
                       onChange={handleEditChange}
                       placeholder="e.g. 50000"
-                      className="w-full border border-input rounded-xl px-3 py-2 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5"
                     />
                   </div>
                 )}
@@ -848,16 +842,8 @@ export default function VendorsClient({
               >
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                disabled={editSaving}
-                className="gap-2 cursor-pointer"
-              >
-                {editSaving ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Check className="size-4" />
-                )}
+              <Button type="submit" loading={editSaving}>
+                {!editSaving && <Check />}
                 <span>Save Changes</span>
               </Button>
             </div>
@@ -908,7 +894,7 @@ export default function VendorsClient({
                 ? " but is currently hidden."
                 : " and is active."}
             </p>
-            <div className="p-3 bg-muted/40 rounded-xl border border-border text-xs text-text-muted text-left font-mono">
+            <div className="p-3 bg-muted/40 rounded-xl border border-border text-xs text-text-muted text-left">
               <p>A/C: {duplicateVendor.account_number}</p>
               <p>Bank: {duplicateVendor.bank_name}</p>
             </div>

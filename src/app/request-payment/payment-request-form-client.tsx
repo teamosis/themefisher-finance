@@ -16,7 +16,6 @@ import {
   Copy,
   CreditCard,
   FileText,
-  Loader2,
   Send,
   User,
 } from "lucide-react";
@@ -146,7 +145,7 @@ export default function PaymentRequestFormClient() {
                 <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
                   Tracking Reference
                 </span>
-                <span className="font-mono text-sm font-bold text-text-strong">
+                <span className="text-sm font-bold text-text-strong">
                   {submittedResult.trackingCode}
                 </span>
               </div>
@@ -188,7 +187,7 @@ export default function PaymentRequestFormClient() {
               </div>
               <div className="flex justify-between py-0.5 border-b border-border/50">
                 <span className="text-muted-foreground">Account</span>
-                <span className="font-mono font-medium text-text-strong">
+                <span className="font-medium text-text-strong">
                   ••••{submittedResult.accountNumber.slice(-4)}
                 </span>
               </div>
@@ -209,20 +208,27 @@ export default function PaymentRequestFormClient() {
             <div className="flex items-center gap-2.5 pt-1">
               <Button
                 type="button"
+                size="sm"
                 onClick={() => {
                   setSubmittedResult(null);
                   setFormData(initialFormState);
                 }}
-                className="flex-1 cursor-pointer text-xs h-9"
+                className="flex-1 cursor-pointer text-xs"
               >
                 Submit Another Request
               </Button>
-              <Link
-                href={`/track-payment?code=${submittedResult.trackingCode}`}
-                className="flex-1 inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-xs font-semibold text-text-strong hover:bg-muted transition-colors h-9"
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                className="flex-1 text-xs"
               >
-                Track Status
-              </Link>
+                <Link
+                  href={`/track-payment?code=${submittedResult.trackingCode}`}
+                >
+                  Track Status
+                </Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -343,6 +349,8 @@ export default function PaymentRequestFormClient() {
               </div>
 
               <BankBranchSelect
+                variant="compact"
+                disabled={isSubmitting}
                 bankName={formData.bankName}
                 branchName={formData.branchName}
                 routingNumber={formData.routingNumber}
@@ -382,7 +390,7 @@ export default function PaymentRequestFormClient() {
                     placeholder="Beneficiary account number"
                     required
                     disabled={isSubmitting}
-                    className="text-xs h-8.5 bg-background font-mono"
+                    className="text-xs h-8.5 bg-background"
                   />
                 </div>
                 <div className="space-y-1">
@@ -405,7 +413,7 @@ export default function PaymentRequestFormClient() {
                     placeholder="Re-enter account number"
                     required
                     disabled={isSubmitting}
-                    className="text-xs h-8.5 bg-background font-mono"
+                    className="text-xs h-8.5 bg-background"
                   />
                 </div>
               </div>
@@ -468,20 +476,13 @@ export default function PaymentRequestFormClient() {
             {/* Submission Button */}
             <Button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full h-9 text-xs font-semibold gap-2 mt-1 cursor-pointer"
+              loading={isSubmitting}
+              className="w-full mt-1"
             >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin" />
-                  <span>Submitting Request...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="size-3.5" />
-                  <span>Submit Payment Request</span>
-                </>
-              )}
+              {!isSubmitting && <Send />}
+              <span>
+                {isSubmitting ? "Submitting Request..." : "Submit Payment Request"}
+              </span>
             </Button>
 
             {/* Link to separate track page */}

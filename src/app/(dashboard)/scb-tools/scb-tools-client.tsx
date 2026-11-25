@@ -5,6 +5,10 @@ import SearchableVendorSelect from "@/components/forms/searchable-vendor-select"
 import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { Modal } from "@/components/modals/modal";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { toast } from "@/components/ui/toast";
 import { buildScbWorkbook, formatTransferDate, isPaymentAmount } from "@/lib/scb-workbook";
 import type { ActivityExcelItem, DebitAccount, Vendor } from "@/types";
 import { format } from "date-fns";
@@ -199,12 +203,12 @@ export default function ScbToolsClient({
       (row) => row.vendorId || row.amount || row.description,
     );
     if (!filledRows.length) {
-      alert("Add at least one transfer before exporting.");
+      toast.warning("Add at least one transfer before exporting.");
       return;
     }
 
     if (!debitAccount.trim()) {
-      alert(
+      toast.error(
         "Please enter or select a Debit Account Number before generating the Excel file.",
       );
       return;
@@ -219,7 +223,7 @@ export default function ScbToolsClient({
         !formattedDate ||
         !isPaymentAmount(row.amount)
       ) {
-        alert(
+        toast.error(
           `Check the receiver, routing number, date, and amount for transfer #${index + 1}.`,
         );
         return;
@@ -245,7 +249,7 @@ export default function ScbToolsClient({
         "SCB_Transfers",
       );
     } catch {
-      alert("Could not generate the Excel file. Please try again.");
+      toast.error("Could not generate the Excel file. Please try again.");
       return;
     }
 
@@ -361,7 +365,7 @@ export default function ScbToolsClient({
     const totalSelected =
       selectedSalaryRows.length + additionalSalaryRows.length;
     if (totalSelected === 0) {
-      alert(
+      toast.warning(
         "Please select at least one employee or add an additional transaction.",
       );
       return;
@@ -371,7 +375,7 @@ export default function ScbToolsClient({
       (row) => !isPaymentAmount(row.amount) || !isPayableVendor(row.vendor),
     );
     if (missingAmount) {
-      alert(
+      toast.error(
         "Check the salary amount and banking details for all selected employees.",
       );
       return;
@@ -381,13 +385,13 @@ export default function ScbToolsClient({
       const row = additionalSalaryRows[i];
       const vendor = vendors.find((item) => item.id === row.vendorId);
       if (!isPayableVendor(vendor)) {
-        alert(
+        toast.error(
           `Check the receiver and routing number for additional transaction #${i + 1}.`,
         );
         return;
       }
       if (!isPaymentAmount(row.amount)) {
-        alert(
+        toast.error(
           `Please enter a valid payment amount for additional transaction #${i + 1}.`,
         );
         return;
@@ -396,13 +400,13 @@ export default function ScbToolsClient({
 
     const activeDebit = salaryDebitAccount || debitAccount;
     if (!activeDebit.trim()) {
-      alert("Please select a Debit Account Number for salary payout.");
+      toast.error("Please select a Debit Account Number for salary payout.");
       return;
     }
 
     const formattedDate = formatTransferDate(salaryDate);
     if (!formattedDate) {
-      alert("Enter a valid salary payment date.");
+      toast.error("Enter a valid salary payment date.");
       return;
     }
 
@@ -444,7 +448,7 @@ export default function ScbToolsClient({
         "SCB_Salary_Sheet",
       );
     } catch {
-      alert("Could not generate the Excel file. Please try again.");
+      toast.error("Could not generate the Excel file. Please try again.");
       return;
     }
 
@@ -501,7 +505,7 @@ export default function ScbToolsClient({
   const handleLoadEmployeesIntoTable = () => {
     const totalCount = selectedSalaryRows.length + additionalSalaryRows.length;
     if (totalCount === 0) {
-      alert(
+      toast.warning(
         "Please select at least one employee or add an additional transaction.",
       );
       return;
@@ -593,12 +597,12 @@ export default function ScbToolsClient({
           </p>
         </div>
         <div className="w-full sm:w-80">
-          <select
+          <Select
             id="debit-account"
             required
             value={debitAccount}
             onChange={(e) => handleDebitAccountChange(e.target.value)}
-            className="w-full border border-input rounded-xl px-3.5 py-2.5 pr-10 font-mono text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 shadow-xs cursor-pointer min-h-11"
+            className="shadow-xs"
           >
             {debitAccounts.length > 0 ? (
               debitAccounts.map((acc) => (
@@ -615,7 +619,7 @@ export default function ScbToolsClient({
             ) : (
               <option value="">-- Select Debit Account --</option>
             )}
-          </select>
+          </Select>
         </div>
       </div>
 
@@ -660,49 +664,46 @@ export default function ScbToolsClient({
 
                 {/* Amount */}
                 <div className="sm:col-span-1 md:col-span-2">
-                  <label className="block text-xs font-medium text-text-strong mb-1.5">
+                  <Label className="block text-xs font-medium text-text-strong mb-1.5">
                     Amount (BDT) *
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="number"
                     value={row.amount}
                     onChange={(e) =>
                       handleRowChange(row.id, "amount", e.target.value)
                     }
-                    className="w-full border border-input rounded-xl px-3 py-2 bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 text-sm font-mono placeholder:text-text-muted"
                     placeholder="0.00"
                   />
                 </div>
 
                 {/* Description */}
                 <div className="sm:col-span-1 md:col-span-3">
-                  <label className="block text-xs font-medium text-text-strong mb-1.5">
+                  <Label className="block text-xs font-medium text-text-strong mb-1.5">
                     Description (Max 100)
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="text"
                     maxLength={100}
                     value={row.description}
                     onChange={(e) =>
                       handleRowChange(row.id, "description", e.target.value)
                     }
-                    className="w-full border border-input rounded-xl px-3 py-2 bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 text-sm placeholder:text-text-muted"
                     placeholder="Transfer reason..."
                   />
                 </div>
 
                 {/* Transfer Date */}
                 <div className="sm:col-span-1 md:col-span-2">
-                  <label className="block text-xs font-medium text-text-strong mb-1.5">
+                  <Label className="block text-xs font-medium text-text-strong mb-1.5">
                     Date *
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     type="date"
                     value={row.transferDate}
                     onChange={(e) =>
                       handleRowChange(row.id, "transferDate", e.target.value)
                     }
-                    className="w-full border border-input rounded-xl px-3 py-2 bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 min-h-10.5 text-sm"
                   />
                 </div>
 
@@ -771,43 +772,40 @@ export default function ScbToolsClient({
             {/* Settings Bar */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 sm:gap-4 p-4 bg-muted/40 rounded-2xl border border-border text-xs sm:text-sm">
               <div className="flex flex-col gap-1.5">
-                <label className="font-normal text-text-strong">
+                <Label className="font-normal text-text-strong">
                   Salary Month / Reason *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="text"
                   value={salaryReason}
                   onChange={(e) => setSalaryReason(e.target.value)}
-                  className="w-full border border-input bg-background rounded-xl px-3 py-2 text-sm text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 placeholder:text-text-muted"
                   placeholder="e.g. Salary for September 2026"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="font-normal text-text-strong">
+                <Label className="font-normal text-text-strong">
                   Transfer Date *
-                </label>
-                <input
+                </Label>
+                <Input
                   type="date"
                   value={salaryDate}
                   onChange={(e) => setSalaryDate(e.target.value)}
-                  className="w-full border border-input bg-background rounded-xl px-3 py-2 text-sm text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="font-normal text-text-strong">
+                <Label className="font-normal text-text-strong">
                   Debit Account *
-                </label>
-                <select
+                </Label>
+                <Select
                   value={salaryDebitAccount}
                   onChange={(e) => setSalaryDebitAccount(e.target.value)}
-                  className="w-full border border-input bg-background rounded-xl px-3.5 py-2.5 pr-10 text-sm text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 font-mono cursor-pointer min-h-11"
                 >
                   {debitAccounts.map((acc) => (
                     <option key={acc.id} value={acc.account_number}>
                       {acc.account_number} ({acc.account_label || "SCB"})
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             </div>
 
@@ -843,13 +841,12 @@ export default function ScbToolsClient({
                       Receiver Bank Accounts or add transfers below.
                     </span>
                   </div>
-                  <Link
-                    href="/vendors"
-                    className="inline-flex items-center gap-1.5 bg-primary text-primary-foreground px-3 py-1.5 rounded-lg text-xs font-normal whitespace-nowrap transition-colors hover:opacity-90"
-                  >
-                    <span>Mark Employees</span>
-                    <ArrowRight className="size-3.5" />
-                  </Link>
+                  <Button asChild size="sm" className="whitespace-nowrap">
+                    <Link href="/vendors">
+                      <span>Mark Employees</span>
+                      <ArrowRight className="size-3.5" />
+                    </Link>
+                  </Button>
                 </div>
               ) : (
                 <div className="border border-border rounded-xl overflow-hidden shadow-2xs">
@@ -896,14 +893,14 @@ export default function ScbToolsClient({
                               </div>
                             )}
                           </td>
-                          <td className="px-3 sm:px-4 py-3 font-mono text-xs text-text-muted">
+                          <td className="px-3 sm:px-4 py-3 text-xs text-text-muted">
                             <div>A/C: {row.vendor.account_number}</div>
                             <div>
                               Routing: {row.vendor.routing_number || "—"}
                             </div>
                           </td>
                           <td className="px-3 sm:px-4 py-3 text-right">
-                            <input
+                            <Input
                               type="number"
                               disabled={!row.selected}
                               value={row.amount}
@@ -914,7 +911,7 @@ export default function ScbToolsClient({
                                 )
                               }
                               placeholder="0.00"
-                              className="w-36 text-right border border-input bg-background text-text-strong rounded-xl px-3 py-1.5 text-sm font-mono focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:bg-muted disabled:opacity-50"
+                              className="w-36 ml-auto h-9 text-right disabled:bg-muted"
                             />
                           </td>
                         </tr>
@@ -933,7 +930,7 @@ export default function ScbToolsClient({
                     <Layers className="size-4 text-primary" />
                     <span>Additional Transactions</span>
                     {additionalSalaryRows.length > 0 && (
-                      <span className="text-xs text-text-muted font-mono">
+                      <span className="text-xs text-text-muted">
                         ({additionalSalaryRows.length})
                       </span>
                     )}
@@ -982,7 +979,7 @@ export default function ScbToolsClient({
                         return (
                           <tr key={add.id} className="hover:bg-muted/30">
                             <td className="px-3 sm:px-4 py-3">
-                              <select
+                              <Select
                                 required
                                 value={add.vendorId || ""}
                                 onChange={(e) =>
@@ -992,7 +989,7 @@ export default function ScbToolsClient({
                                     e.target.value || null,
                                   )
                                 }
-                                className="w-full border border-input rounded-xl px-3 py-1.5 pr-8 text-xs sm:text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 cursor-pointer"
+                                className="h-9 py-1 text-xs sm:text-sm"
                               >
                                 <option value="">-- Choose Receiver --</option>
                                 {vendors.map((v) => (
@@ -1001,16 +998,16 @@ export default function ScbToolsClient({
                                     {v.account_number})
                                   </option>
                                 ))}
-                              </select>
+                              </Select>
                               {matchedVendor && (
-                                <div className="text-xs text-text-muted font-mono mt-1">
+                                <div className="text-xs text-text-muted mt-1">
                                   A/C: {matchedVendor.account_number} • Routing:{" "}
                                   {matchedVendor.routing_number || "—"}
                                 </div>
                               )}
                             </td>
                             <td className="px-3 sm:px-4 py-3">
-                              <input
+                              <Input
                                 type="text"
                                 value={add.description}
                                 onChange={(e) =>
@@ -1024,11 +1021,11 @@ export default function ScbToolsClient({
                                   salaryReason ||
                                   "e.g. Festival Bonus, Office Allowance"
                                 }
-                                className="w-full border border-input rounded-xl px-3 py-1.5 pr-8 text-xs sm:text-sm bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20 cursor-pointer"
+                                className="h-9 text-xs sm:text-sm"
                               />
                             </td>
                             <td className="px-3 sm:px-4 py-3 text-right">
-                              <input
+                              <Input
                                 type="number"
                                 value={add.amount}
                                 onChange={(e) =>
@@ -1039,7 +1036,7 @@ export default function ScbToolsClient({
                                   )
                                 }
                                 placeholder="0.00"
-                                className="w-36 text-right border border-input rounded-xl px-3 py-1.5 text-sm font-mono bg-background text-text-strong focus:border-ring focus:ring-2 focus:ring-ring/20"
+                                className="w-36 ml-auto h-9 text-right"
                               />
                             </td>
                             <td className="px-2 py-3 text-center">
@@ -1077,7 +1074,7 @@ export default function ScbToolsClient({
                 )
               </span>
               <div className="flex items-baseline gap-2">
-                <span className="text-lg sm:text-xl font-normal font-mono text-text-strong">
+                <span className="text-lg sm:text-xl font-normal text-text-strong">
                   ৳{" "}
                   {grandTotalPayout.toLocaleString("en-US", {
                     minimumFractionDigits: 2,
@@ -1152,16 +1149,17 @@ export default function ScbToolsClient({
               to the Standard Chartered Straight2Bank dashboard to upload it.
             </p>
             <div className="pt-2">
-              <a
-                href="https://s2b.standardchartered.com/unifiedlogin/login/index.html?language=en_AE#/login"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setShowScbPopup(false)}
-                className="inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-primary text-primary-foreground font-medium rounded-xl hover:opacity-90 transition-opacity w-full sm:w-auto text-sm"
-              >
-                Go to SCB Dashboard
-                <ExternalLink className="size-4" />
-              </a>
+              <Button asChild className="w-full sm:w-auto">
+                <a
+                  href="https://s2b.standardchartered.com/unifiedlogin/login/index.html?language=en_AE#/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setShowScbPopup(false)}
+                >
+                  <span>Go to SCB Dashboard</span>
+                  <ExternalLink />
+                </a>
+              </Button>
             </div>
           </div>
         </Modal>

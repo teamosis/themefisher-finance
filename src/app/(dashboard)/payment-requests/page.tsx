@@ -1,8 +1,4 @@
-import {
-  getDebitAccounts,
-  getPaymentRequests,
-  getPaymentRequestsStats,
-} from "@/actions";
+import { getDebitAccounts, getPaymentRequests } from "@/actions";
 import type { Metadata } from "next";
 import PaymentRequestsClient from "./payment-requests-client";
 
@@ -15,17 +11,15 @@ export const metadata: Metadata = {
 };
 
 export default async function PaymentRequestsPage() {
-  const [requests, debitAccounts, stats] = await Promise.all([
+  const [requests, debitAccounts] = await Promise.all([
     getPaymentRequests(),
     getDebitAccounts(),
-    getPaymentRequestsStats(),
   ]);
 
   return (
     <PaymentRequestsClient
       initialRequests={requests}
       initialDebitAccounts={debitAccounts}
-      initialStats={stats}
     />
   );
 }

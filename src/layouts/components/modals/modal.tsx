@@ -62,7 +62,7 @@ export function Modal({
             variant="ghost"
             size="icon"
             onClick={onClose}
-            className="size-8 rounded-lg text-muted-foreground hover:text-text-strong hover:bg-light"
+            className="size-8 text-muted-foreground"
           >
             <X className="size-4" />
           </Button>

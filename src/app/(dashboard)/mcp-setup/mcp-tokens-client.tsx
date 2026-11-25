@@ -3,7 +3,6 @@
 import {
   createMcpTokenAction,
   deleteMcpTokenAction,
-  getMcpRecentRunsAction,
   getMcpTokensAction,
   revokeMcpTokenAction,
   rotateMcpTokenAction,
@@ -19,9 +18,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { DEFAULT_SCOPE_KEYS, MCP_SCOPES, type McpScopeKey } from "@/lib/mcp/scopes";
+import { toast } from "@/components/ui/toast";
+import {
+  DEFAULT_SCOPE_KEYS,
+  MCP_SCOPES,
+  type McpScopeKey,
+} from "@/lib/mcp/scopes";
 import type { McpTokenRecord } from "@/lib/mcp/token-service";
 import {
   Activity,
@@ -35,7 +40,6 @@ import {
   Copy,
   KeyRound,
   Plus,
-  RefreshCw,
   RotateCw,
   Search,
   Trash2,
@@ -55,17 +59,16 @@ export default function McpTokensClient({
   initialRuns = [],
 }: McpTokensClientProps) {
   const searchParams = useSearchParams();
-  const [activeMainTab, setActiveMainTab] = useState<"tokens" | "logs">(
-    () => (searchParams.get("tab") === "logs" ? "logs" : "tokens"),
+  const [activeMainTab, setActiveMainTab] = useState<"tokens" | "logs">(() =>
+    searchParams.get("tab") === "logs" ? "logs" : "tokens",
   );
 
   const [tokens, setTokens] = useState<McpTokenRecord[]>(initialTokens);
-  const [runs, setRuns] = useState<any[]>(initialRuns);
-  const [runsLoading, setRunsLoading] = useState(false);
+  const [runs] = useState<any[]>(initialRuns);
   const [searchLogsQuery, setSearchLogsQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "completed" | "failed">(
-    "all",
-  );
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "completed" | "failed"
+  >("all");
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -82,7 +85,9 @@ export default function McpTokensClient({
   const [selectedScopes, setSelectedScopes] = useState<string[]>([
     ...DEFAULT_SCOPE_KEYS,
   ]);
-  const allStandardScopesSelected = DEFAULT_SCOPE_KEYS.every((scope) => selectedScopes.includes(scope));
+  const allStandardScopesSelected = DEFAULT_SCOPE_KEYS.every((scope) =>
+    selectedScopes.includes(scope),
+  );
   const [expiresInDays, setExpiresInDays] = useState(90);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -113,24 +118,16 @@ export default function McpTokensClient({
     }
   };
 
-  const refreshLogs = async () => {
-    setRunsLoading(true);
-    try {
-      const updated = await getMcpRecentRunsAction(100);
-      setRuns(updated);
-    } catch (err) {
-      console.error("Error refreshing MCP logs:", err);
-    } finally {
-      setRunsLoading(false);
-    }
-  };
-
   const filteredRuns = useMemo(() => {
     return runs.filter((run) => {
       const matchesSearch =
         searchLogsQuery.trim() === "" ||
-        run.toolName?.toLowerCase().includes(searchLogsQuery.toLowerCase().trim()) ||
-        run.requestId?.toLowerCase().includes(searchLogsQuery.toLowerCase().trim());
+        run.toolName
+          ?.toLowerCase()
+          .includes(searchLogsQuery.toLowerCase().trim()) ||
+        run.requestId
+          ?.toLowerCase()
+          .includes(searchLogsQuery.toLowerCase().trim());
 
       const matchesStatus =
         statusFilter === "all" || run.status === statusFilter;
@@ -189,7 +186,7 @@ export default function McpTokensClient({
       await refreshData();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
-      alert("Failed to create token: " + (err.message || String(err)));
+      toast.error("Failed to create token: " + (err.message || String(err)));
     } finally {
       setIsSubmitting(false);
     }
@@ -203,7 +200,7 @@ export default function McpTokensClient({
       setTokenToRevoke(null);
       await refreshData();
     } catch (err: any) {
-      alert("Failed to revoke token: " + (err.message || String(err)));
+      toast.error("Failed to revoke token: " + (err.message || String(err)));
     } finally {
       setIsRevoking(false);
     }
@@ -217,7 +214,7 @@ export default function McpTokensClient({
       setTokenToDelete(null);
       await refreshData();
     } catch (err: any) {
-      alert("Failed to delete token: " + (err.message || String(err)));
+      toast.error("Failed to delete token: " + (err.message || String(err)));
     } finally {
       setIsDeleting(false);
     }
@@ -239,16 +236,18 @@ export default function McpTokensClient({
       await refreshData();
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
-      alert("Failed to rotate token: " + (err.message || String(err)));
+      toast.error("Failed to rotate token: " + (err.message || String(err)));
     } finally {
       setIsRotating(false);
     }
   };
 
   const toggleScope = (scope: McpScopeKey) => {
-    setSelectedScopes((current) => current.includes(scope)
-      ? current.filter((selected) => selected !== scope)
-      : [...current, scope]);
+    setSelectedScopes((current) =>
+      current.includes(scope)
+        ? current.filter((selected) => selected !== scope)
+        : [...current, scope],
+    );
   };
 
   return (
@@ -260,27 +259,18 @@ export default function McpTokensClient({
             MCP AI Tools
           </h1>
           <p className="text-sm text-text-muted">
-            Manage bearer tokens, configure client setups, and inspect live tool executions.
+            Manage bearer tokens, configure client setups, and inspect live tool
+            executions.
           </p>
         </div>
 
-        {activeMainTab === "tokens" ? (
+        {activeMainTab === "tokens" && (
           <Button
             onClick={() => setCreateModalOpen(true)}
-            className="gap-2 shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
+            className="gap-2 shrink-0"
           >
             <Plus className="size-4" />
             <span>Generate Agent Token</span>
-          </Button>
-        ) : (
-          <Button
-            variant="outline"
-            onClick={refreshLogs}
-            disabled={runsLoading}
-            className="gap-2 shrink-0"
-          >
-            <RefreshCw className={`size-3.5 ${runsLoading ? "animate-spin" : ""}`} />
-            <span>Refresh Logs</span>
           </Button>
         )}
       </div>
@@ -336,324 +326,333 @@ export default function McpTokensClient({
 
       {activeMainTab === "tokens" ? (
         <div className="flex flex-col gap-6">
-
-      {/* One-Time Connection Setup Banner (Same as portal-app) */}
-      {setupPrompt && (
-        <section
-          className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
-          aria-labelledby="mcp-setup-heading"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <h2
-                id="mcp-setup-heading"
-                className="text-base font-bold text-text-strong"
-              >
-                Connection Setup
-              </h2>
-              <Badge
-                variant="outline"
-                className="text-amber-600 bg-amber-500/10 border-amber-500/30 text-xs font-medium"
-              >
-                Copy Before Closing
-              </Badge>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                onClick={copyActiveSetup}
-                className="gap-1.5"
-              >
-                {copiedSetup ? (
-                  <Check className="size-3.5 text-emerald-400" />
-                ) : (
-                  <Copy className="size-3.5" />
-                )}
-                <span>
-                  {copiedSetup
-                    ? "Copied"
-                    : setupTab === "prompt"
-                      ? "Copy Agent Prompt"
-                      : "Copy Config"}
-                </span>
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={clearOneTimeSetup}
-                className="gap-1 text-muted-foreground hover:text-text-strong"
-              >
-                <X className="size-3.5" />
-                <span>Close</span>
-              </Button>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-primary/30 bg-card p-4 sm:p-5 flex flex-col gap-3 shadow-xs">
-            <Tabs
-              value={setupTab}
-              onValueChange={(val) => {
-                setSetupTab(val as "prompt" | "config");
-                setCopiedSetup(false);
-              }}
+          {/* One-Time Connection Setup Banner (Same as portal-app) */}
+          {setupPrompt && (
+            <section
+              className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
+              aria-labelledby="mcp-setup-heading"
             >
-              <TabsList className="bg-muted/70">
-                <TabsTrigger value="prompt" className="text-xs">
-                  Agent Setup Prompt (Paste to Agent)
-                </TabsTrigger>
-                <TabsTrigger value="config" className="text-xs">
-                  mcp_config.json
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="prompt" className="mt-3">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-semibold uppercase tracking-wider text-[11px]">
-                      Global Setup Prompt for AI Agent
-                    </span>
-                    <span>
-                      Give this prompt to Cursor, Claude Desktop, Antigravity,
-                      or your agent
-                    </span>
-                  </div>
-                  <Textarea
-                    value={setupPrompt}
-                    readOnly
-                    rows={11}
-                    className="font-mono text-xs bg-muted/40 resize-y text-text-strong selection:bg-primary/20"
-                  />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <h2
+                    id="mcp-setup-heading"
+                    className="text-base font-bold text-text-strong"
+                  >
+                    Connection Setup
+                  </h2>
+                  <Badge
+                    variant="outline"
+                    className="text-amber-600 bg-amber-500/10 border-amber-500/30 text-xs font-medium"
+                  >
+                    Copy Before Closing
+                  </Badge>
                 </div>
-              </TabsContent>
 
-              <TabsContent value="config" className="mt-3">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-semibold uppercase tracking-wider text-[11px]">
-                      Client Configuration JSON
-                    </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={copyActiveSetup}
+                    className="gap-1.5"
+                  >
+                    {copiedSetup ? (
+                      <Check className="size-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="size-3.5" />
+                    )}
                     <span>
-                      Add to .cursor/mcp.json or claude_desktop_config.json
+                      {copiedSetup
+                        ? "Copied"
+                        : setupTab === "prompt"
+                          ? "Copy Agent Prompt"
+                          : "Copy Config"}
                     </span>
-                  </div>
-                  <Textarea
-                    value={setupConfig}
-                    readOnly
-                    rows={14}
-                    className="font-mono text-xs bg-muted/40 resize-y text-text-strong selection:bg-primary/20"
-                  />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={clearOneTimeSetup}
+                    className="gap-1 text-muted-foreground hover:text-text-strong"
+                  >
+                    <X className="size-3.5" />
+                    <span>Close</span>
+                  </Button>
                 </div>
-              </TabsContent>
-            </Tabs>
-          </div>
-        </section>
-      )}
-
-      {/* Dedicated Agent Tokens Table */}
-      <Card className="border-border bg-card shadow-xs">
-        <CardHeader className="p-5 pb-3 border-b border-border">
-          <CardTitle className="text-base sm:text-lg font-bold text-text-strong">
-            Dedicated Agent Tokens
-          </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground mt-0.5">
-            Active and revoked tokens provisioned for automated AI assistant and
-            agent access.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="p-0 overflow-x-auto">
-          {tokens.length === 0 ? (
-            <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
-              <div className="size-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
-                <KeyRound className="size-6" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-text-strong">
-                  No MCP Tokens Created Yet
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Generate your first token to connect Cursor, Claude, or any AI
-                  assistant.
-                </p>
+
+              <div className="rounded-xl border border-primary/30 bg-card p-4 sm:p-5 flex flex-col gap-3 shadow-xs">
+                <Tabs
+                  value={setupTab}
+                  onValueChange={(val) => {
+                    setSetupTab(val as "prompt" | "config");
+                    setCopiedSetup(false);
+                  }}
+                >
+                  <TabsList className="bg-muted/70">
+                    <TabsTrigger value="prompt" className="text-xs">
+                      Agent Setup Prompt (Paste to Agent)
+                    </TabsTrigger>
+                    <TabsTrigger value="config" className="text-xs">
+                      mcp_config.json
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="prompt" className="mt-3">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="font-semibold uppercase tracking-wider text-[11px]">
+                          Global Setup Prompt for AI Agent
+                        </span>
+                        <span>
+                          Give this prompt to Cursor, Claude Desktop,
+                          Antigravity, or your agent
+                        </span>
+                      </div>
+                      <Textarea
+                        value={setupPrompt}
+                        readOnly
+                        rows={11}
+                        className="text-xs bg-muted/40 resize-y text-text-strong selection:bg-primary/20"
+                      />
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="config" className="mt-3">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span className="font-semibold uppercase tracking-wider text-[11px]">
+                          Client Configuration JSON
+                        </span>
+                        <span>
+                          Add to .cursor/mcp.json or claude_desktop_config.json
+                        </span>
+                      </div>
+                      <Textarea
+                        value={setupConfig}
+                        readOnly
+                        rows={14}
+                        className="text-xs bg-muted/40 resize-y text-text-strong selection:bg-primary/20"
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
-              <Button
-                size="sm"
-                onClick={() => setCreateModalOpen(true)}
-                className="mt-2"
-              >
-                Generate First Token
-              </Button>
-            </div>
-          ) : (
-            <table className="w-full text-left text-xs">
-              <thead className="bg-muted/40 text-muted-foreground border-b border-border uppercase font-semibold">
-                <tr>
-                  <th className="py-3 px-4">Agent Name</th>
-                  <th className="py-3 px-4">Token Prefix</th>
-                  <th className="py-3 px-4">Permissions</th>
-                  <th className="py-3 px-4">Scopes</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4">Last Used</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {tokens.map((token) => {
-                  const isRevoked = Boolean(token.revokedAt);
-                  const isExpired = new Date(token.expiresAt) < new Date();
-                  const isActive = !isRevoked && !isExpired;
-
-                  return (
-                    <tr
-                      key={token.id}
-                      className="hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="py-3.5 px-4 font-medium text-text-strong">
-                        <div className="flex items-center gap-2">
-                          <Bot className="size-4 text-primary shrink-0" />
-                          <span className="font-semibold">{token.name}</span>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 font-mono text-muted-foreground">
-                        <div className="flex items-center gap-1.5">
-                          <span>{token.prefix}...</span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              copyToClipboard(
-                                token.prefix,
-                                `prefix-${token.id}`,
-                              )
-                            }
-                            className="text-muted-foreground hover:text-text-strong cursor-pointer p-0.5 rounded"
-                            title="Copy prefix"
-                          >
-                            {copiedKey === `prefix-${token.id}` ? (
-                              <Check className="size-3 text-emerald-500" />
-                            ) : (
-                              <Copy className="size-3" />
-                            )}
-                          </button>
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        {token.readOnly ? (
-                          <Badge
-                            variant="outline"
-                            className="text-amber-600 bg-amber-500/10 border-amber-500/20 text-[11px]"
-                          >
-                            Read-Only
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="text-emerald-600 bg-emerald-500/10 border-emerald-500/20 text-[11px]"
-                          >
-                            Read &amp; Write
-                          </Badge>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                          {token.allowedScopes.includes("*") ? (
-                            <Badge variant="secondary" className="text-[10px]">
-                              Standard scopes (*)
-                            </Badge>
-                          ) : null}
-                          {token.allowedScopes.filter((scope) => scope !== "*").map((scope) => (
-                              <Badge
-                                key={scope}
-                                variant="secondary"
-                                className="text-[10px]"
-                              >
-                                {scope}
-                              </Badge>
-                          ))}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4">
-                        {isRevoked ? (
-                          <Badge variant="destructive" className="text-[11px]">
-                            Revoked
-                          </Badge>
-                        ) : isExpired ? (
-                          <Badge
-                            variant="outline"
-                            className="text-destructive bg-destructive/10 border-destructive/20 text-[11px]"
-                          >
-                            Expired
-                          </Badge>
-                        ) : (
-                          <Badge
-                            variant="outline"
-                            className="text-emerald-600 bg-emerald-500/10 border-emerald-500/20 text-[11px]"
-                          >
-                            Active
-                          </Badge>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-muted-foreground">
-                        {token.lastUsedAt
-                          ? new Date(token.lastUsedAt).toLocaleString()
-                          : "Never"}
-                      </td>
-
-                      <td className="py-3.5 px-4 text-right">
-                        {isActive ? (
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setTokenToRotate(token)}
-                              className="h-7 px-2 text-xs text-muted-foreground hover:text-text-strong"
-                              title="Rotate Token"
-                            >
-                              <RotateCw className="size-3.5 mr-1" />
-                              <span>Rotate</span>
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setTokenToRevoke(token)}
-                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                              title="Revoke Token"
-                            >
-                              <Trash2 className="size-3.5 mr-1" />
-                              <span>Revoke</span>
-                            </Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setTokenToDelete(token)}
-                              className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                              title="Delete Token"
-                            >
-                              <Trash2 className="size-3.5 mr-1" />
-                              <span>Delete</span>
-                            </Button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            </section>
           )}
-        </CardContent>
-      </Card>
-      </div>
+
+          {/* Dedicated Agent Tokens Table */}
+          <Card className="border-border bg-card shadow-xs">
+            <CardHeader className="p-5 pb-3 border-b border-border">
+              <CardTitle className="text-base sm:text-lg font-bold text-text-strong">
+                Dedicated Agent Tokens
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Active and revoked tokens provisioned for automated AI assistant
+                and agent access.
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent className="p-0 overflow-x-auto">
+              {tokens.length === 0 ? (
+                <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+                  <div className="size-12 rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+                    <KeyRound className="size-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-text-strong">
+                      No MCP Tokens Created Yet
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Generate your first token to connect Cursor, Claude, or
+                      any AI assistant.
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setCreateModalOpen(true)}
+                    className="mt-2"
+                  >
+                    Generate First Token
+                  </Button>
+                </div>
+              ) : (
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-muted/40 text-muted-foreground border-b border-border uppercase font-semibold">
+                    <tr>
+                      <th className="py-3 px-4">Agent Name</th>
+                      <th className="py-3 px-4">Token Prefix</th>
+                      <th className="py-3 px-4">Permissions</th>
+                      <th className="py-3 px-4">Scopes</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Last Used</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {tokens.map((token) => {
+                      const isRevoked = Boolean(token.revokedAt);
+                      const isExpired = new Date(token.expiresAt) < new Date();
+                      const isActive = !isRevoked && !isExpired;
+
+                      return (
+                        <tr
+                          key={token.id}
+                          className="hover:bg-muted/30 transition-colors"
+                        >
+                          <td className="py-3.5 px-4 font-medium text-text-strong">
+                            <div className="flex items-center gap-2">
+                              <Bot className="size-4 text-primary shrink-0" />
+                              <span className="font-semibold">
+                                {token.name}
+                              </span>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4 text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                              <span>{token.prefix}...</span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  copyToClipboard(
+                                    token.prefix,
+                                    `prefix-${token.id}`,
+                                  )
+                                }
+                                className="text-muted-foreground hover:text-text-strong cursor-pointer p-0.5 rounded"
+                                title="Copy prefix"
+                              >
+                                {copiedKey === `prefix-${token.id}` ? (
+                                  <Check className="size-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="size-3" />
+                                )}
+                              </button>
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            {token.readOnly ? (
+                              <Badge
+                                variant="outline"
+                                className="text-amber-600 bg-amber-500/10 border-amber-500/20 text-[11px]"
+                              >
+                                Read-Only
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-emerald-600 bg-emerald-500/10 border-emerald-500/20 text-[11px]"
+                              >
+                                Read &amp; Write
+                              </Badge>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {token.allowedScopes.includes("*") ? (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px]"
+                                >
+                                  Standard scopes (*)
+                                </Badge>
+                              ) : null}
+                              {token.allowedScopes
+                                .filter((scope) => scope !== "*")
+                                .map((scope) => (
+                                  <Badge
+                                    key={scope}
+                                    variant="secondary"
+                                    className="text-[10px]"
+                                  >
+                                    {scope}
+                                  </Badge>
+                                ))}
+                            </div>
+                          </td>
+
+                          <td className="py-3.5 px-4">
+                            {isRevoked ? (
+                              <Badge
+                                variant="destructive"
+                                className="text-[11px]"
+                              >
+                                Revoked
+                              </Badge>
+                            ) : isExpired ? (
+                              <Badge
+                                variant="outline"
+                                className="text-destructive bg-destructive/10 border-destructive/20 text-[11px]"
+                              >
+                                Expired
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-emerald-600 bg-emerald-500/10 border-emerald-500/20 text-[11px]"
+                              >
+                                Active
+                              </Badge>
+                            )}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-muted-foreground">
+                            {token.lastUsedAt
+                              ? new Date(token.lastUsedAt).toLocaleString()
+                              : "Never"}
+                          </td>
+
+                          <td className="py-3.5 px-4 text-right">
+                            {isActive ? (
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setTokenToRotate(token)}
+                                  className="h-7 px-2 text-xs text-muted-foreground hover:text-text-strong"
+                                  title="Rotate Token"
+                                >
+                                  <RotateCw className="size-3.5 mr-1" />
+                                  <span>Rotate</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setTokenToRevoke(token)}
+                                  className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Revoke Token"
+                                >
+                                  <Trash2 className="size-3.5 mr-1" />
+                                  <span>Revoke</span>
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setTokenToDelete(token)}
+                                  className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  title="Delete Token"
+                                >
+                                  <Trash2 className="size-3.5 mr-1" />
+                                  <span>Delete</span>
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className="flex flex-col gap-4 animate-in fade-in duration-150">
           {/* Filter and Search Bar */}
@@ -716,7 +715,8 @@ export default function McpTokensClient({
                   Execution History
                 </CardTitle>
                 <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                  Showing {filteredRuns.length} of {runs.length} recorded operations
+                  Showing {filteredRuns.length} of {runs.length} recorded
+                  operations
                 </CardDescription>
               </div>
             </CardHeader>
@@ -758,13 +758,13 @@ export default function McpTokensClient({
                               {run.status}
                             </Badge>
 
-                            <span className="font-mono font-semibold text-xs text-text-strong">
+                            <span className="font-semibold text-xs text-text-strong">
                               {run.toolName}
                             </span>
 
                             {run.durationMs !== null &&
                               run.durationMs !== undefined && (
-                                <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-mono">
+                                <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                                   <Clock className="size-3" />
                                   {run.durationMs}ms
                                 </span>
@@ -772,7 +772,7 @@ export default function McpTokensClient({
                           </div>
 
                           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="font-mono text-[11px]">
+                            <span className="text-[11px]">
                               {new Date(run.createdAt).toLocaleString()}
                             </span>
                             <button
@@ -783,7 +783,9 @@ export default function McpTokensClient({
                               className="flex items-center gap-1 text-primary hover:underline cursor-pointer text-xs font-medium ml-2"
                             >
                               <span>
-                                {isExpanded ? "Hide Details" : "Inspect Payload"}
+                                {isExpanded
+                                  ? "Hide Details"
+                                  : "Inspect Payload"}
                               </span>
                               {isExpanded ? (
                                 <ChevronUp className="size-3.5" />
@@ -798,7 +800,7 @@ export default function McpTokensClient({
                         {isExpanded && (
                           <div className="mt-4 pt-3 border-t border-border/60 flex flex-col gap-3 animate-in fade-in duration-150">
                             {run.requestId && (
-                              <div className="text-[11px] text-muted-foreground font-mono">
+                              <div className="text-[11px] text-muted-foreground">
                                 <span className="font-semibold text-text-strong">
                                   Request ID:
                                 </span>{" "}
@@ -807,7 +809,7 @@ export default function McpTokensClient({
                             )}
 
                             {run.error && (
-                              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs font-mono">
+                              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-xs">
                                 <strong>Execution Error:</strong> {run.error}
                               </div>
                             )}
@@ -817,7 +819,7 @@ export default function McpTokensClient({
                                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
                                   Input Arguments:
                                 </span>
-                                <pre className="p-3 bg-muted/60 border border-border rounded-lg font-mono text-[11px] text-text-strong overflow-x-auto max-h-56">
+                                <pre className="p-3 bg-muted/60 border border-border rounded-lg text-[11px] text-text-strong overflow-x-auto max-h-56">
                                   {JSON.stringify(run.input || {}, null, 2)}
                                 </pre>
                               </div>
@@ -826,7 +828,7 @@ export default function McpTokensClient({
                                 <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">
                                   Result Payload (Redacted):
                                 </span>
-                                <pre className="p-3 bg-muted/60 border border-border rounded-lg font-mono text-[11px] text-text-strong overflow-x-auto max-h-56">
+                                <pre className="p-3 bg-muted/60 border border-border rounded-lg text-[11px] text-text-strong overflow-x-auto max-h-56">
                                   {JSON.stringify(run.result || {}, null, 2)}
                                 </pre>
                               </div>
@@ -872,17 +874,17 @@ export default function McpTokensClient({
               <label className="text-xs font-semibold text-text-strong block mb-1.5">
                 Expiration
               </label>
-              <select
+              <Select
                 value={expiresInDays}
                 onChange={(e) => setExpiresInDays(Number(e.target.value))}
-                className="w-full h-9 rounded-md border border-border bg-background px-3 py-1 text-xs text-text-strong focus:outline-hidden focus:ring-2 focus:ring-primary"
+                className="h-9 py-1 text-xs"
               >
                 <option value={30}>30 Days</option>
                 <option value={90}>90 Days (Recommended)</option>
                 <option value={180}>180 Days</option>
                 <option value={365}>1 Year</option>
                 <option value={0}>Never Expires</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -902,19 +904,27 @@ export default function McpTokensClient({
           </label>
 
           <fieldset>
-            <legend className="text-xs font-semibold text-text-strong">Allowed Scopes</legend>
+            <legend className="text-xs font-semibold text-text-strong">
+              Allowed Scopes
+            </legend>
             <div className="mb-2 flex justify-end">
               <button
                 type="button"
                 onClick={() => {
                   setSelectedScopes((current) => {
-                    const explicitScopes = current.filter((scope) => scope === "payment_operations");
-                    return allStandardScopesSelected ? explicitScopes : [...DEFAULT_SCOPE_KEYS, ...explicitScopes];
+                    const explicitScopes = current.filter(
+                      (scope) => scope === "payment_operations",
+                    );
+                    return allStandardScopesSelected
+                      ? explicitScopes
+                      : [...DEFAULT_SCOPE_KEYS, ...explicitScopes];
                   });
                 }}
                 className="text-xs text-primary hover:underline cursor-pointer font-medium"
               >
-                {allStandardScopesSelected ? "Clear standard scopes" : "Select standard scopes"}
+                {allStandardScopesSelected
+                  ? "Clear standard scopes"
+                  : "Select standard scopes"}
               </button>
             </div>
 
@@ -942,7 +952,8 @@ export default function McpTokensClient({
               })}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              Select Payment Request Decisions &amp; Exports and turn off Read-Only Mode to approve, reject, or export requests through MCP.
+              Select Payment Request Decisions &amp; Exports and turn off
+              Read-Only Mode to approve, reject, or export requests through MCP.
             </p>
           </fieldset>
 
@@ -959,8 +970,8 @@ export default function McpTokensClient({
             <Button
               type="submit"
               size="sm"
-              disabled={isSubmitting || !agentName.trim()}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              disabled={!agentName.trim()}
+              loading={isSubmitting}
             >
               {isSubmitting ? "Generating..." : "Generate Token"}
             </Button>
@@ -997,10 +1008,10 @@ export default function McpTokensClient({
               type="button"
               variant="destructive"
               onClick={handleRevokeConfirm}
-              disabled={isRevoking}
-              className="flex-1 gap-1.5"
+              loading={isRevoking}
+              className="flex-1"
             >
-              <Trash2 className="size-4" />
+              {!isRevoking && <Trash2 />}
               <span>{isRevoking ? "Revoking..." : "Revoke Token"}</span>
             </Button>
           </div>
@@ -1036,10 +1047,10 @@ export default function McpTokensClient({
             <Button
               type="button"
               onClick={handleRotateConfirm}
-              disabled={isRotating}
-              className="flex-1 gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90"
+              loading={isRotating}
+              className="flex-1"
             >
-              <RotateCw className="size-4" />
+              {!isRotating && <RotateCw />}
               <span>{isRotating ? "Rotating..." : "Rotate & Generate"}</span>
             </Button>
           </div>
@@ -1074,10 +1085,10 @@ export default function McpTokensClient({
               type="button"
               variant="destructive"
               onClick={handleDeleteConfirm}
-              disabled={isDeleting}
-              className="flex-1 gap-1.5"
+              loading={isDeleting}
+              className="flex-1"
             >
-              <Trash2 className="size-4" />
+              {!isDeleting && <Trash2 />}
               <span>{isDeleting ? "Deleting..." : "Delete Token"}</span>
             </Button>
           </div>

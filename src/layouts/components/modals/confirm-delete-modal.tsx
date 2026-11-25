@@ -72,7 +72,8 @@ export function ConfirmDeleteModal({
               type="button"
               variant="outline"
               onClick={onHide}
-              disabled={isDeleting || isHiding}
+              disabled={isDeleting}
+              loading={isHiding}
               className="flex-1 w-full"
             >
               {isHiding ? "Hiding..." : "Hide Instead"}
@@ -83,10 +84,11 @@ export function ConfirmDeleteModal({
             type="button"
             variant="destructive"
             onClick={onConfirm}
-            disabled={isDeleting || isHiding}
+            disabled={isHiding}
+            loading={isDeleting}
             className="flex-1 w-full"
           >
-            <Trash2 className="size-4" />
+            {!isDeleting && <Trash2 />}
             <span>{isDeleting ? "Deleting..." : "Delete"}</span>
           </Button>
         </div>

@@ -5,7 +5,7 @@ import McpTokensClient from "./mcp-tokens-client";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "MCP AI Tools & Logs | Themefisher Finance",
+  title: "MCP Tools & Logs | Themefisher Finance",
   description:
     "Manage dedicated tokens and inspect live tool execution logs for AI Agents connecting via Model Context Protocol.",
 };

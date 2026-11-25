@@ -110,8 +110,8 @@ const navSections: NavSection[] = [
         icon: Clock,
       },
       {
-        name: "MCP AI Tools",
-        href: "/mcp-setup",
+        name: "MCP Tools",
+        href: "/mcp",
         icon: Wrench,
       },
     ],

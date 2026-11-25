@@ -32,7 +32,7 @@ Themefisher Admin Tools (Finance Tools Suite) is a Next.js App Router applicatio
 │   │   │   ├── vendors/                  # Beneficiary & employee directory
 │   │   │   ├── debit-accounts/           # SCB funding sources
 │   │   │   ├── activity-logs/            # Financial operations audit logs
-│   │   │   ├── mcp-setup/                # MCP AI tools & real-time execution logs
+│   │   │   ├── mcp/                # MCP Tools & real-time execution logs
 │   │   │   └── payment-accounts/         # Receiving bank accounts
 │   │   ├── login/                        # Protected access login page (standalone)
 │   │   ├── request-payment/              # Public beneficiary payment claim form (standalone)

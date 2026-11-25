@@ -61,7 +61,7 @@ The project follows standard Next.js App Router conventions with domain-separate
     - `/vendors` — Beneficiary & employee directory
     - `/debit-accounts` — SCB funding sources
     - `/activity-logs` — Activity audit logs & live operations trail
-    - `/mcp-setup` — MCP AI tools & real-time execution telemetry logs
+    - `/mcp` — MCP Tools & real-time execution telemetry logs
     - `/payment-accounts` — Receiving bank accounts
   - `/request-payment` — Public beneficiary payment request submission form
   - `/track-payment` — Public claim status tracking page

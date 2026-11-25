@@ -78,7 +78,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## MCP access
 
-Open **MCP Setup** (`/mcp-setup`), generate a scoped token, and copy the JSON config into a client that supports Streamable HTTP and bearer headers. The endpoint is `/api/mcp` on the app origin. For a custom deployment, set `NEXT_PUBLIC_APP_URL` to its origin so the workflow links point to the right site.
+Open **MCP Setup** (`/mcp`), generate a scoped token, and copy the JSON config into a client that supports Streamable HTTP and bearer headers. The endpoint is `/api/mcp` on the app origin. For a custom deployment, set `NEXT_PUBLIC_APP_URL` to its origin so the workflow links point to the right site.
 
 Call the relevant tool directly when your client shows its schema. For discovery, read `finance://workflows` or use `tools/list`. Use `finance_get_overview` for a connection check or account summary. The catalog lists the tools your token can use and links to Form-C and invoice printing, MT103 PDF import, and the public payment pages.
 

@@ -53,7 +53,7 @@ export async function createMcpTokenAction(input: {
   const prompt = setupPrompt(origin, result.token);
   const mcpConfig = mcpClientConfig(origin, result.token);
 
-  revalidatePath("/mcp-setup");
+  revalidatePath("/mcp");
   return {
     ...result,
     prompt,
@@ -64,14 +64,14 @@ export async function createMcpTokenAction(input: {
 export async function revokeMcpTokenAction(id: string): Promise<boolean> {
   await requireBrowserSession();
   const result = await mcpTokenService.revokeToken(id);
-  revalidatePath("/mcp-setup");
+  revalidatePath("/mcp");
   return result;
 }
 
 export async function deleteMcpTokenAction(id: string): Promise<boolean> {
   await requireBrowserSession();
   const result = await mcpTokenService.deleteToken(id);
-  revalidatePath("/mcp-setup");
+  revalidatePath("/mcp");
   return result;
 }
 
@@ -89,7 +89,7 @@ export async function rotateMcpTokenAction(id: string): Promise<{
   const prompt = setupPrompt(origin, result.token);
   const mcpConfig = mcpClientConfig(origin, result.token);
 
-  revalidatePath("/mcp-setup");
+  revalidatePath("/mcp");
   return {
     ...result,
     prompt,

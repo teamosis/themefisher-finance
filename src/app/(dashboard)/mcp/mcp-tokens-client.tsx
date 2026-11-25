@@ -256,7 +256,7 @@ export default function McpTokensClient({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-text-strong">
-            MCP AI Tools
+            MCP Tools
           </h1>
           <p className="text-sm text-text-muted">
             Manage bearer tokens, configure client setups, and inspect live tool
@@ -330,12 +330,12 @@ export default function McpTokensClient({
           {setupPrompt && (
             <section
               className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 duration-200"
-              aria-labelledby="mcp-setup-heading"
+              aria-labelledby="mcp-heading"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <h2
-                    id="mcp-setup-heading"
+                    id="mcp-heading"
                     className="text-base font-bold text-text-strong"
                   >
                     Connection Setup

@@ -8,19 +8,19 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 
 - Moved all pages previously nested under `/settings/*` directly out to the root dashboard URL paths:
   - `/settings/activity-logs` -> `/activity-logs`
-  - `/settings/mcp-setup` -> `/mcp-setup`
+  - `/settings/mcp` -> `/mcp`
   - `/settings/payment-accounts` -> `/payment-accounts`
 - Removed legacy `/settings` directory and configured Next.js permanent redirects in `next.config.ts` for all `/settings/*` paths to ensure backward compatibility.
 - Updated `AppSidebar` and action revalidation targets to root routes.
 
 ---
 
-### 2026-11-24 — Unified MCP AI Tools & Telemetry Logs
+### 2026-11-24 — Unified MCP Tools & Telemetry Logs
 
-- Merged MCP execution logs into `/settings/mcp-setup` under a unified multi-tab interface (`Tokens & Access` and `Execution Logs`), consolidating agent management and payload inspection.
-- Removed redundant `/settings/mcp-logs` route and added a permanent redirect in `next.config.ts` to `/settings/mcp-setup?tab=logs`.
-- Streamlined `AppSidebar` System & Settings navigation down to 3 focused items (`Activity Logs`, `MCP AI Tools`, and `Receiving Accounts`).
-- Updated external audit links to deep-link directly into `/settings/mcp-setup?tab=logs`.
+- Merged MCP execution logs into `/settings/mcp` under a unified multi-tab interface (`Tokens & Access` and `Execution Logs`), consolidating agent management and payload inspection.
+- Removed redundant `/settings/mcp-logs` route and added a permanent redirect in `next.config.ts` to `/settings/mcp?tab=logs`.
+- Streamlined `AppSidebar` System & Settings navigation down to 3 focused items (`Activity Logs`, `MCP Tools`, and `Receiving Accounts`).
+- Updated external audit links to deep-link directly into `/settings/mcp?tab=logs`.
 
 ---
 
@@ -91,7 +91,7 @@ This log preserves the evolution, architectural shifts, and technical decisions 
 ### 2026-11-24 — Settings & Logs Reorganization & MCP Log Tools
 
 - Created unified `/settings` architecture with dedicated `SettingsSidebar` matching the design system of `SCBSidebar` and `InvoiceSidebar`.
-- Consolidated subroutes: `/settings/activity-logs` (app activity audit trail without stats cards), `/settings/mcp-setup` (AI agent MCP tokens & client configs), `/settings/mcp-logs` (agent execution telemetry), and `/settings/payment-accounts` (receiving bank accounts).
+- Consolidated subroutes: `/settings/activity-logs` (app activity audit trail without stats cards), `/settings/mcp` (AI agent MCP tokens & client configs), `/settings/mcp-logs` (agent execution telemetry), and `/settings/payment-accounts` (receiving bank accounts).
 - Removed legacy `/mcp/`, `/activity-logs/`, `/invoice-tools/settings/`, and `McpSidebar.tsx`.
 - Added `logs` scope to `MCP_SCOPES` and created two new native MCP tools (`finance_logs_list` and `finance_logs_get_excel_export`), enabling AI agents connected via Model Context Protocol to query application activity and examine past Excel exports.
 - Updated main dashboard Card 3 (`Settings & Logs`), top header, and navigation sidebars.

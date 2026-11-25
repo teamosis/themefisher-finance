@@ -5,6 +5,8 @@ import { paymentRequests } from "@/db/schema";
 import { requireBrowserSession } from "@/lib/browser-session";
 import {
   approvePaymentRequest as approveRequest,
+  deletePaymentRequest as deleteRequest,
+  deletePaymentRequests as deleteRequests,
   exportApprovedPaymentRequests,
   rejectPaymentRequest as rejectRequest,
   submitPaymentRequest as submitRequest,
@@ -68,8 +70,14 @@ export async function getPaymentRequests(filter?: {
 export async function getPaymentRequestByTrackingCode(trackingCode: string) {
   if (typeof trackingCode !== "string") return null;
   const code = trackingCode.trim().toUpperCase();
-  // Keep previously issued tracking codes usable.
-  if (!/^PR-\d{8}-(?:[A-Z0-9]{1,4}|[A-F0-9]{32})$/.test(code)) return null;
+  // Support both compact PR-YYMMDD-XXXXXX codes and previously issued formats.
+  if (
+    !/^PR-(?:\d{6}-[A-Z0-9]{6,8}|\d{8}-(?:[A-Z0-9]{1,8}|[A-F0-9]{32}))$/.test(
+      code,
+    )
+  ) {
+    return null;
+  }
 
   const [row] = await db
     .select({
@@ -85,19 +93,35 @@ export async function getPaymentRequestByTrackingCode(trackingCode: string) {
   return row ?? null;
 }
 
-export async function approvePaymentRequest(id: string, options?: { saveAsVendor?: boolean }) {
+export async function approvePaymentRequest(
+  id: string,
+  options?: { saveAsVendor?: boolean },
+) {
   await requireBrowserSession();
-  return await approveRequest(id, options) as unknown as PaymentRequest;
+  return (await approveRequest(id, options)) as unknown as PaymentRequest;
 }
 
 export async function rejectPaymentRequest(id: string, reason: string) {
   await requireBrowserSession();
-  return await rejectRequest(id, reason) as unknown as PaymentRequest;
+  return (await rejectRequest(id, reason)) as unknown as PaymentRequest;
 }
 
-export async function exportPaymentRequestsToScb(requestIds: string[], debitAccountId?: string) {
+export async function exportPaymentRequestsToScb(
+  requestIds: string[],
+  debitAccountId?: string,
+) {
   await requireBrowserSession();
   return exportApprovedPaymentRequests(requestIds, debitAccountId);
+}
+
+export async function deletePaymentRequest(id: string) {
+  await requireBrowserSession();
+  return (await deleteRequest(id)) as unknown as PaymentRequest;
+}
+
+export async function deletePaymentRequests(requestIds: string[]) {
+  await requireBrowserSession();
+  return (await deleteRequests(requestIds)) as unknown as PaymentRequest[];
 }
 
 /**

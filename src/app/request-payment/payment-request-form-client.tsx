@@ -129,23 +129,25 @@ export default function PaymentRequestFormClient() {
   if (submittedResult) {
     return (
       <div className="max-w-xl mx-auto w-full">
-        <Card className="border-emerald-500/30 bg-card shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-          <div className="h-1.5 bg-emerald-500 w-full" />
-          <CardHeader className="text-center p-5 pb-2">
-            <div className="size-11 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto mb-2.5">
+        <Card className="border-success/30 bg-card shadow-sm overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="h-1.5 bg-success w-full" />
+          <CardHeader className="text-center p-5 pb-3">
+            <div className="size-11 rounded-xl bg-success/10 text-success flex items-center justify-center mx-auto mb-2.5">
               <CheckCircle2 className="size-6" />
             </div>
             <CardTitle className="text-lg sm:text-xl font-bold text-text-strong">
               Payment Request Submitted
             </CardTitle>
+          </CardHeader>
 
+          <CardContent className="p-5 pt-0 space-y-3.5">
             {/* Tracking Code Box */}
-            <div className="mt-3.5 p-3 bg-muted/60 border border-border rounded-xl flex items-center justify-between gap-3 max-w-sm mx-auto">
-              <div className="text-left">
+            <div className="w-full px-3.5 py-2.5 bg-muted/60 border border-border rounded-xl flex items-center justify-between gap-3">
+              <div className="text-left min-w-0 flex-1">
                 <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">
                   Tracking Reference
                 </span>
-                <span className="text-sm font-bold text-text-strong">
+                <span className="text-sm font-bold text-text-strong truncate block">
                   {submittedResult.trackingCode}
                 </span>
               </div>
@@ -158,7 +160,7 @@ export default function PaymentRequestFormClient() {
               >
                 {copiedCode ? (
                   <>
-                    <Check className="size-3 text-emerald-600" />
+                    <Check className="size-3 text-success" />
                     <span>Copied</span>
                   </>
                 ) : (
@@ -169,9 +171,7 @@ export default function PaymentRequestFormClient() {
                 )}
               </Button>
             </div>
-          </CardHeader>
 
-          <CardContent className="p-5 pt-1 space-y-3.5">
             <div className="border border-border rounded-xl p-3 bg-background/50 space-y-2 text-xs">
               <div className="flex justify-between py-0.5 border-b border-border/50">
                 <span className="text-muted-foreground">Beneficiary</span>
@@ -193,7 +193,7 @@ export default function PaymentRequestFormClient() {
               </div>
               <div className="flex justify-between py-0.5 border-b border-border/50">
                 <span className="text-muted-foreground">Amount</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="font-bold text-success">
                   ৳{Number(submittedResult.amount).toLocaleString()} BDT
                 </span>
               </div>
@@ -481,7 +481,9 @@ export default function PaymentRequestFormClient() {
             >
               {!isSubmitting && <Send />}
               <span>
-                {isSubmitting ? "Submitting Request..." : "Submit Payment Request"}
+                {isSubmitting
+                  ? "Submitting Request..."
+                  : "Submit Payment Request"}
               </span>
             </Button>
 

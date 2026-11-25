@@ -222,7 +222,6 @@ npm install @fontsource-variable/inter @fontsource-variable/cormorant-garamond @
 @theme inline {
   --font-sans: "Inter Variable", -apple-system, system-ui, sans-serif;
   --font-serif: "Cormorant Garamond Variable", Garamond, serif;
-  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
   --font-heading: var(--font-sans);
 }
 ```

@@ -427,7 +427,7 @@ a `CodeBlock`, never a hand-rolled `<pre>`.
 **Incorrect:**
 
 ```tsx
-<pre className="rounded-md bg-muted p-3 font-mono text-xs whitespace-pre-wrap">
+<pre className="rounded-md bg-muted p-3 text-xs whitespace-pre-wrap">
   {output}
 </pre>
 ```

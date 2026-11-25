@@ -65,9 +65,6 @@
   --color-text-strong: var(--text-strong);
 
   --font-primary: var(--font-primary);
-  --font-secondary: var(--font-primary);
-  --font-sans: var(--font-primary);
-  --font-mono: var(--font-primary);
 
   /* Base font sizes with px appended */
   --text-base: calc(var(--font-base) * 1px);

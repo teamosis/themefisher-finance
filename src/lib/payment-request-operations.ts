@@ -2,7 +2,10 @@ import { db } from "@/db";
 import { getScbDebitAccountNumber } from "@/db/debit-accounts";
 import { activityLogs, paymentRequests, vendors } from "@/db/schema";
 import { logActivity } from "@/lib/activity-log";
-import { actionableRequest, inspectPaymentRequest } from "@/lib/payment-request-verification";
+import {
+  actionableRequest,
+  inspectPaymentRequest,
+} from "@/lib/payment-request-verification";
 import { scbWorkbookRow } from "@/lib/scb-workbook";
 import { format } from "date-fns";
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -11,51 +14,60 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 
 const paymentAmountPattern = /^\d{1,12}(?:\.\d{1,2})?$/;
-export const paymentRequestFields = z
-  .object({
-    payeeName: z.string().trim().min(2, "Enter your full name").max(120),
-    payeeEmail: z
-      .string()
-      .trim()
-      .max(254)
-      .email("Invalid email address")
-      .or(z.literal(""))
-      .optional(),
-    payeePhone: z.string().trim().max(40).optional(),
-    bankName: z.string().trim().min(1, "Bank name is required").max(150),
-    branchName: z.string().trim().min(1, "Branch name is required").max(150),
-    routingNumber: z
-      .string()
-      .trim()
-      .regex(/^\d{9}$/, "Routing number must be exactly 9 digits"),
-    accountNumber: z
-      .string()
-      .trim()
-      .regex(/^\d{4,34}$/, "Account number must contain 4 to 34 digits"),
-    confirmAccountNumber: z.string().trim().max(34),
-    amount: z
-      .string()
-      .trim()
-      .regex(
-        paymentAmountPattern,
-        "Enter an amount with up to two decimal places",
-      )
-      .refine((value) => Number(value) > 0, "Amount must be positive"),
-    purpose: z
-      .string()
-      .trim()
-      .min(3, "Purpose must be at least 3 characters")
-      .max(140),
-    website_hp: z.string().optional(),
-  });
+export const paymentRequestFields = z.object({
+  payeeName: z.string().trim().min(2, "Enter your full name").max(120),
+  payeeEmail: z
+    .string()
+    .trim()
+    .max(254)
+    .email("Invalid email address")
+    .or(z.literal(""))
+    .optional(),
+  payeePhone: z.string().trim().max(40).optional(),
+  bankName: z.string().trim().min(1, "Bank name is required").max(150),
+  branchName: z.string().trim().min(1, "Branch name is required").max(150),
+  routingNumber: z
+    .string()
+    .trim()
+    .regex(/^\d{9}$/, "Routing number must be exactly 9 digits"),
+  accountNumber: z
+    .string()
+    .trim()
+    .regex(/^\d{4,34}$/, "Account number must contain 4 to 34 digits"),
+  confirmAccountNumber: z.string().trim().max(34),
+  amount: z
+    .string()
+    .trim()
+    .regex(
+      paymentAmountPattern,
+      "Enter an amount with up to two decimal places",
+    )
+    .refine((value) => Number(value) > 0, "Amount must be positive"),
+  purpose: z
+    .string()
+    .trim()
+    .min(3, "Purpose must be at least 3 characters")
+    .max(140),
+  website_hp: z.string().optional(),
+});
 
-const submitPaymentRequestSchema = paymentRequestFields.refine((data) => data.accountNumber === data.confirmAccountNumber, {
+const submitPaymentRequestSchema = paymentRequestFields.refine(
+  (data) => data.accountNumber === data.confirmAccountNumber,
+  {
     message: "Account numbers do not match. Please verify your entry.",
     path: ["confirmAccountNumber"],
-  });
+  },
+);
+
+const TRACKING_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 function generateTrackingCode(): string {
-  return `PR-${format(new Date(), "yyyyMMdd")}-${randomBytes(16).toString("hex").toUpperCase()}`;
+  const bytes = randomBytes(6);
+  let suffix = "";
+  for (let i = 0; i < 6; i++) {
+    suffix += TRACKING_ALPHABET[bytes[i] % TRACKING_ALPHABET.length];
+  }
+  return `PR-${format(new Date(), "yyMMdd")}-${suffix}`;
 }
 
 /**
@@ -151,9 +163,14 @@ export const paymentRequestReviewSchema = z.object({
 
 type PaymentRequestReview = z.infer<typeof paymentRequestReviewSchema>;
 
-export function paymentRequestReview(request: typeof paymentRequests.$inferSelect) {
-  if (request.status !== "pending" && request.status !== "verified") return null;
-  const verification = request.verificationDetails as { verifiedAt?: string } | null;
+export function paymentRequestReview(
+  request: typeof paymentRequests.$inferSelect,
+) {
+  if (request.status !== "pending" && request.status !== "verified")
+    return null;
+  const verification = request.verificationDetails as {
+    verifiedAt?: string;
+  } | null;
   return {
     requestId: request.id,
     payeeName: request.payeeName,
@@ -180,16 +197,18 @@ export async function approvePaymentRequest(
   const review = options?.review;
   const eligible = and(
     actionableRequest(id),
-    review ? and(
-      eq(paymentRequests.id, review.requestId),
-      eq(paymentRequests.payeeName, review.payeeName),
-      eq(paymentRequests.accountNumber, review.accountNumber),
-      eq(paymentRequests.routingNumber, review.routingNumber),
-      eq(paymentRequests.amount, review.amount),
-      eq(paymentRequests.currency, review.currency),
-      eq(paymentRequests.status, review.status),
-      sql`(${paymentRequests.verificationDetails}->>'verifiedAt') IS NOT DISTINCT FROM ${review.verificationAt}::text`,
-    ) : undefined,
+    review
+      ? and(
+          eq(paymentRequests.id, review.requestId),
+          eq(paymentRequests.payeeName, review.payeeName),
+          eq(paymentRequests.accountNumber, review.accountNumber),
+          eq(paymentRequests.routingNumber, review.routingNumber),
+          eq(paymentRequests.amount, review.amount),
+          eq(paymentRequests.currency, review.currency),
+          eq(paymentRequests.status, review.status),
+          sql`(${paymentRequests.verificationDetails}->>'verifiedAt') IS NOT DISTINCT FROM ${review.verificationAt}::text`,
+        )
+      : undefined,
   );
   let updated: typeof paymentRequests.$inferSelect | undefined;
 
@@ -239,7 +258,10 @@ export async function approvePaymentRequest(
   }
 
   if (!updated) {
-    if (review) throw new PaymentRequestReviewError("The review no longer matches an actionable request. Fetch the latest request and have the operator review it again.");
+    if (review)
+      throw new PaymentRequestReviewError(
+        "The review no longer matches an actionable request. Fetch the latest request and have the operator review it again.",
+      );
     throw new Error("Only requests awaiting review can be approved.");
   }
 
@@ -363,5 +385,45 @@ export async function exportApprovedPaymentRequests(
       ) / 100,
     exportedIds: requests.map(({ id }) => id),
   };
+}
+
+/**
+ * Protected action: Permanently delete one or more payment requests.
+ */
+export async function deletePaymentRequests(requestIds: string[]) {
+  const ids = [...new Set(z.array(z.uuid()).min(1).parse(requestIds))];
+  const deleted = await db
+    .delete(paymentRequests)
+    .where(inArray(paymentRequests.id, ids))
+    .returning();
+
+  if (deleted.length === 0) {
+    throw new Error("No matching payment requests found to delete.");
+  }
+
+  await logActivity({
+    domain: "scb_tools",
+    action: "payment_request_delete",
+    entityType: "payment_request",
+    entityId: deleted.length === 1 ? deleted[0].id : undefined,
+    title:
+      deleted.length === 1
+        ? `Payment request deleted: ${deleted[0].payeeName} (${deleted[0].trackingCode})`
+        : `Deleted ${deleted.length} payment requests`,
+    details: {
+      itemCount: deleted.length,
+      extra: {
+        ids: deleted.map((d) => d.id),
+        trackingCodes: deleted.map((d) => d.trackingCode),
+      },
+    },
+  }).catch(() => {});
+
+  return deleted;
+}
+
+export async function deletePaymentRequest(id: string) {
+  const [deleted] = await deletePaymentRequests([id]);
+  return deleted;
 }
 

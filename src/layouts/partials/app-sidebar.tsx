@@ -249,8 +249,8 @@ export default function AppSidebar() {
             >
               {copiedLink ? (
                 <>
-                  <Check className="size-3.5 text-emerald-600" />
-                  <span className="text-emerald-600">Copied to Clipboard</span>
+                  <Check className="size-3.5 text-success" />
+                  <span className="text-success">Copied to Clipboard</span>
                 </>
               ) : (
                 <>

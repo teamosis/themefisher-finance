@@ -1,5 +1,6 @@
 import {
   approvePaymentRequest,
+  deletePaymentRequest,
   exportPaymentRequestsToScb,
   getPaymentRequestByTrackingCode,
   rejectPaymentRequest,
@@ -14,7 +15,13 @@ import { establishBrowserSession } from "../browser-session-fixture";
 import { cookieStore } from "../setup";
 
 vi.mock("@/db", () => ({
-  db: { select: vi.fn(), insert: vi.fn(), update: vi.fn(), execute: vi.fn() },
+  db: {
+    select: vi.fn(),
+    insert: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+    execute: vi.fn(),
+  },
 }));
 
 const requestId = "236fa2ec-e183-44d5-bc7d-904986261b52";
@@ -77,6 +84,23 @@ describe("Public payment requests", () => {
       "exportedAt",
     ]);
   });
+
+  it("accepts the compact PR-YYMMDD-XXXXXX tracking reference format", async () => {
+    const row = {
+      trackingCode: "PR-261125-A7K9M2",
+      status: "verified",
+      createdAt: new Date(),
+      exportedAt: null,
+    };
+    const limit = vi.fn().mockResolvedValue([row]);
+    vi.mocked(db.select).mockReturnValue({
+      from: () => ({ where: () => ({ limit }) }),
+    } as any);
+
+    await expect(
+      getPaymentRequestByTrackingCode(" pr-261125-a7k9m2 "),
+    ).resolves.toEqual(row);
+  });
 });
 
 describe("Payment request transitions", () => {
@@ -90,8 +114,34 @@ describe("Payment request transitions", () => {
     await expect(exportPaymentRequestsToScb([requestId])).rejects.toThrow(
       "Authentication required",
     );
+    await expect(deletePaymentRequest(requestId)).rejects.toThrow(
+      "Authentication required",
+    );
     expect(db.update).not.toHaveBeenCalled();
+    expect(db.delete).not.toHaveBeenCalled();
     expect(db.execute).not.toHaveBeenCalled();
+  });
+
+  it("deletes a payment request when authenticated", async () => {
+    await establishBrowserSession();
+    const deletedRow = {
+      id: requestId,
+      trackingCode: "PR-261125-A7K9M2",
+      payeeName: "Example Beneficiary",
+      amount: "1250.50",
+      purpose: "Monthly service fee",
+      status: "rejected",
+    };
+    const returning = vi.fn().mockResolvedValue([deletedRow]);
+    vi.mocked(db.delete).mockReturnValue({
+      where: () => ({ returning }),
+    } as any);
+    vi.mocked(db.insert).mockReturnValue({
+      values: () => ({ returning: async () => [{}] }),
+    } as any);
+
+    await expect(deletePaymentRequest(requestId)).resolves.toEqual(deletedRow);
+    expect(db.delete).toHaveBeenCalledTimes(1);
   });
 
   it("checks the reviewed payment fields in the approval statement", async () => {

@@ -97,7 +97,7 @@ export default function TrackPaymentClient() {
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300"
+            className="gap-1 border-warning/30 text-warning bg-warning/10"
           >
             <Clock className="size-3" />
             Under Review
@@ -107,7 +107,7 @@ export default function TrackPaymentClient() {
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-300"
+            className="gap-1 border-accent/30 text-accent bg-accent/10"
           >
             <ShieldCheck className="size-3" />
             Verified & Ready
@@ -117,7 +117,7 @@ export default function TrackPaymentClient() {
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-300"
+            className="gap-1 border-success/30 text-success bg-success/10"
           >
             <CheckCircle2 className="size-3" />
             Approved
@@ -127,7 +127,7 @@ export default function TrackPaymentClient() {
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/30 dark:text-purple-300"
+            className="gap-1 border-primary/30 text-primary bg-primary/10"
           >
             <Check className="size-3" />
             Sent to Bank (Exported)
@@ -137,7 +137,7 @@ export default function TrackPaymentClient() {
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-rose-300 text-rose-700 bg-rose-50 dark:bg-rose-950/30 dark:text-rose-300"
+            className="gap-1 border-destructive/30 text-destructive bg-destructive/10"
           >
             <XCircle className="size-3" />
             Rejected
@@ -179,7 +179,7 @@ export default function TrackPaymentClient() {
                 onChange={(e) =>
                   setTrackCodeInput(e.target.value.toUpperCase())
                 }
-                placeholder="PR-20261124-XXXX"
+                placeholder="PR-261125-XXXXXX"
                 disabled={isTracking}
                 className="text-xs uppercase h-8.5 bg-background"
                 autoFocus
@@ -225,7 +225,7 @@ export default function TrackPaymentClient() {
                     )}
                   </span>
                   {trackingResult.exportedAt && (
-                    <span className="text-purple-600 dark:text-purple-400 font-medium">
+                    <span className="text-primary font-medium">
                       Exported:{" "}
                       {format(
                         new Date(trackingResult.exportedAt),

@@ -2,9 +2,12 @@
 
 import {
   approvePaymentRequest,
+  deletePaymentRequest,
+  deletePaymentRequests,
   exportPaymentRequestsToScb,
   rejectPaymentRequest,
 } from "@/actions";
+import { ConfirmDeleteModal } from "@/components/modals/confirm-delete-modal";
 import { Modal } from "@/components/modals/modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +32,7 @@ import {
   FileSpreadsheet,
   Search,
   ShieldCheck,
+  Trash2,
   UserCheck,
   X,
   XCircle,
@@ -67,6 +71,9 @@ export default function PaymentRequestsClient({
 
   // Audit / Details modal state
   const [viewingItem, setViewingItem] = useState<PaymentRequest | null>(null);
+
+  // Delete modal state (supports single or bulk deletion)
+  const [deletingIds, setDeletingIds] = useState<string[] | null>(null);
 
   // SCB Export Success Modal state
   const [exportedResult, setExportedResult] = useState<{
@@ -113,6 +120,13 @@ export default function PaymentRequestsClient({
     );
   };
 
+  const handleTabChange = (
+    tab: "actionable" | "approved" | "exported" | "rejected" | "all",
+  ) => {
+    setActiveTab(tab);
+    setSelectedIds([]);
+  };
+
   // 1-Click Approve single request
   const handleApprove = (req: PaymentRequest, saveAsVendor = true) => {
     startTransition(async () => {
@@ -122,6 +136,7 @@ export default function PaymentRequestsClient({
         setRequests((prev) =>
           prev.map((item) => (item.id === updated.id ? updated : item)),
         );
+        setSelectedIds((prev) => prev.filter((id) => id !== updated.id));
       } catch {
         setActionError(
           "Could not update the request. Refresh the list and try again.",
@@ -172,11 +187,42 @@ export default function PaymentRequestsClient({
         setRequests((prev) =>
           prev.map((item) => (item.id === updated.id ? updated : item)),
         );
+        setSelectedIds((prev) => prev.filter((id) => id !== updated.id));
         setRejectingItem(null);
         setRejectReason("");
       } catch {
         setActionError(
           "Could not update the request. Refresh the list and try again.",
+        );
+      }
+    });
+  };
+
+  // Delete confirm
+  const handleConfirmDelete = () => {
+    if (!deletingIds || deletingIds.length === 0) return;
+    const idsToDelete = deletingIds;
+    startTransition(async () => {
+      setActionError(null);
+      try {
+        if (idsToDelete.length === 1) {
+          await deletePaymentRequest(idsToDelete[0]);
+        } else {
+          await deletePaymentRequests(idsToDelete);
+        }
+        setRequests((prev) =>
+          prev.filter((item) => !idsToDelete.includes(item.id)),
+        );
+        setSelectedIds((prev) =>
+          prev.filter((id) => !idsToDelete.includes(id)),
+        );
+        if (viewingItem && idsToDelete.includes(viewingItem.id)) {
+          setViewingItem(null);
+        }
+        setDeletingIds(null);
+      } catch {
+        setActionError(
+          "Could not delete the payment request. Refresh the list and try again.",
         );
       }
     });
@@ -234,29 +280,29 @@ export default function PaymentRequestsClient({
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-amber-300 text-amber-700 bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300"
+            className="gap-1 whitespace-nowrap border-warning/30 text-warning bg-warning/10"
           >
-            <Clock className="size-3" />
-            Pending Review
+            <Clock className="size-3 shrink-0" />
+            Pending
           </Badge>
         );
       case "verified":
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-blue-300 text-blue-700 bg-blue-50 dark:bg-blue-950/30 dark:text-blue-300"
+            className="gap-1 whitespace-nowrap border-accent/30 text-accent bg-accent/10"
           >
-            <ShieldCheck className="size-3" />
-            Verified & Ready
+            <ShieldCheck className="size-3 shrink-0" />
+            Verified
           </Badge>
         );
       case "approved":
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-emerald-300 text-emerald-700 bg-emerald-50 dark:bg-emerald-950/30 dark:text-emerald-300"
+            className="gap-1 whitespace-nowrap border-success/30 text-success bg-success/10"
           >
-            <CheckCircle2 className="size-3" />
+            <CheckCircle2 className="size-3 shrink-0" />
             Approved
           </Badge>
         );
@@ -264,24 +310,28 @@ export default function PaymentRequestsClient({
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-purple-300 text-purple-700 bg-purple-50 dark:bg-purple-950/30 dark:text-purple-300"
+            className="gap-1 whitespace-nowrap border-primary/30 text-primary bg-primary/10"
           >
-            <Check className="size-3" />
-            Exported to SCB
+            <Check className="size-3 shrink-0" />
+            Exported
           </Badge>
         );
       case "rejected":
         return (
           <Badge
             variant="outline"
-            className="gap-1 border-rose-300 text-rose-700 bg-rose-50 dark:bg-rose-950/30 dark:text-rose-300"
+            className="gap-1 whitespace-nowrap border-destructive/30 text-destructive bg-destructive/10"
           >
-            <XCircle className="size-3" />
+            <XCircle className="size-3 shrink-0" />
             Rejected
           </Badge>
         );
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return (
+          <Badge variant="outline" className="whitespace-nowrap">
+            {status}
+          </Badge>
+        );
     }
   };
 
@@ -352,7 +402,7 @@ export default function PaymentRequestsClient({
           <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
             <button
               type="button"
-              onClick={() => setActiveTab("actionable")}
+              onClick={() => handleTabChange("actionable")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all shrink-0 cursor-pointer ${
                 activeTab === "actionable"
                   ? "bg-primary text-primary-foreground shadow-xs"
@@ -363,7 +413,7 @@ export default function PaymentRequestsClient({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("approved")}
+              onClick={() => handleTabChange("approved")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all shrink-0 cursor-pointer ${
                 activeTab === "approved"
                   ? "bg-primary text-primary-foreground shadow-xs"
@@ -374,7 +424,7 @@ export default function PaymentRequestsClient({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("exported")}
+              onClick={() => handleTabChange("exported")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all shrink-0 cursor-pointer ${
                 activeTab === "exported"
                   ? "bg-primary text-primary-foreground shadow-xs"
@@ -386,7 +436,7 @@ export default function PaymentRequestsClient({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("rejected")}
+              onClick={() => handleTabChange("rejected")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all shrink-0 cursor-pointer ${
                 activeTab === "rejected"
                   ? "bg-primary text-primary-foreground shadow-xs"
@@ -398,7 +448,7 @@ export default function PaymentRequestsClient({
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab("all")}
+              onClick={() => handleTabChange("all")}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all shrink-0 cursor-pointer ${
                 activeTab === "all"
                   ? "bg-primary text-primary-foreground shadow-xs"
@@ -443,7 +493,7 @@ export default function PaymentRequestsClient({
                   disabled={isPending}
                   className="h-7 text-xs"
                 >
-                  <CheckCircle2 className="size-3 text-emerald-600" />
+                  <CheckCircle2 className="size-3 text-success" />
                   <span>Approve Selected</span>
                 </Button>
               )}
@@ -463,6 +513,17 @@ export default function PaymentRequestsClient({
 
               <Button
                 size="sm"
+                variant="outline"
+                onClick={() => setDeletingIds(selectedIds)}
+                disabled={isPending}
+                className="h-7 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30 cursor-pointer"
+              >
+                <Trash2 className="size-3" />
+                <span>Delete Selected</span>
+              </Button>
+
+              <Button
+                size="sm"
                 variant="ghost"
                 onClick={() => setSelectedIds([])}
                 className="h-7 px-2 text-xs text-muted-foreground hover:text-text-strong"
@@ -478,7 +539,7 @@ export default function PaymentRequestsClient({
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-border bg-muted/30 text-muted-foreground font-medium">
-                <th className="p-3 w-8 text-center">
+                <th className="p-3 w-10 text-center">
                   <input
                     type="checkbox"
                     checked={
@@ -489,20 +550,19 @@ export default function PaymentRequestsClient({
                     className="rounded border-border size-3.5 cursor-pointer"
                   />
                 </th>
-                <th className="p-3">Reference & Date</th>
-                <th className="p-3">Beneficiary</th>
-                <th className="p-3">Bank & Routing Details</th>
-                <th className="p-3 text-right">Claim Amount</th>
-                <th className="p-3">Purpose</th>
-                <th className="p-3 text-center">Status</th>
-                <th className="p-3 text-right">Actions</th>
+                <th className="p-3 whitespace-nowrap">Beneficiary</th>
+                <th className="p-3 whitespace-nowrap">Bank Account</th>
+                <th className="p-3 whitespace-nowrap">Purpose</th>
+                <th className="p-3 text-right whitespace-nowrap">Amount</th>
+                <th className="p-3 text-center whitespace-nowrap">Status</th>
+                <th className="p-3 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filteredRequests.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="p-8 text-center text-muted-foreground"
                   >
                     <div className="flex flex-col items-center justify-center gap-2">
@@ -541,77 +601,40 @@ export default function PaymentRequestsClient({
                         />
                       </td>
 
-                      {/* Reference & Date */}
+                      {/* Beneficiary & Ref */}
                       <td className="p-3">
-                        <div className="font-bold text-text-strong">
-                          {req.trackingCode}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground mt-0.5">
-                          {format(
-                            new Date(req.createdAt),
-                            "dd MMM yyyy, hh:mm a",
+                        <div className="font-medium text-text-strong flex items-center gap-1.5 whitespace-nowrap">
+                          <span>{req.payeeName}</span>
+                          {verification?.matchedVendorName && (
+                            <span
+                              title={`Registered Beneficiary: ${verification.matchedVendorName}`}
+                              className="inline-flex text-success"
+                            >
+                              <UserCheck className="size-3.5" />
+                            </span>
                           )}
                         </div>
-                      </td>
-
-                      {/* Beneficiary */}
-                      <td className="p-3">
-                        <div className="font-semibold text-text-strong">
-                          {req.payeeName}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground truncate max-w-40">
-                          {req.payeeEmail ||
-                            req.payeePhone ||
-                            "No contact info"}
-                        </div>
-                        {verification?.matchedVendorName && (
-                          <div className="inline-flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
-                            <UserCheck className="size-3" />
-                            <span>Registered Beneficiary</span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* Bank & Routing Details */}
-                      <td className="p-3">
-                        <div className="font-medium text-text-strong">
-                          {req.bankName}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {req.branchName} Branch
-                        </div>
-                        <div className="text-[11px] text-text-muted mt-0.5 flex items-center gap-2">
-                          <span>A/C: {req.accountNumber}</span>
-                          <span className="text-muted-foreground/60">•</span>
-                          <span
-                            className={
-                              verification?.routingValid
-                                ? "text-emerald-600 font-semibold"
-                                : "text-amber-600 font-semibold"
-                            }
-                            title={
-                              verification?.routingValid
-                                ? "Verified BEFTN Routing #"
-                                : "Unverified routing #"
-                            }
-                          >
-                            RTN: {req.routingNumber}
+                        <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1.5 whitespace-nowrap">
+                          <span>{req.trackingCode}</span>
+                          <span className="text-muted-foreground/50">·</span>
+                          <span>
+                            {format(new Date(req.createdAt), "dd MMM yyyy")}
                           </span>
                         </div>
                       </td>
 
-                      {/* Amount */}
-                      <td className="p-3 text-right">
-                        <div className="font-bold text-sm text-text-strong">
-                          ৳{Number(req.amount).toLocaleString()}
+                      {/* Bank Account */}
+                      <td className="p-3">
+                        <div className="font-medium text-text-strong truncate max-w-48">
+                          {req.bankName}
                         </div>
-                        <div className="text-[10px] text-muted-foreground uppercase">
-                          {req.currency}
+                        <div className="text-[11px] text-muted-foreground mt-0.5 whitespace-nowrap">
+                          A/C {req.accountNumber}
                         </div>
                       </td>
 
                       {/* Purpose */}
-                      <td className="p-3 max-w-45">
+                      <td className="p-3 max-w-64">
                         <p
                           className="truncate text-text-default text-xs"
                           title={req.purpose}
@@ -619,27 +642,34 @@ export default function PaymentRequestsClient({
                           {req.purpose}
                         </p>
                         {verification?.duplicateDetected && (
-                          <div className="inline-flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                          <div className="inline-flex items-center gap-1 text-[10px] text-warning mt-0.5 whitespace-nowrap">
                             <AlertTriangle className="size-3" />
-                            <span>Potential duplicate</span>
+                            <span>Duplicate</span>
                           </div>
                         )}
                       </td>
 
+                      {/* Amount */}
+                      <td className="p-3 text-right whitespace-nowrap">
+                        <div className="font-semibold text-sm text-text-strong tabular-nums">
+                          ৳{Number(req.amount).toLocaleString()}
+                        </div>
+                      </td>
+
                       {/* Status */}
-                      <td className="p-3 text-center">
+                      <td className="p-3 text-center whitespace-nowrap">
                         {renderStatusBadge(req.status)}
                       </td>
 
                       {/* Actions */}
-                      <td className="p-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <td className="p-3 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
                           {/* Audit Details */}
                           <button
                             type="button"
                             onClick={() => setViewingItem(req)}
                             className="p-1.5 text-muted-foreground hover:text-text-strong hover:bg-light rounded-lg transition-colors cursor-pointer"
-                            title="View Verification Audit"
+                            title="View Details"
                           >
                             <Eye className="size-4" />
                           </button>
@@ -652,7 +682,7 @@ export default function PaymentRequestsClient({
                                 variant="outline"
                                 onClick={() => handleApprove(req, true)}
                                 disabled={isPending}
-                                className="h-7 px-2 text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-300 dark:hover:bg-emerald-950/40 border-emerald-300 cursor-pointer"
+                                className="h-7 px-2 text-xs font-medium text-success hover:text-success hover:bg-success/10 border-success/30 cursor-pointer"
                                 title="1-Click Approve"
                               >
                                 <Check className="size-3.5" />
@@ -667,7 +697,7 @@ export default function PaymentRequestsClient({
                                   setRejectReason("");
                                 }}
                                 disabled={isPending}
-                                className="h-7 px-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                                className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                                 title="Reject Request"
                               >
                                 <X className="size-3.5" />
@@ -689,15 +719,16 @@ export default function PaymentRequestsClient({
                             </Button>
                           )}
 
-                          {/* Exported info */}
-                          {req.status === "exported" && (
-                            <span
-                              className="text-[10px] text-muted-foreground truncate max-w-25"
-                              title={req.scbFileName || "Exported"}
-                            >
-                              {req.scbFileName ? "Downloaded" : "Exported"}
-                            </span>
-                          )}
+                          {/* Delete */}
+                          <button
+                            type="button"
+                            onClick={() => setDeletingIds([req.id])}
+                            disabled={isPending}
+                            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors cursor-pointer"
+                            title="Delete Request"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -790,7 +821,7 @@ export default function PaymentRequestsClient({
                 <span className="text-muted-foreground text-[10px] uppercase font-bold block">
                   Claimed Amount
                 </span>
-                <span className="font-bold text-base text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                <span className="font-bold text-base text-success block mt-0.5">
                   ৳{Number(viewingItem.amount).toLocaleString()} BDT
                 </span>
                 <span className="text-muted-foreground block text-[11px]">
@@ -864,7 +895,7 @@ export default function PaymentRequestsClient({
                       key={idx}
                       className="flex items-start gap-2 text-text-default"
                     >
-                      <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                      <CheckCircle2 className="size-3.5 text-success shrink-0 mt-0.5" />
                       <span>{note}</span>
                     </div>
                   ))
@@ -875,7 +906,7 @@ export default function PaymentRequestsClient({
                 )}
 
                 {viewingItem.verificationDetails?.duplicateDetected && (
-                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-xs mt-2">
+                  <div className="p-2.5 rounded-lg bg-warning/10 border border-warning/20 text-warning text-xs mt-2">
                     <span className="font-bold block">Duplicate Warning:</span>
                     Found{" "}
                     {
@@ -889,7 +920,7 @@ export default function PaymentRequestsClient({
             </div>
 
             {viewingItem.rejectionReason && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 rounded-xl">
+              <div className="p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl">
                 <span className="font-bold block">Rejection Reason:</span>
                 <span>{viewingItem.rejectionReason}</span>
               </div>
@@ -968,6 +999,32 @@ export default function PaymentRequestsClient({
           </div>
         </Modal>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deletingIds && deletingIds.length > 0}
+        onClose={() => setDeletingIds(null)}
+        onConfirm={handleConfirmDelete}
+        title={
+          deletingIds && deletingIds.length > 1
+            ? "Delete Payment Requests?"
+            : "Delete Payment Request?"
+        }
+        description="Are you sure you want to permanently delete this payment request? This action cannot be undone."
+        itemName={
+          deletingIds
+            ? deletingIds.length === 1
+              ? (() => {
+                  const target = requests.find((r) => r.id === deletingIds[0]);
+                  return target
+                    ? `${target.payeeName} (${target.trackingCode})`
+                    : undefined;
+                })()
+              : `${deletingIds.length} payment requests`
+            : undefined
+        }
+        isDeleting={isPending}
+      />
     </div>
   );
 }

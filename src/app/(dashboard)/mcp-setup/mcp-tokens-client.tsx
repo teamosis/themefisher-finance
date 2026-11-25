@@ -342,7 +342,7 @@ export default function McpTokensClient({
                   </h2>
                   <Badge
                     variant="outline"
-                    className="text-amber-600 bg-amber-500/10 border-amber-500/30 text-xs font-medium"
+                    className="text-warning bg-warning/10 border-warning/30 text-xs font-medium"
                   >
                     Copy Before Closing
                   </Badge>
@@ -356,7 +356,7 @@ export default function McpTokensClient({
                     className="gap-1.5"
                   >
                     {copiedSetup ? (
-                      <Check className="size-3.5 text-emerald-400" />
+                      <Check className="size-3.5 text-success" />
                     ) : (
                       <Copy className="size-3.5" />
                     )}
@@ -524,7 +524,7 @@ export default function McpTokensClient({
                                 title="Copy prefix"
                               >
                                 {copiedKey === `prefix-${token.id}` ? (
-                                  <Check className="size-3 text-emerald-500" />
+                                  <Check className="size-3 text-success" />
                                 ) : (
                                   <Copy className="size-3" />
                                 )}
@@ -536,14 +536,14 @@ export default function McpTokensClient({
                             {token.readOnly ? (
                               <Badge
                                 variant="outline"
-                                className="text-amber-600 bg-amber-500/10 border-amber-500/20 text-[11px]"
+                                className="text-warning bg-warning/10 border-warning/20 text-[11px]"
                               >
                                 Read-Only
                               </Badge>
                             ) : (
                               <Badge
                                 variant="outline"
-                                className="text-emerald-600 bg-emerald-500/10 border-emerald-500/20 text-[11px]"
+                                className="text-success bg-success/10 border-success/20 text-[11px]"
                               >
                                 Read &amp; Write
                               </Badge>
@@ -592,7 +592,7 @@ export default function McpTokensClient({
                             ) : (
                               <Badge
                                 variant="outline"
-                                className="text-emerald-600 bg-emerald-500/10 border-emerald-500/20 text-[11px]"
+                                className="text-success bg-success/10 border-success/20 text-[11px]"
                               >
                                 Active
                               </Badge>
@@ -685,7 +685,7 @@ export default function McpTokensClient({
                 onClick={() => setStatusFilter("completed")}
                 className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
                   statusFilter === "completed"
-                    ? "bg-emerald-600 text-white"
+                    ? "bg-success text-success-foreground"
                     : "text-muted-foreground hover:text-text-strong hover:bg-muted"
                 }`}
               >
@@ -751,7 +751,7 @@ export default function McpTokensClient({
                               variant={isSuccess ? "outline" : "destructive"}
                               className={`text-[10px] ${
                                 isSuccess
-                                  ? "text-emerald-600 bg-emerald-500/10 border-emerald-500/20"
+                                  ? "text-success bg-success/10 border-success/20"
                                   : ""
                               }`}
                             >

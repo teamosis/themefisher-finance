@@ -123,7 +123,8 @@ export type ActivityAction =
   | "payment_request_verify"
   | "payment_request_approve"
   | "payment_request_reject"
-  | "payment_request_export";
+  | "payment_request_export"
+  | "payment_request_delete";
 
 // ==========================================
 // Payment Requests Types

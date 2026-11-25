@@ -54,40 +54,35 @@ function getActionBadge(action: ActivityAction) {
           ? "Salary Sheet Excel"
           : "Transfers Excel",
       icon: FileSpreadsheet,
-      badgeClass:
-        "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+      badgeClass: "bg-success/10 text-success border-success/20",
     };
   }
   if (action.startsWith("invoice_")) {
     return {
       label: "Invoice",
       icon: FileText,
-      badgeClass:
-        "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+      badgeClass: "bg-accent/10 text-accent border-accent/20",
     };
   }
   if (action.startsWith("vendor_")) {
     return {
       label: action === "vendor_archive" ? "Vendor Archived" : "Vendor",
       icon: Users,
-      badgeClass:
-        "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+      badgeClass: "bg-primary/10 text-primary border-primary/20",
     };
   }
   if (action.startsWith("debit_account_")) {
     return {
       label: "Debit Account",
       icon: CreditCard,
-      badgeClass:
-        "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+      badgeClass: "bg-warning/10 text-warning border-warning/20",
     };
   }
   if (action.startsWith("client_")) {
     return {
       label: "Client",
       icon: Building2,
-      badgeClass:
-        "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20",
+      badgeClass: "bg-light text-text-strong border-border",
     };
   }
   return {
@@ -243,7 +238,7 @@ export default function ActivityLogsClient({
             }}
             className={`px-3 py-1 text-xs font-medium rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 ${
               actionFilter === "excel"
-                ? "bg-emerald-600 text-white"
+                ? "bg-success text-success-foreground"
                 : "text-muted-foreground hover:text-text-strong hover:bg-muted"
             }`}
           >
@@ -361,7 +356,7 @@ export default function ActivityLogsClient({
                     <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border">
                       {isExcel && log.details?.totalAmount ? (
                         <div className="text-right">
-                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block">
+                          <span className="text-xs font-bold text-success block">
                             ৳{Number(log.details.totalAmount).toLocaleString()}
                           </span>
                           <span className="text-[11px] text-muted-foreground">
@@ -400,7 +395,7 @@ export default function ActivityLogsClient({
           subtitle={`Logged on ${formatLogTimestamp(selectedLog.createdAt).exact}`}
           icon={
             selectedLog.action.includes("excel") ? (
-              <FileSpreadsheet className="size-5 text-emerald-600" />
+              <FileSpreadsheet className="size-5 text-success" />
             ) : (
               <Activity className="size-5 text-primary" />
             )
@@ -424,7 +419,7 @@ export default function ActivityLogsClient({
               </div>
               <div>
                 <span className="text-muted-foreground block">Status:</span>
-                <span className="inline-flex items-center gap-1 font-semibold text-emerald-600">
+                <span className="inline-flex items-center gap-1 font-semibold text-success">
                   <CheckCircle2 className="size-3" />
                   {selectedLog.status}
                 </span>
@@ -460,7 +455,7 @@ export default function ActivityLogsClient({
                   <Button
                     onClick={() => handleRedownloadExcel(selectedLog.details)}
                     disabled={isExportingExcel}
-                    className="gap-2 text-xs h-9 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+                    className="gap-2 text-xs h-9 bg-success hover:bg-success/90 text-success-foreground shrink-0"
                   >
                     <Download className="size-3.5" />
                     <span>

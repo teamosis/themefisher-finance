@@ -78,28 +78,28 @@ export default function DashboardSummary({
     switch (status) {
       case "pending":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-warning/10 text-warning border border-warning/20">
             <Clock className="size-3" />
             Pending Review
           </span>
         );
       case "verified":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-500/10 text-sky-600 border border-sky-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-accent/10 text-accent border border-accent/20">
             <Check className="size-3" />
             Routing Verified
           </span>
         );
       case "approved":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-success/10 text-success border border-success/20">
             <CheckCircle2 className="size-3" />
             Approved
           </span>
         );
       case "exported":
         return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-purple-500/10 text-purple-600 border border-purple-500/20">
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-primary/10 text-primary border border-primary/20">
             <FileSpreadsheet className="size-3" />
             Exported to SCB
           </span>
@@ -171,7 +171,7 @@ export default function DashboardSummary({
                 <span className="text-xs font-medium text-muted-foreground">
                   Pending Payout Claims
                 </span>
-                <div className="size-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+                <div className="size-8 rounded-xl bg-warning/10 text-warning flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
                   <Inbox className="size-4" />
                 </div>
               </div>
@@ -189,7 +189,7 @@ export default function DashboardSummary({
                 </p>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs font-medium text-amber-600">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs font-medium text-warning">
               <span>Review Payment Claims</span>
               <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -197,17 +197,14 @@ export default function DashboardSummary({
         </Link>
 
         {/* Metric 3: Beneficiaries & Payroll */}
-        <Link
-          href="/vendors"
-          className="group block focus:outline-hidden"
-        >
+        <Link href="/vendors" className="group block focus:outline-hidden">
           <Card className="p-5 bg-card border-border hover:border-primary/40 transition-all duration-200 shadow-xs hover:shadow-md h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">
                   Beneficiaries &amp; Team
                 </span>
-                <div className="size-8 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+                <div className="size-8 rounded-xl bg-success/10 text-success flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
                   <UserCheck className="size-4" />
                 </div>
               </div>
@@ -221,7 +218,7 @@ export default function DashboardSummary({
                 </p>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs font-medium text-emerald-600">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs font-medium text-success">
               <span>Manage Receiver Accounts</span>
               <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -229,17 +226,14 @@ export default function DashboardSummary({
         </Link>
 
         {/* Metric 4: International Clients */}
-        <Link
-          href="/clients"
-          className="group block focus:outline-hidden"
-        >
+        <Link href="/clients" className="group block focus:outline-hidden">
           <Card className="p-5 bg-card border-border hover:border-primary/40 transition-all duration-200 shadow-xs hover:shadow-md h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-muted-foreground">
                   International Clients
                 </span>
-                <div className="size-8 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+                <div className="size-8 rounded-xl bg-accent/10 text-accent flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
                   <Users className="size-4" />
                 </div>
               </div>
@@ -252,7 +246,7 @@ export default function DashboardSummary({
                 </p>
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs font-medium text-purple-600">
+            <div className="mt-4 pt-3 border-t border-border flex items-center justify-between text-xs font-medium text-accent">
               <span>Clients Directory</span>
               <ArrowRight className="size-3.5 transition-transform group-hover:translate-x-1" />
             </div>
@@ -537,7 +531,7 @@ export default function DashboardSummary({
                   variant="outline"
                   className={`text-[10px] capitalize shrink-0 ${
                     log.status === "success"
-                      ? "border-emerald-500/20 text-emerald-600 bg-emerald-500/10"
+                      ? "border-success/20 text-success bg-success/10"
                       : "border-border text-muted-foreground"
                   }`}
                 >
